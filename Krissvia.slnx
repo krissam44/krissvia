@@ -17,6 +17,7 @@
     <Project Path="src/Krissvia.Server/Krissvia.Server.csproj" />
   </Folder>
   <Folder Name="/plugins/">
+    <Project Path="plugins/Krissvia.Plugin.Shelly/Krissvia.Plugin.Shelly.csproj" />
     <Project Path="plugins/Krissvia.Plugin.Teleinfo/Krissvia.Plugin.Teleinfo.csproj" />
     <Project Path="plugins/Krissvia.Plugin.Zigbee2Mqtt/Krissvia.Plugin.Zigbee2Mqtt.csproj" />
   </Folder>
@@ -27,6 +28,7 @@
     <Project Path="tests/Krissvia.Core.Tests/Krissvia.Core.Tests.csproj" />
     <Project Path="tests/Krissvia.Persistence.Tests/Krissvia.Persistence.Tests.csproj" />
     <Project Path="tests/Krissvia.PluginHost.Tests/Krissvia.PluginHost.Tests.csproj" />
+    <Project Path="tests/Krissvia.Plugin.Shelly.Tests/Krissvia.Plugin.Shelly.Tests.csproj" />
     <Project Path="tests/Krissvia.Plugin.Teleinfo.Tests/Krissvia.Plugin.Teleinfo.Tests.csproj" />
     <Project Path="tests/Krissvia.Plugin.Zigbee2Mqtt.Tests/Krissvia.Plugin.Zigbee2Mqtt.Tests.csproj" />
   </Folder>

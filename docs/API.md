@@ -78,8 +78,7 @@ Un seul document de configuration par installation.
   "restore_percent": 70,
   "sources": [
     { "name": "Linky", "power_entity_id": "sensor.linky_apparent_power", "power_quality": "apparent" },
-    { "name": "Pince", "power_entity_id": "sensor.pince_power", "power_quality": "active",
-      "active_to_apparent_factor": 1.10 },
+    { "name": "Pince", "power_entity_id": "sensor.pince_maison_apparent_power_0", "power_quality": "apparent" },
     { "name": "Somme", "kind": "equipment_sum",
       "metered_equipment": [ { "switch_entity_id": "switch.radiateur_chambre_rdc", "nominal_power": 1500 } ] }
   ],
@@ -105,6 +104,8 @@ Un seul document de configuration par installation.
   économie, l'équipement suivant est délesté, et elle est retentée toutes les 2 s.
 - Aucune source fraîche : aucune décision, `status.source_unavailable` à `true` — jamais « 0 VA ».
 
-Le Linky arrive par le plugin téléinfo (`plugins/Krissvia.Plugin.Teleinfo`). La pince Shelly n'a pas
-encore de plugin.
+Le Linky arrive par le plugin téléinfo (`plugins/Krissvia.Plugin.Teleinfo`), la pince Shelly par le plugin
+Shelly (`plugins/Krissvia.Plugin.Shelly`), qui publie la **puissance apparente** (`…_apparent_power`, en VA) :
+à prendre en `apparent`, sans majoration. Relevé du 15/10/2026 : 339 W pour 737 VA — la majoration de 10 % de la
+puissance active aurait donné la moitié de la réalité.
 
