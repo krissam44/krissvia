@@ -1,4 +1,5 @@
 using Krissvia.Climate.Thermostats;
+using Krissvia.Core.Scheduling;
 
 namespace Krissvia.Climate.Tests;
 

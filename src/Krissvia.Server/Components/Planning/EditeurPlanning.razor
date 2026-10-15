@@ -1,0 +1,140 @@
+@typeparam TValeur
+
+@* Éditeur de planning commun aux thermostats et aux équipements : il ne connaît que des valeurs, leurs libellés et
+   leurs couleurs. L'enregistrement appartient à la page qui l'héberge. *@
+
+<div class="apercu mb-1">
+    @foreach (var jour in Jours.Semaine)
+    {
+        <div class="ligne-apercu">
+            <span class="jour">@Abrege(jour)</span>
+            <div class="barre">
+                @foreach (var (debut, fin, valeur) in Apercu(jour))
+                {
+                    <div class="bloc" title="@($"{Libelle(valeur)} de {Heure(debut)} à {Heure(fin)}")"
+                         style="@($"left:{Pourcent(debut)};width:{Pourcent(fin - debut)};background:{Couleur(valeur)}")"></div>
+                }
+            </div>
+        </div>
+    }
+    <div class="ligne-apercu graduation">
+        <span class="jour"></span>
+        <div class="barre">
+            @for (var h = 0; h <= 24; h += 6)
+            {
+                <span style="left:@(h * 100 / 24)%">@h h</span>
+            }
+        </div>
+    </div>
+</div>
+<div class="d-flex flex-wrap gap-3 mb-4">
+    @foreach (var v in Valeurs)
+    {
+        <span class="legende"><i style="background:@Couleur(v)"></i>@Libelle(v)</span>
+    }
+</div>
+
+<MudSelect T="TValeur" Value="Planning.ParDefaut" ValueChanged="v => Planning.ParDefaut = v" Label="@LibelleParDefaut"
+           Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 280px" Class="mb-2"
+           HelperText="À toute heure qu'aucun créneau ne couvre">
+    @foreach (var v in Valeurs)
+    {
+        <MudSelectItem Value="v">@Libelle(v)</MudSelectItem>
+    }
+</MudSelect>
+
+@foreach (var jour in Jours.Semaine)
+{
+    var creneaux = Planning.Jours[jour];
+    <div class="jour-planning" @key="jour">
+        <div class="entete">
+            <span class="nom">@Phrases.Majuscule(Jours.Nom(jour))</span>
+            <MudIconButton Icon="@Icons.Material.Outlined.AddCircleOutline" Size="Size.Small" Color="Color.Primary"
+                           OnClick="() => Ajouter(jour)" aria-label="@($"Ajouter un créneau le {Jours.Nom(jour)}")" />
+            @if (creneaux.Count > 0)
+            {
+                @if (Jours.Index(jour) < 5)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => Copier(jour, Jours.Semaine[..5])">copier → lun-ven</MudButton>
+                }
+                else
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => Copier(jour, Jours.Semaine[5..])">copier → sam-dim</MudButton>
+                }
+                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => Copier(jour, Jours.Semaine)">copier → lun-dim</MudButton>
+            }
+        </div>
+
+        @if (creneaux.Count == 0)
+        {
+            <div class="vide">Aucun créneau → @Libelle(Planning.ParDefaut)</div>
+        }
+        else
+        {
+            <div class="cartes">
+                @foreach (var c in creneaux)
+                {
+                    var teinte = Couleur(c.Valeur);
+                    <div class="carte" style="@($"background:{teinte}1f;border-color:{teinte}66")" @key="c">
+                        <div class="heures">
+                            <MudSelect T="int" @bind-Value="c.HeureDebut" Dense="true" Margin="Margin.Dense" Class="champ" aria-label="Heure de début">
+                                @for (var h = 0; h < 24; h++) { var x = h; <MudSelectItem Value="x">@x.ToString("00")</MudSelectItem> }
+                            </MudSelect>
+                            <span>:</span>
+                            <MudSelect T="int" @bind-Value="c.MinuteDebut" Dense="true" Margin="Margin.Dense" Class="champ" aria-label="Minutes de début">
+                                @foreach (var m in Minutes) { <MudSelectItem Value="m">@m.ToString("00")</MudSelectItem> }
+                            </MudSelect>
+                            <span class="fleche">→</span>
+                            <MudSelect T="int" @bind-Value="c.HeureFin" Dense="true" Margin="Margin.Dense" Class="champ" aria-label="Heure de fin">
+                                @for (var h = 0; h < 24; h++) { var x = h; <MudSelectItem Value="x">@x.ToString("00")</MudSelectItem> }
+                            </MudSelect>
+                            <span>:</span>
+                            <MudSelect T="int" @bind-Value="c.MinuteFin" Dense="true" Margin="Margin.Dense" Class="champ" aria-label="Minutes de fin">
+                                @foreach (var m in Minutes) { <MudSelectItem Value="m">@m.ToString("00")</MudSelectItem> }
+                            </MudSelect>
+                            <MudSelect T="TValeur" @bind-Value="c.Valeur" Dense="true" Margin="Margin.Dense" Class="valeur" aria-label="Valeur du créneau">
+                                @foreach (var v in Valeurs)
+                                {
+                                    <MudSelectItem Value="v">@Libelle(v)</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                           OnClick="() => creneaux.Remove(c)" aria-label="Supprimer le créneau" />
+                        </div>
+                        @if (c.CrossesMidnight())
+                        {
+                            <div class="nuit">nuit : jusqu'au @Jours.Nom(Jours.Lendemain(jour)) matin</div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        @foreach (var alerte in Alertes(jour))
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">@alerte</MudAlert>
+        }
+    </div>
+}
+
+<style>
+    .apercu .ligne-apercu { display: flex; align-items: center; margin-bottom: 4px; }
+    .apercu .jour { width: 36px; font-size: .8rem; color: var(--mud-palette-text-secondary); }
+    .apercu .barre { position: relative; flex: 1; height: 18px; border-radius: 4px; overflow: hidden; background: var(--mud-palette-background-gray); }
+    .apercu .bloc { position: absolute; top: 0; bottom: 0; }
+    .apercu .graduation .barre { height: 14px; background: none; overflow: visible; }
+    .apercu .graduation span { position: absolute; transform: translateX(-50%); white-space: nowrap; font-size: .7rem; color: var(--mud-palette-text-secondary); }
+    .legende { font-size: .8rem; display: inline-flex; align-items: center; gap: 4px; }
+    .legende i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+    .jour-planning { padding: 10px 0; border-top: 1px solid var(--mud-palette-lines-default); }
+    .jour-planning .entete { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .jour-planning .nom { font-weight: 500; color: var(--mud-palette-text-secondary); min-width: 84px; }
+    .jour-planning .vide { font-size: .85rem; padding: 4px 0 0 8px; color: var(--mud-palette-text-secondary); }
+    .jour-planning .cartes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .jour-planning .carte { border: 1px solid; border-radius: 8px; padding: 2px 8px 4px; }
+    .jour-planning .heures { display: flex; align-items: center; gap: 4px; }
+    .jour-planning .champ { width: 52px; flex: none; }
+    .jour-planning .valeur { width: 130px; flex: none; }
+    .jour-planning .fleche { margin: 0 4px; }
+    .jour-planning .nuit { font-size: .75rem; color: var(--mud-palette-text-secondary); padding-left: 2px; }
+</style>

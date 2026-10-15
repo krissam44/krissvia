@@ -207,7 +207,12 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
    configuration dont les listes ne proposent que des entités du registre de la bonne famille. Les boutons passent
    par `ThermostatService`, comme l'API. Un changement de configuration réveille la boucle du moteur
    (`ThermostatService.Changed`, levé verrou rendu) : un mode choisi atteint le radiateur tout de suite au lieu
-   d'attendre jusqu'à 10 s. **Éditeur de planning** (`/thermostats/{id}/planning`) : créneaux par jour, mode
+   d'attendre jusqu'à 10 s. **Planning générique** (`Krissvia.Core.Scheduling`) : une seule règle de créneaux
+   (nuit qui finit le lendemain, chevauchements, validation) pour tous les plannings — DomoMud en avait deux copies,
+   qui ont divergé. L'éditeur (`EditeurPlanning<TValeur>`) ne connaît que des valeurs, libellés et couleurs ; la fiche
+   du thermostat, désormais en onglets (Général, Températures, Régulation, Planning), relit le thermostat au moment
+   d'enregistrer, pour ne pas écraser un mode choisi sur la carte entre-temps.
+   **Éditeur de planning** (onglet Planning, `/thermostats/{id}/planning`) : créneaux par jour, mode
    hors créneau, copie d'un jour vers la semaine, le week-end ou les jours ouvrés, et un aperçu de la semaine
    calculé en interrogeant le planning lui-même quart d'heure par quart d'heure — il montre ce que fera le moteur,
    créneaux de nuit et chevauchements compris. Un créneau de nuit (22:00 → 06:00) finit le LENDEMAIN matin
