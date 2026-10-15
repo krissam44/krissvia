@@ -1,0 +1,58 @@
+@page "/programmations"
+@implements IDisposable
+
+<PageTitle>Programmations · Krissvia</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+    <div>
+        <MudText Typo="Typo.h5">Programmations</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+            Allumer ou éteindre des équipements selon un planning. Elles n'agissent qu'aux changements de créneau : un geste à la main tient jusqu'au suivant.
+        </MudText>
+    </div>
+    <MudButton Href="/programmations/nouvelle" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">Nouvelle</MudButton>
+</MudStack>
+
+@foreach (var erreur in Service.LoadErrors)
+{
+    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">Programmation illisible, écartée : @erreur</MudAlert>
+}
+
+@if (Service.List().Count == 0)
+{
+    <MudAlert Severity="Severity.Info">Aucune programmation. Par exemple : une prise allumée tous les jours de 6 h à 8 h.</MudAlert>
+}
+
+<MudGrid>
+    @foreach (var p in Service.List())
+    {
+        var etat = Moteur.GetSnapshot(p.Id);
+        <MudItem xs="12" sm="6" lg="4" @key="p.Id">
+            <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.h6">@(p.Name is { Length: > 0 } n ? n : p.Id)</MudText>
+                    <MudIconButton Href="@($"/programmations/{p.Id}")" Icon="@Icons.Material.Filled.Settings" Size="Size.Small" aria-label="Modifier" />
+                </MudStack>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">@string.Join(", ", p.SwitchEntityIds.Select(NomEntite))</MudText>
+
+                @if (!p.Enabled)
+                {
+                    <MudChip T="string" Size="Size.Small" Class="mt-2">Désactivée</MudChip>
+                }
+                else if (etat is not null)
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-2">
+                        <MudChip T="string" Size="Size.Small" Color="@(etat.Desired ? Color.Success : Color.Default)">@(etat.Desired ? "Allumé" : "Éteint")</MudChip>
+                        <MudText Typo="Typo.body2">@ProchainChangement(etat)</MudText>
+                    </MudStack>
+                    @if (!etat.Applied)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Warning">Ordre non confirmé par l'équipement, renvoyé au prochain passage.</MudText>
+                    }
+                }
+
+                <MudSwitch T="bool" Value="p.Enabled" ValueChanged="actif => ActiverAsync(p, actif)" Color="Color.Primary" Label="Active" Class="mt-2" />
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>

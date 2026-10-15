@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Krissvia.Climate.DeviceSchedules;
 using Krissvia.Climate.LoadShedding;
 using Krissvia.Climate.Thermostats;
 
@@ -105,6 +106,45 @@ internal static class PublicApi
                 return Refus(ex.Message);
             }
         });
+    }
+
+    /// <summary>Programmations des équipements (<c>/api/schedules</c>) : configuration et état du moment.</summary>
+    public static void MapDeviceScheduleApi(this RouteGroupBuilder api)
+    {
+        var groupe = api.MapGroup("/schedules");
+
+        groupe.MapGet("/", (DeviceScheduleService service, DeviceScheduleEngine moteur) =>
+            Json(service.List().Select(p => new { settings = p, state = moteur.GetSnapshot(p.Id) })));
+
+        groupe.MapPut("/{id}", async (string id, HttpRequest requete, DeviceScheduleService service, CancellationToken ct) =>
+        {
+            DeviceSchedule? corps;
+            try
+            {
+                if (await JsonNode.ParseAsync(requete.Body, cancellationToken: ct) is not JsonObject objet) return Refus("objet JSON attendu");
+                objet["id"] = id;
+                corps = objet.Deserialize<DeviceSchedule>(ThermostatService.Json);
+            }
+            catch (JsonException ex)
+            {
+                return Refus($"JSON invalide : {ex.Message}");
+            }
+
+            if (corps is null) return Refus("corps vide");
+            try
+            {
+                return Json(await service.SaveAsync(corps, ct));
+            }
+            catch (DeviceScheduleValidationException ex)
+            {
+                return Refus(ex.Message);
+            }
+        });
+
+        groupe.MapDelete("/{id}", async (string id, DeviceScheduleService service, CancellationToken ct) =>
+            await service.DeleteAsync(id, ct)
+                ? Results.NoContent()
+                : Results.Json(new { error = $"programmation « {id} » inconnue" }, ThermostatService.Json, statusCode: StatusCodes.Status404NotFound));
     }
 
     private static IResult Json(object valeur) => Results.Json(valeur, ThermostatService.Json);
