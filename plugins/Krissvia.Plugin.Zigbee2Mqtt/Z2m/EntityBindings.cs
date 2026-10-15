@@ -32,6 +32,13 @@ internal abstract class EntityBinding(string uniqueId, string? nom)
     /// </summary>
     public virtual bool EstEvenement => false;
 
+    /// <summary>
+    /// Propriétés à demander par <c>/get</c> quand la valeur est inconnue. Un relais ne publie qu'au changement
+    /// d'état, et Zigbee2MQTT ne retient rien sur le broker : sans demande, le cœur ignorerait pendant des heures
+    /// si un radiateur est allumé.
+    /// </summary>
+    public virtual IReadOnlyList<string> ProprietesADemander => [];
+
     public virtual OrdreZ2m Commander(string commande, JsonElement? args) =>
         OrdreZ2m.Refus($"commande « {commande} » non prise en charge par cette entité");
 
@@ -95,9 +102,12 @@ internal sealed class EtatBinaireBinding(
 
 /// <summary>Relais : valeur booléenne, ordres marche / arrêt / bascule.</summary>
 internal sealed class InterrupteurBinding(
-    string uniqueId, string? nom, string propriete, JsonElement? valeurOn, JsonElement? valeurOff, JsonElement? valeurBascule)
+    string uniqueId, string? nom, string propriete, JsonElement? valeurOn, JsonElement? valeurOff, JsonElement? valeurBascule,
+    bool lisible = false)
     : EntityBinding(uniqueId, nom)
 {
+    public override IReadOnlyList<string> ProprietesADemander => lisible ? [propriete] : [];
+
     public override EntityDescriptor Descriptor => new()
     {
         UniqueId = UniqueId,
@@ -122,9 +132,12 @@ internal sealed class InterrupteurBinding(
 
 /// <summary>Lumière : valeur <c>{"on": bool, "brightness": 0..100}</c>. Zigbee2MQTT compte la luminosité de 0 à 254.</summary>
 internal sealed class LumiereBinding(
-    string uniqueId, string? nom, string proprieteEtat, JsonElement? valeurOn, string? proprieteLuminosite, double luminositeMax)
+    string uniqueId, string? nom, string proprieteEtat, JsonElement? valeurOn, string? proprieteLuminosite, double luminositeMax,
+    bool lisible = false)
     : EntityBinding(uniqueId, nom)
 {
+    public override IReadOnlyList<string> ProprietesADemander => lisible ? [proprieteEtat] : [];
+
     public override EntityDescriptor Descriptor => new()
     {
         UniqueId = UniqueId,

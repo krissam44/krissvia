@@ -44,6 +44,7 @@ internal sealed record Z2mExpose
 
     public bool Publiee => (Access & 1) != 0;
     public bool Modifiable => (Access & 2) != 0;
+    public bool Lisible => (Access & 4) != 0;
 }
 
 /// <summary>Lecture tolérante de <c>bridge/devices</c> : un champ inattendu ne doit pas faire perdre tout le réseau.</summary>
