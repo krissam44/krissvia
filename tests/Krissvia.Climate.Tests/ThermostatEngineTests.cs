@@ -217,6 +217,19 @@ public class ThermostatEngineTests
     }
 
     [Fact]
+    public async Task En_Off_une_consigne_ajustee_ne_chauffe_pas_et_n_est_pas_affichee()
+    {
+        var b = new Banc();
+        b.Mesurer(17);
+
+        var s = await b.DemarrerAsync(Banc.Salon(t => t with { ManualMode = ThermostatMode.Off, TargetOverride = 24 }));
+
+        Assert.Equal(ThermostatStatus.Off, s.Status);
+        Assert.Equal(7, s.Target);
+        Assert.Equal(0, b.Ordres(StandardCommands.TurnOn));
+    }
+
+    [Fact]
     public async Task L_inertie_coupe_au_dessus_du_seuil_haut_et_reprend_sous_le_seuil_bas()
     {
         var b = new Banc();

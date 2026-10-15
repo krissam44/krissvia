@@ -181,6 +181,20 @@ public class ThermostatServiceTests
     }
 
     [Fact]
+    public async Task Une_consigne_sur_un_thermostat_arrete_est_refusee()
+    {
+        var b = new Banc();
+        await b.Service.SaveAsync(Salon() with { ScheduleActive = false });
+        await b.Service.SetModeAsync("salon", ThermostatMode.Off);
+
+        var ex = await Assert.ThrowsAsync<ThermostatValidationException>(() => b.Service.SetTargetAsync("salon", 24));
+
+        Assert.Contains("mode off", ex.Message);
+        Assert.Null(b.Service.Get("salon")!.TargetOverride);
+        Assert.Null((await b.Service.SetTargetAsync("salon", null))!.TargetOverride);   // revenir au mode reste permis
+    }
+
+    [Fact]
     public async Task Un_thermostat_inconnu_renvoie_null()
     {
         var b = new Banc();

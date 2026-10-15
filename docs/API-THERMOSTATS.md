@@ -19,10 +19,14 @@ plutôt que de s'ouvrir à tout le réseau.
 | PUT | `/api/thermostats/{id}` | réglages (voir ci-dessous) | Crée ou remplace ; l'identifiant vient de l'URL |
 | DELETE | `/api/thermostats/{id}` | | Supprime ; ses coupures (fenêtre, sonde) sont levées |
 | POST | `/api/thermostats/{id}/mode` | `{"mode": "comfort"}` | Choisit un mode : **suspend le planning** et efface la consigne ajustée |
-| POST | `/api/thermostats/{id}/target` | `{"temperature": 19.5}` ou `null` | Ajuste la consigne (5 à 30 °C) ; `null` revient à celle du mode |
+| POST | `/api/thermostats/{id}/target` | `{"temperature": 19.5}` ou `null` | Ajuste la consigne (5 à 30 °C) ; `null` revient à celle du mode. Refusée en mode `off` (Off est ferme : choisir d'abord un mode) |
 | POST | `/api/thermostats/{id}/schedule` | `{"active": true}` | Active ou suspend le planning |
 
-Modes : `off`, `frost_protection`, `eco`, `comfort2`, `comfort1`, `comfort`.
+Modes : `off`, `frost_protection`, `eco`, `comfort2`, `comfort1`, `comfort`. Choisir un mode efface la consigne
+ajustée : pour chauffer à 24 °C, `mode` **puis** `target`.
+
+Dans `state`, `status` peut valoir `coasting` (inertie) : la pièce dépasse la consigne de plus de
+`coasting_high` (1 °C) et le moteur la laisse redescendre jusqu'à consigne + `coasting_low` avant de reprendre.
 Erreurs : **400** avec `{"error": "…"}` lisible tel quel, **404** pour un thermostat inconnu.
 
 ## Créer un thermostat

@@ -126,11 +126,19 @@ public sealed partial class ThermostatService(IConfigurationStore store, IEntity
     public Task<ThermostatSettings?> SetModeAsync(string id, ThermostatMode mode, CancellationToken ct = default) =>
         ModifierAsync(id, t => t with { ManualMode = mode, ScheduleActive = false, TargetOverride = null }, creer: false, ct);
 
-    /// <summary>Ajuste la consigne (null : revient à celle du mode). Null si inconnu.</summary>
+    /// <summary>
+    /// Ajuste la consigne (null : revient à celle du mode). Null si inconnu. Refusée sur un thermostat arrêté :
+    /// Off est ferme, une consigne acceptée sans effet laisserait croire qu'il va chauffer.
+    /// </summary>
     public Task<ThermostatSettings?> SetTargetAsync(string id, double? cible, CancellationToken ct = default)
     {
         VerifierConsigne(cible);
-        return ModifierAsync(id, t => t with { TargetOverride = cible is { } c ? Math.Round(c, 1) : null }, creer: false, ct);
+        return ModifierAsync(id, t =>
+        {
+            if (cible is not null && t.ManualMode == ThermostatMode.Off && !t.ScheduleActive)
+                throw new ThermostatValidationException("thermostat arrêté (mode off) : choisir d'abord un mode, puis ajuster la consigne.");
+            return t with { TargetOverride = cible is { } c ? Math.Round(c, 1) : null };
+        }, creer: false, ct);
     }
 
     /// <summary>Active ou suspend le planning ; la consigne ajustée est effacée. Null si inconnu.</summary>

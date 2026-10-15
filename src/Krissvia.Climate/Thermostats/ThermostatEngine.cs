@@ -162,7 +162,8 @@ public sealed class ThermostatEngine(
     {
         var maintenant = clock.GetUtcNow();
         var mode = t.ModeAt(clock.GetLocalNow().DateTime);
-        var cible = t.TargetOverride ?? t.TargetFor(mode);
+        // En Off, la consigne ajustée ne s'applique pas (Off est ferme) : on montre celle qui l'est réellement.
+        var cible = mode == ThermostatMode.Off ? t.TargetFor(mode) : t.TargetOverride ?? t.TargetFor(mode);
 
         var sonde = states.Get(t.TemperatureEntityId);
         double? interieur = sonde is not null && sonde.TryGetNumber(out var ti) ? ti : null;
