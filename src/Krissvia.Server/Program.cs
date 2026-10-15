@@ -1,5 +1,8 @@
 using System.Text.Json;
+using Krissvia.Climate;
+using Krissvia.Climate.Thermostats;
 using Krissvia.Contracts;
+using Krissvia.Core.Configuration;
 using Krissvia.Core.Commands;
 using Krissvia.Core.Events;
 using Krissvia.Core.Registry;
@@ -44,15 +47,27 @@ builder.Services.AddSingleton<CommandBus>();
 builder.Services.AddSingleton<ICommandBus>(sp => sp.GetRequiredService<CommandBus>());
 builder.Services.AddSingleton<IEntityCommander>(sp => sp.GetRequiredService<CommandBus>());
 
-// Schéma, puis restauration des états : les hosted services démarrent avant que Kestrel accepte un plugin.
+// Thermostats : configuration en base, moteur, et l'inhibiteur que partageront délestage et protections.
+builder.Services.AddSingleton<IConfigurationStore, SqliteConfigurationStore>();
+builder.Services.AddSingleton(sp => new ThermostatInhibitor(sp.GetRequiredService<ICommandBus>()));
+builder.Services.AddSingleton<ThermostatEngine>();
+builder.Services.AddSingleton<ThermostatService>();
+
+// Ordre de démarrage : schéma et états d'abord (les hosted services démarrent avant que Kestrel accepte un
+// plugin), puis la configuration des thermostats, qui lit la base.
 builder.Services.AddHostedService<StateStoreLifetime>();
 builder.Services.AddHostedService<CommandJournal>();
+builder.Services.AddHostedService<ThermostatLoop>();
 
 var app = builder.Build();
 
 app.UseWebSockets();
 
 app.MapGet("/", () => "Krissvia");
+
+// API publique (premier morceau du contrat 3) : protégée par la clé d'API.
+var api = app.MapGroup("/api").AddEndpointFilter<ApiKeyFilter>();
+api.MapThermostatApi();
 
 // Point d'entrée des plugins : voir docs/TRANSPORT.md.
 app.Map("/plugins", async (HttpContext contexte, PluginHub hub) =>

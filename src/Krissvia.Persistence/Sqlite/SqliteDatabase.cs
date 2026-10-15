@@ -9,7 +9,7 @@ namespace Krissvia.Persistence.Sqlite;
 /// </summary>
 public sealed class SqliteDatabase(string connectionString)
 {
-    private const int VersionSchema = 2;
+    private const int VersionSchema = 3;
 
     public async Task<SqliteConnection> OpenAsync(CancellationToken ct = default)
     {
@@ -32,6 +32,7 @@ public sealed class SqliteDatabase(string connectionString)
         // Une étape par version : une base existante n'applique que ce qui lui manque.
         if (version < 1) await connexion.ExecuteAsync(SchemaV1, transaction: transaction);
         if (version < 2) await connexion.ExecuteAsync(SchemaV2, transaction: transaction);
+        if (version < 3) await connexion.ExecuteAsync(SchemaV3, transaction: transaction);
         await connexion.ExecuteAsync($"PRAGMA user_version = {VersionSchema};", transaction: transaction);
         await transaction.CommitAsync(ct);
     }
@@ -80,6 +81,16 @@ public sealed class SqliteDatabase(string connectionString)
             entity_id         TEXT PRIMARY KEY,
             value_json        TEXT NOT NULL,
             measured_at_ticks INTEGER NOT NULL
+        );
+        """;
+
+    /// <summary>v3 : documents de configuration des modules (thermostats…), un JSON par élément.</summary>
+    private const string SchemaV3 = """
+        CREATE TABLE IF NOT EXISTS config_documents (
+            collection TEXT NOT NULL,
+            id         TEXT NOT NULL,
+            json       TEXT NOT NULL,
+            PRIMARY KEY (collection, id)
         );
         """;
 }
