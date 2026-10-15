@@ -282,4 +282,59 @@ public class ThermostatServiceTests
 
         Assert.NotNull(vu);
     }
+
+    private static WeeklySchedule SemaineDeTravail() => new()
+    {
+        Days = new Dictionary<DayOfWeek, IReadOnlyList<ScheduleSlot>>
+        {
+            [DayOfWeek.Tuesday] = [new ScheduleSlot(TimeSpan.FromHours(17), TimeSpan.FromHours(23), ThermostatMode.Comfort1)],
+        },
+        DefaultMode = ThermostatMode.FrostProtection,
+    };
+
+    [Fact]
+    public async Task Remplacer_le_planning_ne_touche_ni_au_mode_ni_a_la_consigne_ajustee()
+    {
+        var b = new Banc();
+        await b.Service.SaveAsync(Salon() with { ScheduleActive = false, ManualMode = ThermostatMode.Comfort, TargetOverride = 21.5 });
+
+        var modifie = await b.Service.SetScheduleAsync("salon", SemaineDeTravail());
+
+        Assert.NotNull(modifie);
+        Assert.False(modifie.ScheduleActive);
+        Assert.Equal(ThermostatMode.Comfort, modifie.ManualMode);
+        Assert.Equal(21.5, modifie.TargetOverride);
+        Assert.Equal(ThermostatMode.FrostProtection, modifie.Schedule.DefaultMode);
+    }
+
+    [Fact]
+    public async Task Le_planning_remplace_survit_au_redemarrage()
+    {
+        var b = new Banc();
+        await b.Service.SaveAsync(Salon());
+        await b.Service.SetScheduleAsync("salon", SemaineDeTravail());
+
+        var apres = b.Redemarrer();
+        await apres.LoadAsync();
+
+        var planning = Assert.Single(apres.List()).Schedule;
+        Assert.Equal(ThermostatMode.Comfort1, Assert.Single(planning.Days[DayOfWeek.Tuesday]).Mode);
+        Assert.False(planning.Days.ContainsKey(DayOfWeek.Monday));
+    }
+
+    [Fact]
+    public async Task Un_planning_invalide_est_refuse_et_rien_ne_change()
+    {
+        var b = new Banc();
+        await b.Service.SaveAsync(Salon());
+        var vide = new WeeklySchedule
+        {
+            Days = new Dictionary<DayOfWeek, IReadOnlyList<ScheduleSlot>> { [DayOfWeek.Monday] = [new ScheduleSlot(TimeSpan.FromHours(7), TimeSpan.FromHours(7), ThermostatMode.Eco)] },
+        };
+
+        await Assert.ThrowsAsync<ThermostatValidationException>(() => b.Service.SetScheduleAsync("salon", vide));
+
+        Assert.Equal(TimeSpan.FromHours(8.5), b.Service.Get("salon")!.Schedule.Days[DayOfWeek.Monday][0].End);
+        Assert.Null(await b.Service.SetScheduleAsync("inconnu", SemaineDeTravail()));
+    }
 }
