@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Krissvia.Climate;
+using Krissvia.Core.Accounts;
 using Krissvia.Climate.LoadShedding;
 using Krissvia.Climate.Thermostats;
 using Krissvia.Contracts;
@@ -12,6 +13,8 @@ using Krissvia.Persistence.Sqlite;
 using Krissvia.PluginHost;
 using Krissvia.PluginHost.Services;
 using Krissvia.Server.Components;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using MudBlazor.Services;
 using Krissvia.Server;
 
@@ -73,6 +76,29 @@ builder.Services.AddSingleton<IPluginSettingsProvider>(sp => sp.GetRequiredServi
 builder.Services.AddSingleton<PluginSupervisor>();
 builder.Services.AddHostedService<PluginSupervisorLifetime>();
 
+// Comptes de l'interface : le premier se crée avec le jeton d'installation écrit dans le journal.
+builder.Services.AddSingleton<AccountService>();
+builder.Services.AddHostedService<AccountsLifetime>();
+
+// Clés de chiffrement des cookies, conservées pour qu'un redémarrage ne déconnecte personne.
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Path.GetDirectoryName(cheminBase)!, "keys")))
+    .SetApplicationName("Krissvia");
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/connexion";
+        options.ReturnUrlParameter = "retour";
+        options.Cookie.Name = "krissvia";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.ExpireTimeSpan = TimeSpan.FromDays(14);
+        options.SlidingExpiration = true;
+    });
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
+
 // Interface d'administration (Blazor + MudBlazor).
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddMudServices();   // après les thermostats, que sa configuration référence
@@ -81,20 +107,15 @@ var app = builder.Build();
 
 app.UseWebSockets();
 
-// L'interface d'administration lance des programmes sur le serveur : tant qu'il n'y a pas de connexion
-// utilisateur, elle n'existe qu'en développement.
-if (app.Environment.IsDevelopment())
-{
-    app.UseAntiforgery();
-    app.MapStaticAssets();
-    app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
-}
-else
-{
-    app.MapGet("/", () => "Krissvia");
-}
+// L'interface d'administration lance des programmes sur le serveur : tout y passe par une connexion.
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseAntiforgery();
+app.MapStaticAssets();
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode().RequireAuthorization();
+app.MapAuthentification();
 
-// API publique (premier morceau du contrat 3) : protégée par la clé d'API.
+// API publique (premier morceau du contrat 3) : clé d'API, ou session de l'interface.
 var api = app.MapGroup("/api").AddEndpointFilter<ApiKeyFilter>();
 api.MapThermostatApi();
 api.MapLoadSheddingApi();
@@ -115,7 +136,8 @@ app.Map("/plugins", async (HttpContext contexte, PluginHub hub) =>
 if (app.Environment.IsDevelopment())
 {
     // Diagnostic provisoire, en attendant l'API publique (contrat 3) : ce que le cœur sait en ce moment.
-    app.MapGet("/debug/states", async (IEntityRegistry registre, EntityStateStore etats, PluginHub hub, EventBus bus) => new
+    var debug = app.MapGroup("/debug").AddEndpointFilter<ApiKeyFilter>();
+    debug.MapGet("/states", async (IEntityRegistry registre, EntityStateStore etats, PluginHub hub, EventBus bus) => new
     {
         plugins = hub.ConnectedPlugins,
         bus = bus.Diagnostics().Select(d => new { d.Subscriber, d.Pending }),
@@ -129,7 +151,7 @@ if (app.Environment.IsDevelopment())
         }),
     });
 
-    app.MapGet("/debug/commands", (ICommandBus commandes) => commandes.RecentCommands.Select(c => new
+    debug.MapGet("/commands", (ICommandBus commandes) => commandes.RecentCommands.Select(c => new
     {
         c.Command.EntityId,
         c.Command.Command,
@@ -143,7 +165,7 @@ if (app.Environment.IsDevelopment())
     }));
 
     // Envoi manuel d'un ordre, vérifié : {"entity_id": "switch.…", "command": "turn_off", "args": {…}}.
-    app.MapPost("/debug/commands", async (OrdreManuel ordre, ICommandBus commandes, CancellationToken ct) =>
+    debug.MapPost("/commands", async (OrdreManuel ordre, ICommandBus commandes, CancellationToken ct) =>
     {
         var resultat = await commandes.SendVerifiedAsync(
             new EntityCommand(ordre.EntityId, ordre.Command) { Args = ordre.Args, Origin = "debug" }, ct: ct);

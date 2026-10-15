@@ -10,6 +10,10 @@ Toute l'API (`/api/…`) exige l'en-tête `X-Api-Key`, comparé en temps constan
 Sans clé configurée, l'API n'est ouverte qu'en développement ; en production elle répond **503**
 plutôt que de s'ouvrir à tout le réseau.
 
+Une session ouverte dans l'interface d'administration (cookie `krissvia`) vaut la clé : les écrans appellent
+l'API sans la connaître. Le cookie est `SameSite=Lax`, donc un autre site ne peut pas le faire partir avec un
+`POST`.
+
 ## Routes
 
 | Méthode | Route | Corps | Effet |

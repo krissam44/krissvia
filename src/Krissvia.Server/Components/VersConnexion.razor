@@ -1,0 +1,8 @@
+@inject NavigationManager Navigation
+
+@* Session expirée pendant que la page était ouverte : retour à la connexion, avec l'adresse pour y revenir. *@
+
+@code {
+    protected override void OnInitialized() =>
+        Navigation.NavigateTo($"/connexion?retour={Uri.EscapeDataString("/" + Navigation.ToBaseRelativePath(Navigation.Uri))}", forceLoad: true);
+}

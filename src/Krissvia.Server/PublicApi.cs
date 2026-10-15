@@ -138,7 +138,8 @@ internal static class PublicApi
 
 /// <summary>
 /// Clé d'API (en-tête <c>X-Api-Key</c>, comparée en temps constant) sur tout <c>/api</c> : sans elle, n'importe
-/// quel appareil du réseau pourrait allumer les radiateurs. Sans clé configurée (<c>Api:Key</c>), l'API n'est
+/// quel appareil du réseau pourrait allumer les radiateurs. Une session ouverte dans l'interface d'administration
+/// vaut la clé. Sans clé configurée (<c>Api:Key</c>), l'API n'est
 /// ouverte qu'en développement ; en production elle répond 503 au lieu de s'ouvrir à tous.
 /// </summary>
 internal sealed class ApiKeyFilter(IConfiguration configuration, IHostEnvironment environment) : IEndpointFilter
@@ -147,6 +148,9 @@ internal sealed class ApiKeyFilter(IConfiguration configuration, IHostEnvironmen
 
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
+        // Session de l'interface d'administration : le cookie suffit (SameSite=Lax écarte les envois d'un autre site).
+        if (context.HttpContext.User.Identity?.IsAuthenticated == true) return await next(context);
+
         var attendue = configuration["Api:Key"];
         if (string.IsNullOrEmpty(attendue))
         {

@@ -10,6 +10,16 @@
         <MudText Typo="Typo.h6">Krissvia</MudText>
         <MudSpacer />
         <MudButton Href="/parametres/services" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Extension">Services</MudButton>
+        <MudButton Href="/parametres/comptes" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.ManageAccounts">Comptes</MudButton>
+        <AuthorizeView>
+            <Authorized>
+                <form method="post" action="/deconnexion" class="ml-2">
+                    <AntiforgeryToken />
+                    <MudButton ButtonType="ButtonType.Submit" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Logout"
+                               title="Se déconnecter">@context.User.Identity?.Name</MudButton>
+                </form>
+            </Authorized>
+        </AuthorizeView>
     </MudAppBar>
     <MudMainContent Class="pt-16 px-4 pb-8">
         <MudContainer MaxWidth="MaxWidth.Large">

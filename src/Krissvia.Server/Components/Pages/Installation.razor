@@ -1,0 +1,43 @@
+@page "/installation"
+@layout Layout.AccueilLayout
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@inject Krissvia.Core.Accounts.AccountService Comptes
+@inject NavigationManager Navigation
+
+<PageTitle>Premier compte · Krissvia</PageTitle>
+
+<h1>Premier compte</h1>
+<p class="aide">Aucun compte n'existe encore. Le jeton d'installation est écrit dans le journal du serveur
+    (« Aucun compte. Créez le premier… ») : il prouve que c'est bien vous qui installez.</p>
+
+@if (!string.IsNullOrEmpty(Erreur))
+{
+    <div class="erreur">@(char.ToUpperInvariant(Erreur[0]) + Erreur[1..])</div>
+}
+
+<form method="post" action="/installation">
+    <AntiforgeryToken />
+    <label for="jeton">Jeton d'installation</label>
+    <input id="jeton" name="jeton" value="@Jeton" required autocomplete="off" />
+    <label for="utilisateur">Identifiant</label>
+    <input id="utilisateur" name="utilisateur" value="@Utilisateur" autocomplete="username" required pattern="[a-z0-9._\-]{2,32}"
+           title="2 à 32 caractères : minuscules, chiffres, « . », « _ » ou « - »" />
+    <label for="motdepasse">Mot de passe (@Krissvia.Core.Accounts.AccountService.MinPasswordLength caractères au moins)</label>
+    <input id="motdepasse" name="motdepasse" type="password" autocomplete="new-password" required
+           minlength="@Krissvia.Core.Accounts.AccountService.MinPasswordLength" />
+    <label for="confirmation">Confirmation</label>
+    <input id="confirmation" name="confirmation" type="password" autocomplete="new-password" required />
+    <button type="submit">Créer le compte</button>
+</form>
+
+@code {
+    [SupplyParameterFromQuery] public string? Jeton { get; set; }
+    [SupplyParameterFromQuery] public string? Utilisateur { get; set; }
+    [SupplyParameterFromQuery] public string? Erreur { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (Comptes.HasAccounts) Navigation.NavigateTo("/connexion");
+    }
+}
