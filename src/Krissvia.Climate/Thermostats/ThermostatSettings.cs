@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Krissvia.Core.Scheduling;
 
 namespace Krissvia.Climate.Thermostats;
 
@@ -14,145 +15,36 @@ public enum ThermostatMode
 }
 
 /// <summary>
-/// Créneau d'un jour. <see cref="End"/> à 00:00 veut dire « fin de journée » (minuit du soir). Une fin antérieure
-/// au début (22:00 → 06:00) fait un créneau de NUIT : il commence le soir de son jour et finit le LENDEMAIN matin.
+/// Créneau d'un planning de thermostat : un mode de <see cref="Start"/> à <see cref="End"/>. Les règles (fin à minuit,
+/// nuit qui finit le lendemain, chevauchements) sont celles de tous les plannings : <see cref="WeeklySlots"/>.
 /// </summary>
 /// <remarks>
-/// DomoMud comprenait l'inverse (C11) : le soir ET le matin du même jour, si bien qu'une nuit du lundi au mardi
-/// demandait deux créneaux, lundi 22:00 → 00:00 et mardi 00:00 → 06:00. Changé le 15/10/2026 à la demande de
-/// l'utilisateur ; l'import des plannings DomoMud devra convertir.
+/// DomoMud comprenait un créneau de nuit comme le soir ET le matin du même jour (C11). Changé le 15/10/2026 à la
+/// demande de l'utilisateur ; l'import des plannings DomoMud devra convertir.
 /// </remarks>
-public sealed record ScheduleSlot(TimeSpan Start, TimeSpan End, ThermostatMode Mode)
+public sealed record ScheduleSlot(TimeSpan Start, TimeSpan End, ThermostatMode Mode) : ITimeSlot
 {
-    private static readonly TimeSpan Jour = TimeSpan.FromHours(24);
-
-    private TimeSpan FinEffective => End == TimeSpan.Zero ? Jour : End;
-
     /// <summary>Finit le lendemain matin. Déduit, donc jamais écrit en base ni dans l'API.</summary>
     [JsonIgnore]
-    public bool CrossesMidnight => FinEffective < Start;
-
-    /// <summary>Durée réelle, nuit comprise.</summary>
-    [JsonIgnore]
-    public TimeSpan Duration => CrossesMidnight ? Jour - Start + End : FinEffective - Start;
-
-    /// <summary>Actif à cette heure de SON jour (la partie du soir pour un créneau de nuit).</summary>
-    internal bool IsActiveOnItsDay(TimeSpan heure) => heure >= Start && heure < (CrossesMidnight ? Jour : FinEffective);
-
-    /// <summary>Actif à cette heure du LENDEMAIN (le matin d'un créneau de nuit).</summary>
-    internal bool IsActiveNextMorning(TimeSpan heure) => CrossesMidnight && heure < End;
+    public bool CrossesMidnight => this.CrossesMidnight();
 }
 
-/// <summary>Deux créneaux qui se recouvrent : celui qui l'emporte (commencé le premier) et l'autre.</summary>
-public sealed record ScheduleOverlap(DayOfWeek WinnerDay, ScheduleSlot Winner, DayOfWeek LoserDay, ScheduleSlot Loser);
-
-/// <summary>Planning hebdomadaire : créneaux par jour, mode par défaut hors créneau.</summary>
+/// <summary>Planning hebdomadaire d'un thermostat : créneaux par jour, mode par défaut hors créneau.</summary>
 public sealed record WeeklySchedule
 {
-    private static readonly TimeSpan Semaine = TimeSpan.FromDays(7);
-
     public IReadOnlyDictionary<DayOfWeek, IReadOnlyList<ScheduleSlot>> Days { get; init; } =
         new Dictionary<DayOfWeek, IReadOnlyList<ScheduleSlot>>();
 
     public ThermostatMode DefaultMode { get; init; } = ThermostatMode.Eco;
 
-    /// <summary>
-    /// Mode à l'heure LOCALE donnée. Deux créneaux qui se chevauchent : celui qui a commencé le premier gagne (C12,
-    /// la saisie avertit de ces chevauchements) — donc la fin d'une nuit de la veille avant les créneaux du jour.
-    /// </summary>
-    public ThermostatMode ModeAt(DateTime heureLocale)
-    {
-        var heure = heureLocale.TimeOfDay;
-        if (Days.TryGetValue(Veille(heureLocale.DayOfWeek), out var hier))
-            foreach (var creneau in hier.OrderBy(c => c.Start))
-                if (creneau.IsActiveNextMorning(heure)) return creneau.Mode;
+    /// <summary>Mode à l'heure LOCALE donnée (C12 : en chevauchement, le premier commencé gagne).</summary>
+    public ThermostatMode ModeAt(DateTime heureLocale) => WeeklySlots.Active(Days, heureLocale)?.Mode ?? DefaultMode;
 
-        if (Days.TryGetValue(heureLocale.DayOfWeek, out var creneaux))
-            foreach (var creneau in creneaux.OrderBy(c => c.Start))
-                if (creneau.IsActiveOnItsDay(heure)) return creneau.Mode;
-
-        return DefaultMode;
-    }
-
-    /// <summary>
-    /// Les chevauchements que perd un créneau de ce jour, y compris contre la nuit de la veille. Pas une erreur (le
-    /// premier commencé gagne, C12), mais presque toujours une faute de saisie : l'écran les signale.
-    /// </summary>
-    public IReadOnlyList<ScheduleOverlap> Overlaps(DayOfWeek jour)
-    {
-        // Chaque créneau posé sur la semaine, en temps écoulé depuis lundi 00:00 ; la nuit de dimanche déborde sur
-        // le lundi suivant, d'où la comparaison aussi à une semaine d'écart.
-        var poses = Jours.Semaine
-            .SelectMany(j => Days.TryGetValue(j, out var cs) ? cs.Select(c => (Jour: j, Creneau: c)) : [])
-            .Select(x => (x.Jour, x.Creneau, Debut: TimeSpan.FromDays(Jours.Index(x.Jour)) + x.Creneau.Start))
-            .ToList();
-
-        var resultat = new List<ScheduleOverlap>();
-        for (var i = 0; i < poses.Count; i++)
-        {
-            for (var j = i + 1; j < poses.Count; j++)
-            {
-                var a = poses[i];
-                var b = poses[j];
-                foreach (var decalage in new[] { TimeSpan.Zero, Semaine, -Semaine })
-                {
-                    var debutB = b.Debut + decalage;
-                    if (!(a.Debut < debutB + b.Creneau.Duration && debutB < a.Debut + a.Creneau.Duration)) continue;
-
-                    // Même départ : l'ordre de ModeAt (tri stable par heure de début) départage, soit l'ordre de saisie.
-                    var (gagnant, perdant) = a.Debut <= debutB ? (a, b) : (b, a);
-                    if (perdant.Jour == jour) resultat.Add(new ScheduleOverlap(gagnant.Jour, gagnant.Creneau, perdant.Jour, perdant.Creneau));
-                    break;
-                }
-            }
-        }
-
-        return resultat;
-    }
-
-    private static DayOfWeek Veille(DayOfWeek jour) => (DayOfWeek)(((int)jour + 6) % 7);
+    /// <summary>Les chevauchements que perd un créneau de ce jour, nuit de la veille comprise.</summary>
+    public IReadOnlyList<SlotOverlap<ScheduleSlot>> Overlaps(DayOfWeek jour) => WeeklySlots.Overlaps(Days, jour);
 
     /// <summary>Lève une exception lisible pour un créneau hors de la journée ou de durée nulle.</summary>
-    public void Validate()
-    {
-        foreach (var (jour, creneaux) in Days)
-        {
-            foreach (var c in creneaux)
-            {
-                if (c.Start < TimeSpan.Zero || c.Start >= TimeSpan.FromHours(24) || c.End < TimeSpan.Zero || c.End >= TimeSpan.FromHours(24))
-                    throw new ArgumentException($"planning, {Jours.Nom(jour)} : heures entre 00:00 et 23:59.");
-                if (c.Start == c.End && c.End != TimeSpan.Zero)
-                    throw new ArgumentException($"planning, {Jours.Nom(jour)} : un créneau commence et finit à {c.Start:hh\\:mm}, il ne durerait rien.");
-            }
-        }
-    }
-}
-
-/// <summary>Noms des jours en français, pour les messages : <see cref="DayOfWeek"/> ne parle qu'anglais.</summary>
-public static class Jours
-{
-    /// <summary>Du lundi au dimanche : l'ordre d'affichage.</summary>
-    public static readonly DayOfWeek[] Semaine =
-    [
-        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
-        DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday,
-    ];
-
-    /// <summary>Rang dans la semaine, lundi = 0.</summary>
-    public static int Index(DayOfWeek jour) => ((int)jour + 6) % 7;
-
-    public static DayOfWeek Lendemain(DayOfWeek jour) => (DayOfWeek)(((int)jour + 1) % 7);
-
-    public static string Nom(DayOfWeek jour) => jour switch
-    {
-        DayOfWeek.Monday => "lundi",
-        DayOfWeek.Tuesday => "mardi",
-        DayOfWeek.Wednesday => "mercredi",
-        DayOfWeek.Thursday => "jeudi",
-        DayOfWeek.Friday => "vendredi",
-        DayOfWeek.Saturday => "samedi",
-        _ => "dimanche",
-    };
+    public void Validate() => WeeklySlots.Validate(Days);
 }
 
 /// <summary>Paramètres de la régulation TPI (valeurs par défaut de DomoMud).</summary>

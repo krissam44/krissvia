@@ -1,5 +1,6 @@
 using Krissvia.Contracts;
 using Krissvia.Core.Registry;
+using Krissvia.Server.Components.Planning;
 
 namespace Krissvia.Server.Components.Pages;
 
@@ -22,6 +23,8 @@ public partial class ThermostatConfiguration
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     private Modele? _m;
+    private PlanningSaisi<ThermostatMode>? _planning;
+    private int _onglet;
     private ThermostatSettings? _existant;
     private bool _introuvable;
     private bool _idSaisi;
@@ -42,15 +45,20 @@ public partial class ThermostatConfiguration
         _interrupteurs = actives.Where(e => e.Kind == EntityKind.Switch).ToList();
         _ouvertures = actives.Where(e => e.Kind == EntityKind.BinarySensor).ToList();
 
+        // Le lien « planning » de la carte ouvre directement l'onglet Planning.
+        _onglet = Navigation.Uri.TrimEnd('/').EndsWith("/planning", StringComparison.Ordinal) ? 3 : 0;
+
         if (Creation)
         {
             _m = new Modele();
+            _planning = new PlanningSaisi<ThermostatMode> { ParDefaut = ThermostatMode.Eco };
             return;
         }
 
         _existant = Service.Get(Id!);
         _introuvable = _existant is null;
         _m = _existant is null ? null : Modele.Depuis(_existant);
+        _planning = _existant is null ? null : PlanningSaisi<ThermostatMode>.Depuis(_existant.Schedule.Days, _existant.Schedule.DefaultMode, c => c.Mode);
     }
 
     /// <summary>
@@ -93,7 +101,15 @@ public partial class ThermostatConfiguration
 
         try
         {
-            var enregistre = await Service.SaveAsync(_m!.Vers(_existant));
+            // Relu au moment d'enregistrer, pas à l'ouverture : un mode ou une consigne choisis sur la carte pendant
+            // que cette page était ouverte ne doivent pas être écrasés par ceux d'il y a dix minutes.
+            var actuel = Creation ? null : Service.Get(Id!) ?? _existant;
+            var planning = new WeeklySchedule
+            {
+                Days = _planning!.Vers((debut, fin, mode) => new ScheduleSlot(debut, fin, mode)),
+                DefaultMode = _planning.ParDefaut,
+            };
+            var enregistre = await Service.SaveAsync(_m!.Vers(actuel) with { Schedule = planning });
             Snackbar.Add($"Thermostat « {(enregistre.Name is { Length: > 0 } n ? n : enregistre.Id)} » enregistré.", Severity.Success);
             Navigation.NavigateTo("/thermostats");
         }
@@ -102,6 +118,17 @@ public partial class ThermostatConfiguration
             _erreur = Phrases.Majuscule(ex.Message);
         }
     }
+
+    private double Temperature(ThermostatMode mode) => mode switch
+    {
+        ThermostatMode.Comfort => _m!.Confort,
+        ThermostatMode.Comfort1 => _m!.Confort - 1,
+        ThermostatMode.Comfort2 => _m!.Confort - 2,
+        ThermostatMode.Eco => _m!.Eco,
+        _ => _m!.HorsGel,
+    };
+
+    private static string Degres(double t) => t.ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("fr-FR")) + " °C";
 
     private async Task SupprimerAsync()
     {
