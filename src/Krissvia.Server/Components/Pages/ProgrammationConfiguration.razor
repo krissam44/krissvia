@@ -1,0 +1,63 @@
+@page "/programmations/nouvelle"
+@page "/programmations/{Id}"
+
+<PageTitle>@Titre · Krissvia</PageTitle>
+
+<MudButton Href="/programmations" StartIcon="@Icons.Material.Filled.ArrowBack" Variant="Variant.Text" Class="mb-2">Programmations</MudButton>
+
+@if (_introuvable)
+{
+    <MudAlert Severity="Severity.Info">Aucune programmation « @Id ».</MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.h5" Class="mb-4">@Titre</MudText>
+
+    @if (_erreur is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_erreur</MudAlert>
+    }
+
+    <MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" Value="_nom" ValueChanged="NomChange" Label="Nom" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              HelperText="Par exemple « Chauffe-eau heures creuses »" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" Value="_id" ValueChanged="IdChange" Label="Identifiant" Disabled="@(!Creation)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              HelperText="@(Creation ? "Déduit du nom ; il ne change plus ensuite : l'API l'utilise." : "Utilisé par l'API, ne change pas.")" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-SelectedValues="_interrupteurs" MultiSelection="true" Label="Équipements pilotés"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Les radiateurs d'un thermostat n'y figurent pas : leur thermostat les pilote déjà"
+                           MultiSelectionTextFunc="@(v => string.Join(", ", v.Select(NomEntite)))">
+                    @foreach (var e in Proposes())
+                    {
+                        <MudSelectItem Value="e.EntityId">@e.DisplayName</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6" Class="d-flex align-center">
+                <MudSwitch T="bool" @bind-Value="_active" Color="Color.Primary" Label="Active" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
+        <MudText Typo="Typo.h6" Class="mb-3">Planning</MudText>
+        <EditeurPlanning TValeur="bool" Planning="_planning" Valeurs="Valeurs" Libelle="Libelle" Couleur="Couleur"
+                         NouvelleValeur="true" LibelleParDefaut="Hors créneau" />
+    </MudPaper>
+
+    <MudStack Row="true" Justify="Justify.SpaceBetween">
+        <MudStack Row="true" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="EnregistrerAsync">Enregistrer</MudButton>
+            <MudButton Variant="Variant.Text" Href="/programmations">Annuler</MudButton>
+        </MudStack>
+        @if (!Creation)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="SupprimerAsync">Supprimer</MudButton>
+        }
+    </MudStack>
+}

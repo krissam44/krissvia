@@ -115,3 +115,32 @@ Shelly (`plugins/Krissvia.Plugin.Shelly`), qui publie la **puissance apparente**
 à prendre en `apparent`, sans majoration. Relevé du 15/10/2026 : 339 W pour 737 VA — la majoration de 10 % de la
 puissance active aurait donné la moitié de la réalité.
 
+## Programmations des équipements
+
+Allumer ou éteindre des switches (prises, chauffe-eau…) selon un planning hebdomadaire, avec les mêmes règles de
+créneaux que les thermostats (un créneau de nuit finit le lendemain matin).
+
+| Méthode | Route | Effet |
+|---|---|---|
+| GET | `/api/schedules` | Liste : `settings` + `state` (`desired`, `applied`, `next_change`) |
+| PUT | `/api/schedules/{id}` | Crée ou remplace ; l'identifiant vient de l'URL |
+| DELETE | `/api/schedules/{id}` | Supprime ; les équipements restent dans l'état où ils sont |
+
+```json
+{
+  "name": "Chauffe-eau heures creuses",
+  "enabled": true,
+  "switch_entity_ids": ["switch.cumulus"],
+  "default_on": false,
+  "days": { "monday": [ { "start": "22:00:00", "end": "06:00:00", "on": true } ] }
+}
+```
+
+- La programmation n'agit qu'aux **changements** de créneau : un allumage à la main tient jusqu'au suivant. Au
+  démarrage, et après toute modification, l'état attendu est appliqué une fois. Chaque ordre est vérifié et renvoyé
+  tant qu'il n'est pas confirmé.
+- Un switch n'a qu'un pilote : refusé s'il est le radiateur d'un thermostat ou s'il appartient déjà à une autre
+  programmation. (Limite connue : l'enregistrement d'un thermostat ne vérifie pas encore l'inverse.)
+- Avec le délestage : une programmation ne rallume jamais un équipement délesté, et le rétablissement remet l'état
+  qu'elle veut à ce moment-là — un chauffe-eau dont le créneau s'est terminé pendant le délestage reste éteint.
+

@@ -25,7 +25,8 @@ namespace Krissvia.Climate.LoadShedding;
 /// <see cref="ConfigureAsync"/> peut venir de l'interface. Les deux se sérialisent sur un verrou qui n'est
 /// jamais imbriqué ni tenu pendant la levée d'un événement.
 /// </remarks>
-public sealed class LoadShedder(ICommandBus commander, ThermostatInhibitor inhibitor, TimeProvider clock)
+public sealed class LoadShedder(
+    ICommandBus commander, ThermostatInhibitor inhibitor, TimeProvider clock, DesiredSwitchStates? desired = null)
 {
     private readonly SemaphoreSlim _verrou = new(1, 1);
     private readonly Dictionary<string, DeviceState> _etats = new(StringComparer.Ordinal);
@@ -37,6 +38,14 @@ public sealed class LoadShedder(ICommandBus commander, ThermostatInhibitor inhib
 
     /// <summary>Équipements délestés en ce moment (instantané, lisible sans verrou).</summary>
     public IReadOnlyList<string> CurrentlyShed { get; private set; } = [];
+
+    private IReadOnlySet<string> _switchesCoupes = new HashSet<string>();
+
+    /// <summary>
+    /// Ce switch est coupé par un délestage en cours (coupure directe, hors thermostat). Une programmation ne doit pas
+    /// le rallumer : c'est le rétablissement qui le fera, dans l'état qu'elle voudra à ce moment-là.
+    /// </summary>
+    public bool IsSwitchShed(string entityId) => _switchesCoupes.Contains(entityId);
 
     private sealed class DeviceState(DateTimeOffset delesteLe, bool confirme)
     {
@@ -78,7 +87,7 @@ public sealed class LoadShedder(ICommandBus commander, ThermostatInhibitor inhib
 
             _reglages = settings;
             _equipements = devices.ToList();
-            CurrentlyShed = _etats.Keys.Order(StringComparer.Ordinal).ToList();
+            PublierInstantane();
         }
         finally
         {
@@ -254,7 +263,10 @@ public sealed class LoadShedder(ICommandBus commander, ThermostatInhibitor inhib
             return true;
         }
 
-        return await EnvoyerATousAsync(equipement.SwitchEntityIds, StandardCommands.TurnOn, CommandPriority.Normal, ct);
+        // L'état voulu par une programmation l'emporte : on ne rallume pas ce qu'elle a éteint pendant le délestage.
+        // Un switch qu'elle veut éteint est déjà coupé, il n'y a rien à envoyer.
+        var aRallumer = equipement.SwitchEntityIds.Where(s => desired?.Get(s) != false).ToList();
+        return aRallumer.Count == 0 || await EnvoyerATousAsync(aRallumer, StandardCommands.TurnOn, CommandPriority.Normal, ct);
     }
 
     // ── Utilitaires ──────────────────────────────────────────────────────────
@@ -286,10 +298,19 @@ public sealed class LoadShedder(ICommandBus commander, ThermostatInhibitor inhib
         return resultats.All(ok => ok);
     }
 
+    private void PublierInstantane()
+    {
+        CurrentlyShed = _etats.Keys.Order(StringComparer.Ordinal).ToList();
+        _switchesCoupes = _equipements
+            .Where(e => _etats.ContainsKey(e.Id) && e.ThermostatId is null)
+            .SelectMany(e => e.SwitchEntityIds)
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
     private LoadSheddingTick Terminer(List<string> delestes, List<string> retablis, bool sourceIndisponible)
     {
         var nombre = _etats.Count;
-        CurrentlyShed = _etats.Keys.Order(StringComparer.Ordinal).ToList();
+        PublierInstantane();
         var transition = _nbDelestesPrecedent == 0 && nombre > 0 ? ShedTransition.Started
             : _nbDelestesPrecedent > 0 && nombre == 0 ? ShedTransition.Ended
             : ShedTransition.None;

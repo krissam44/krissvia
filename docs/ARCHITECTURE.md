@@ -221,7 +221,11 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
    (`SetScheduleAsync`, `PUT /api/thermostats/{id}/schedule`). **Écran Délestage** (`/delestage`) : état en direct (jauge
    avec les deux seuils, source utilisée, absence de mesure signalée — jamais lue comme 0 VA —, équipements
    délestés et coupures non confirmées) et toute la configuration (abonnement, seuils, sources ordonnées, somme
-   d'équipements, équipements délestables ; lier un thermostat reprend ses radiateurs). Reste à faire : les entités.
+   d'équipements, équipements délestables ; lier un thermostat reprend ses radiateurs). **Programmations des équipements** (`/programmations`,
+   `Krissvia.Climate.DeviceSchedules`) : planning allumé / éteint avec le même éditeur, moteur qui n'agit qu'aux
+   changements de créneau (état attendu appliqué au démarrage et après modification, ordres vérifiés et repris), un
+   seul pilote par switch. Le délesteur rétablit désormais l'état VOULU (`DesiredSwitchStates`) et non « allumé ».
+   Reste à faire : les entités (avec la puissance déclarée et la somme automatique).
 6. Un plugin Python d'exemple.
 7. Import des données DomoMud, une seule fois, pour les deux installations (6 kVA et 12 kVA).
 
