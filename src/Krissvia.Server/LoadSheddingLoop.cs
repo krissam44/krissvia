@@ -15,6 +15,7 @@ internal sealed partial class LoadSheddingLoop(
     private static readonly TimeSpan Periode = TimeSpan.FromSeconds(2);
     private bool _sourceIndisponible;
     private string _nonConfirmes = "";
+    private string? _source;
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -49,7 +50,9 @@ internal sealed partial class LoadSheddingLoop(
 
     private async Task TickAsync(CancellationToken ct)
     {
-        var lecture = service.ReadPower();
+        var lecture = service.ReadPower(clock.GetUtcNow());
+        if (service.ActiveSource is { } source && source != _source) SourceUtilisee(logger, source);
+        _source = service.ActiveSource ?? _source;
         var tick = await shedder.TickAsync(lecture, ct);
         service.RecordTick(lecture, tick, clock.GetUtcNow());
 
@@ -94,6 +97,9 @@ internal sealed partial class LoadSheddingLoop(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Délestage : mesure de puissance absente ou périmée, aucune décision possible.")]
     private static partial void SourcePerdue(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Délestage : mesure de puissance prise sur « {Source} ».")]
+    private static partial void SourceUtilisee(ILogger logger, string source);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Délestage : mesure de puissance retrouvée.")]
     private static partial void SourceRetrouvee(ILogger logger);

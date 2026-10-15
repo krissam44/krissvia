@@ -31,7 +31,8 @@ public sealed class LoadSheddingService(
 
     private readonly SemaphoreSlim _verrou = new(1, 1);
     private LoadSheddingConfiguration _configuration = new();
-    private IPowerSource? _source;
+    private PowerSourceChain? _sources;
+    private string? _sourceUtilisee;
     private volatile LoadSheddingStatus? _etat;
 
     public LoadSheddingConfiguration Configuration => _configuration;
@@ -84,16 +85,26 @@ public sealed class LoadSheddingService(
         }
     }
 
-    /// <summary>La mesure à donner au délesteur, ramenée à l'unité des seuils ; null si aucune n'est exploitable.</summary>
-    public PowerReading? ReadPower() =>
-        PowerReadings.ToReading(_source?.Read(), Math.Max(1.0, _configuration.ActiveToApparentFactor));
+    /// <summary>
+    /// La mesure à donner au délesteur : celle de la première source fraîche, ramenée à l'unité des seuils ; null si
+    /// aucune n'est exploitable.
+    /// </summary>
+    public PowerReading? ReadPower(DateTimeOffset maintenant)
+    {
+        var (lecture, source) = _sources?.Read(maintenant) ?? (null, null);
+        _sourceUtilisee = source;
+        return lecture;
+    }
+
+    /// <summary>Nom de la source utilisée à la dernière lecture.</summary>
+    public string? ActiveSource => _sourceUtilisee;
 
     /// <summary>Retient ce que le dernier tick a lu et décidé, pour l'API.</summary>
     public void RecordTick(PowerReading? lecture, LoadSheddingTick tick, DateTimeOffset maintenant)
     {
         var reglages = _configuration.ToSettings();
         _etat = new LoadSheddingStatus(
-            _configuration.Enabled, lecture?.Value, lecture?.MeasuredAt, tick.SourceUnavailable,
+            _configuration.Enabled, lecture?.Value, lecture?.MeasuredAt, _sourceUtilisee, tick.SourceUnavailable,
             reglages.AlertThreshold, reglages.RestoreThreshold, shedder.CurrentlyShed, tick.Unconfirmed, maintenant);
     }
 
@@ -103,7 +114,7 @@ public sealed class LoadSheddingService(
         {
             if (_etat is { } etat) return etat;
             var reglages = _configuration.ToSettings();
-            return new LoadSheddingStatus(_configuration.Enabled, null, null, false,
+            return new LoadSheddingStatus(_configuration.Enabled, null, null, null, false,
                 reglages.AlertThreshold, reglages.RestoreThreshold, shedder.CurrentlyShed, [], null);
         }
     }
@@ -113,10 +124,15 @@ public sealed class LoadSheddingService(
     private async Task AppliquerAsync(LoadSheddingConfiguration c, CancellationToken ct)
     {
         await shedder.ConfigureAsync(c.ToSettings(), c.Devices.Select(d => d.ToDevice()).ToList(), ct);
-        _source = c.SourceKind == PowerSourceKind.Entity
-            ? c.PowerEntityId is { } id ? new EntityPowerSource(states, id, c.PowerQuality) : null
-            : new EquipmentSumPowerSource(states,
-                c.MeteredEquipment.Select(e => new MeteredEquipment(e.SwitchEntityId, e.PowerEntityId, e.NominalPower)).ToList());
+        _sources = new PowerSourceChain(c.Sources.Select((s, i) =>
+        {
+            IPowerSource source = s.Kind == PowerSourceKind.Entity
+                ? new EntityPowerSource(states, s.PowerEntityId ?? "", s.PowerQuality)
+                : new EquipmentSumPowerSource(states,
+                    s.MeteredEquipment.Select(e => new MeteredEquipment(e.SwitchEntityId, e.PowerEntityId, e.NominalPower)).ToList());
+            return (s.Name is { Length: > 0 } nom ? nom : $"source {i + 1}", source, Math.Max(1.0, s.ActiveToApparentFactor));
+        }).ToList(), TimeSpan.FromSeconds(c.MaxReadingAgeSeconds));
+        _sourceUtilisee = null;
         _configuration = c;
         _etat = null;
     }
@@ -132,25 +148,33 @@ public sealed class LoadSheddingService(
             throw new LoadSheddingValidationException(ex.Message);
         }
 
-        if (c.ActiveToApparentFactor < 1)
-            throw new LoadSheddingValidationException("la majoration d'une mesure en W doit être au moins 1.");
         if (c.MaxReadingAgeSeconds <= 0 || c.SettleDelaySeconds < 0 || c.CutVerificationTimeoutSeconds <= 0)
             throw new LoadSheddingValidationException("délais invalides.");
+        if (c.Enabled && c.Sources.Count == 0)
+            throw new LoadSheddingValidationException("aucune source de puissance : le délesteur ne pourrait rien décider.");
 
-        if (c.SourceKind == PowerSourceKind.Entity)
+        for (var i = 0; i < c.Sources.Count; i++)
         {
-            if (string.IsNullOrWhiteSpace(c.PowerEntityId))
-                throw new LoadSheddingValidationException("source : l'entité de puissance est obligatoire.");
-            await VerifierAsync(c.PowerEntityId, EntityKind.Sensor, "source de puissance", ct);
-        }
-        else
-        {
-            if (c.MeteredEquipment.Count == 0)
-                throw new LoadSheddingValidationException("source : aucun équipement à additionner.");
-            foreach (var e in c.MeteredEquipment)
+            var s = c.Sources[i];
+            var role = $"source {(s.Name is { Length: > 0 } nom ? $"« {nom} »" : (i + 1).ToString())}";
+            if (s.ActiveToApparentFactor < 1)
+                throw new LoadSheddingValidationException($"{role} : la majoration d'une mesure en W doit être au moins 1.");
+
+            if (s.Kind == PowerSourceKind.Entity)
             {
-                await VerifierAsync(e.SwitchEntityId, EntityKind.Switch, "équipement mesuré", ct);
-                if (e.PowerEntityId is { } p) await VerifierAsync(p, EntityKind.Sensor, "mesure d'équipement", ct);
+                if (string.IsNullOrWhiteSpace(s.PowerEntityId))
+                    throw new LoadSheddingValidationException($"{role} : l'entité de puissance est obligatoire.");
+                await VerifierAsync(s.PowerEntityId, EntityKind.Sensor, role, ct);
+            }
+            else
+            {
+                if (s.MeteredEquipment.Count == 0)
+                    throw new LoadSheddingValidationException($"{role} : aucun équipement à additionner.");
+                foreach (var e in s.MeteredEquipment)
+                {
+                    await VerifierAsync(e.SwitchEntityId, EntityKind.Switch, role, ct);
+                    if (e.PowerEntityId is { } p) await VerifierAsync(p, EntityKind.Sensor, role, ct);
+                }
             }
         }
 

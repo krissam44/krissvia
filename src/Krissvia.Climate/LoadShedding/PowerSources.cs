@@ -91,6 +91,24 @@ public sealed class EquipmentSumPowerSource(IEntityStateReader reader, IReadOnly
         courant is { } c && c < candidat ? c : candidat;
 }
 
+/// <summary>
+/// Sources par ordre de préférence : la première qui a une mesure fraîche l'emporte, ramenée à l'unité des seuils
+/// avec sa propre majoration. Aucune fraîche : pas de mesure (D6), jamais zéro.
+/// </summary>
+public sealed class PowerSourceChain(IReadOnlyList<(string Name, IPowerSource Source, double Factor)> sources, TimeSpan maxAge)
+{
+    public (PowerReading? Reading, string? Source) Read(DateTimeOffset now)
+    {
+        foreach (var (nom, source, facteur) in sources)
+        {
+            if (source.Read() is not { } mesure || now - mesure.MeasuredAt > maxAge) continue;
+            return (PowerReadings.ToReading(mesure, facteur), nom);
+        }
+
+        return (null, null);
+    }
+}
+
 /// <summary>Conversion d'une mesure de puissance en entrée du délesteur.</summary>
 public static class PowerReadings
 {

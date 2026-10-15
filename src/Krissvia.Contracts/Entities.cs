@@ -84,6 +84,9 @@ public static class DeviceClasses
     public const string Temperature = "temperature";
     public const string Humidity = "humidity";
     public const string Power = "power";
+
+    /// <summary>Puissance apparente, en VA : ce que comparent l'abonnement et le disjoncteur (trame Linky SINSTS).</summary>
+    public const string ApparentPower = "apparent_power";
     public const string Energy = "energy";
     public const string Voltage = "voltage";
     public const string Current = "current";
@@ -92,6 +95,9 @@ public static class DeviceClasses
     public const string Pressure = "pressure";
     public const string Illuminance = "illuminance";
     public const string CarbonDioxide = "carbon_dioxide";
+
+    /// <summary>sensor dont la valeur est un libellé (tarif en cours…), pas un nombre.</summary>
+    public const string Enum = "enum";
 
     /// <summary>binary_sensor : true = OUVERT (le plugin inverse les conventions contraires).</summary>
     public const string Opening = "opening";
@@ -118,6 +124,7 @@ public static class Units
     public const string Celsius = "°C";
     public const string Percent = "%";
     public const string Watt = "W";
+    public const string VoltAmpere = "VA";
     public const string KilowattHour = "kWh";
     public const string Volt = "V";
     public const string Ampere = "A";
