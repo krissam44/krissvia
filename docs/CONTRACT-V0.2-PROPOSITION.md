@@ -46,7 +46,10 @@
 
 ## 5. Points ouverts
 
-- Transport retenu (WebSocket + JSON, ou gRPC) et délais du heartbeat.
+- ~~Transport retenu et délais du heartbeat~~ : **tranché le 15/10/2026**, WebSocket + JSON, ping 15 s,
+  mort à 45 s — voir `TRANSPORT.md`. Implémentés au passage (contrat `0.2`) : `welcome` / `rejected`,
+  `configure_result`, `availability` par entité, messages de type inconnu ignorés. Écart avec §1 : un
+  second `hello` du même plugin **remplace** la session au lieu d'être refusé (raison dans `TRANSPORT.md`).
 - Plugin à deux sens pour openHASP : entités d'un côté, écran piloté de l'autre. Entité d'affichage
   ou service sortant ?
 - Auto-extinction côté appareil (`lease`) pour les radiateurs et chauffe-eau, via `args`.

@@ -30,7 +30,7 @@ fonctionne dans DomoMud (moteurs de chauffage, délestage, alarme, présence) et
 
 | # | Contrat | Statut |
 |---|---|---|
-| 1 | Intégration plugin ↔ cœur (messages JSON) | v0.1 écrit, v0.2 proposé : `CONTRACT-V0.2-PROPOSITION.md` |
+| 1 | Intégration plugin ↔ cœur (messages JSON sur WebSocket) | v0.2 en cours : `CONTRACT-V0.2-PROPOSITION.md`, transport dans `TRANSPORT.md` |
 | 2 | Services sortants (notifications, publication vers Home Assistant…) : capacités appelées par le cœur | à écrire |
 | 3 | API publique cœur ↔ frontend (REST + abonnement WebSocket ; clé en en-tête, comparaison en temps constant) | à écrire |
 | 4 | Manifeste de widget : types d'entités et de plugins que le widget sait afficher | à écrire |
@@ -163,7 +163,7 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
 
 ## 11. Feuille de route
 
-1. Contrat v0.2, `PluginHost` et transport (WebSocket).
+1. ~~Contrat v0.2, `PluginHost` et transport (WebSocket)~~ — fait le 15/10/2026 (`TRANSPORT.md`).
 2. Plugin Zigbee2MQTT interne, avec un simulateur pour les tests.
 3. Cœur : magasin d'états, bus d'événements, bus de commandes.
 4. Port des moteurs, chacun précédé de ses tests de caractérisation : Climate, Délestage, Présence,

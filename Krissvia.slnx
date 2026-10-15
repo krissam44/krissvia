@@ -23,9 +23,11 @@
     <Project Path="tests/Krissvia.Contracts.Tests/Krissvia.Contracts.Tests.csproj" />
     <Project Path="tests/Krissvia.Core.Tests/Krissvia.Core.Tests.csproj" />
     <Project Path="tests/Krissvia.Persistence.Tests/Krissvia.Persistence.Tests.csproj" />
+    <Project Path="tests/Krissvia.PluginHost.Tests/Krissvia.PluginHost.Tests.csproj" />
   </Folder>
   <Folder Name="/docs/">
     <File Path="docs/CONTRACT-V0.md" />
     <File Path="docs/REGISTRE-ENTITES.md" />
+    <File Path="docs/TRANSPORT.md" />
   </Folder>
 </Solution>
