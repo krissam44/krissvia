@@ -19,4 +19,9 @@
     <ProjectReference Include="..\..\src\Krissvia.Climate\Krissvia.Climate.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Le même dépôt en mémoire que Core.Tests : le moteur des thermostats interroge le vrai registre. -->
+    <Compile Include="..\Krissvia.Core.Tests\InMemoryEntityRepository.cs" Link="InMemoryEntityRepository.cs" />
+  </ItemGroup>
+
 </Project>

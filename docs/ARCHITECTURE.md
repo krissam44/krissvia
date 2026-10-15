@@ -180,7 +180,8 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
    passer les coupures du délesteur et des inhibitions par `SendVerifiedAsync` (§7, règles 2 et 3) — fait
    le 15/10/2026 : une coupure ne compte (économie, inhibition soldée) qu'une fois confirmée par l'état,
    délai `CutVerificationTimeout` (5 s) ; le délesteur coupe par vagues parallèles.
-4. Port des moteurs, chacun précédé de ses tests de caractérisation : Climate, Délestage, Présence,
+4. Port des moteurs, chacun précédé de ses tests de caractérisation : Climate (régulation des thermostats
+   faite le 15/10/2026, voir TESTS-CARACTERISATION.md pour ce qui reste), Délestage, Présence,
    Alarme, Automatismes.
 5. API publique et premier frontend avec les widgets de base.
 6. Un plugin Python d'exemple.

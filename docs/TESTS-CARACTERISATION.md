@@ -30,18 +30,23 @@
 
 | # | Comportement | Décision |
 |---|---|---|
-| C1 | Un thermostat sans état dans le moteur lors d'un délestage : erreur journalisée, aucune coupure | corriger : inhibition prise sur l'objet, pas sur une copie |
-| C2 | Failsafe sonde : sonde sans donnée depuis `failsafe_minutes` ⇒ coupure inconditionnelle | conserver |
-| C3 | Fenêtre ouverte : coupure après `delai_ouverture`, reprise après `delai_fermeture` | conserver |
-| C4 | ✱ Mode Off et coasting ne coupent que si le moteur croit que le radiateur chauffe | corriger : couper sans condition |
-| C5 | ✱ Les drapeaux « coupure envoyée » sont posés même si l'ordre échoue | corriger : seulement après `accepted`, retenter sinon |
-| C6 | ✱ Dictionnaire d'états modifié par la configuration pendant que d'autres services le lisent | corriger : structure concurrente |
-| C7 | Après reprise d'un délestage, l'intégrale du TPI n'est pas remise à zéro | conserver |
+| C1 | Un thermostat sans état dans le moteur lors d'un délestage : erreur journalisée, aucune coupure | corrigé (15/10/2026) : le délestage passe par l'inhibiteur, indépendant de l'état du moteur |
+| C2 | Failsafe sonde : sonde sans donnée depuis `failsafe_minutes` ⇒ coupure inconditionnelle | conservé ; écart voulu : une sonde **indisponible** (plugin mort) coupe tout de suite (principe 3). Tests `Une_sonde_*` |
+| C3 | Fenêtre ouverte : coupure après `delai_ouverture`, reprise après `delai_fermeture` | conservé ; la coupure est une inhibition vérifiée (§7). Test `Une_fenetre_ouverte_*` |
+| C4 | ✱ Mode Off et coasting ne coupent que si le moteur croit que le radiateur chauffe | corrigé : l'entrée en Off ou en inertie renvoie l'arrêt sans condition, une fois par épisode |
+| C5 | ✱ Les drapeaux « coupure envoyée » sont posés même si l'ordre échoue | corrigé : le moteur ne retient que le dernier ordre **accepté** et renvoie sinon |
+| C6 | ✱ Dictionnaire d'états modifié par la configuration pendant que d'autres services le lisent | corrigé : état interne sous verrou, instantanés immuables publiés |
+| C7 | Après reprise d'un délestage, l'intégrale du TPI n'est pas remise à zéro | conservé. Test `Sous_delestage_*` |
 | C8 | Une période d'absence programmée s'efface après le retour ; une présence détectée l'annule seulement si le départ a été constaté | conserver |
 | C9 | Hiérarchie : forçage manuel > période programmée > détection | conserver |
 | C10 | Auto-TPI : pas de correction avant 6 cycles, cycles saturés ignorés, bornes Ki ∈ [0 ; 0,10], Kp ∈ [0,2 ; 1,5] | conserver |
-| C11 | Les créneaux de planning qui passent minuit (fin < début) sont actifs de début à minuit puis de minuit à fin | conserver |
-| C12 | Chevauchement de créneaux : le plus matinal gagne, avertissement à la saisie | conserver |
+| C11 | Les créneaux de planning qui passent minuit (fin < début) sont actifs de début à minuit puis de minuit à fin **du même jour** | conservé. Tests `PlanningThermostatTests` |
+| C12 | Chevauchement de créneaux : le plus matinal gagne, avertissement à la saisie | conservé (l'avertissement viendra avec l'écran de saisie) |
+
+Port du moteur des thermostats (`Krissvia.Climate.Thermostats`, 15/10/2026) : régulation TPI, inertie, délais
+minimaux, cycle figé, Off, failsafe, fenêtre, inhibitions, radiateur inconnu. **Pas encore portés** : C8-C10
+(absence programmée, hiérarchie de présence, auto-TPI), le préchauffage anticipé, la prévision météo,
+l'apprentissage de la pente, l'historique, et la persistance de la configuration.
 
 ## Alarme
 
