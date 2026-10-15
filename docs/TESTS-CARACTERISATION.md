@@ -40,8 +40,8 @@
 | C8 | Une période d'absence programmée s'efface après le retour ; une présence détectée l'annule seulement si le départ a été constaté | conserver |
 | C9 | Hiérarchie : forçage manuel > période programmée > détection | conserver |
 | C10 | Auto-TPI : pas de correction avant 6 cycles, cycles saturés ignorés, bornes Ki ∈ [0 ; 0,10], Kp ∈ [0,2 ; 1,5] | conserver |
-| C11 | Les créneaux de planning qui passent minuit (fin < début) sont actifs de début à minuit puis de minuit à fin **du même jour** | conservé. Tests `PlanningThermostatTests` |
-| C12 | Chevauchement de créneaux : le plus matinal gagne, avertissement à la saisie | conservé (l'avertissement viendra avec l'écran de saisie) |
+| C11 | Les créneaux de planning qui passent minuit (fin < début) sont actifs de début à minuit puis de minuit à fin **du même jour** | **changé le 15/10/2026** à la demande de l'utilisateur : un créneau de nuit finit **le lendemain matin** (lundi 22:00 → 06:00 couvre la nuit du lundi au mardi ; celui du dimanche finit le lundi). En chevauchement, la fin de la nuit l'emporte sur les créneaux du matin (C12 : le premier commencé). **Import DomoMud** : un créneau de nuit DomoMud du jour J devient deux créneaux, J début → 00:00 et J 00:00 → fin. Tests `PlanningThermostatTests` |
+| C12 | Chevauchement de créneaux : le plus matinal gagne, avertissement à la saisie | conservé : le premier commencé gagne, nuit de la veille comprise ; l'éditeur de planning avertit, y compris d'un jour sur l'autre |
 
 Port du moteur des thermostats (`Krissvia.Climate.Thermostats`, 15/10/2026) : régulation TPI, inertie, délais
 minimaux, cycle figé, Off, failsafe, fenêtre, inhibitions, radiateur inconnu. **Pas encore portés** : C8-C10
