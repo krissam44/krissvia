@@ -76,9 +76,13 @@ Un seul document de configuration par installation.
   "subscription_kva": 6,
   "alert_percent": 80,
   "restore_percent": 70,
-  "source_kind": "entity",
-  "power_entity_id": "sensor.linky_power",
-  "power_quality": "apparent",
+  "sources": [
+    { "name": "Linky", "power_entity_id": "sensor.linky_apparent_power", "power_quality": "apparent" },
+    { "name": "Pince", "power_entity_id": "sensor.pince_power", "power_quality": "active",
+      "active_to_apparent_factor": 1.10 },
+    { "name": "Somme", "kind": "equipment_sum",
+      "metered_equipment": [ { "switch_entity_id": "switch.radiateur_chambre_rdc", "nominal_power": 1500 } ] }
+  ],
   "devices": [
     { "id": "cumulus", "name": "Chauffe-eau", "priority": 1, "nominal_power": 2000,
       "restore_delay_seconds": 120, "switch_entity_ids": ["switch.cumulus"] },
@@ -89,16 +93,18 @@ Un seul document de configuration par installation.
 ```
 
 - Seuils déduits de l'abonnement : 6 kVA à 80 / 70 % donnent 4 800 / 4 200 VA.
-- Source : `entity` (Linky en VA, `power_quality: "apparent"` ; pince en W, `"active"`, majorée de
+- **Sources par ordre de préférence** : chaque tick prend la première dont la mesure a moins de 10 s
+  (`max_reading_age_seconds`) ; `status.active_source` dit laquelle, et le journal note chaque bascule. Une
+  source unique qui se tait laisserait le délesteur sans décision : la protection disparaîtrait en silence.
+- Une source est `entity` (Linky en VA, `power_quality: "apparent"` ; pince en W, `"active"`, majorée de
   `active_to_apparent_factor`, 1,10 par défaut) ou `equipment_sum` (`metered_equipment` : switch, mesure
   facultative, puissance nominale).
 - Priorité 1 = délesté en premier. Un équipement lié à un thermostat (`thermostat_id`) est coupé par
   inhibition : consigne et mode intacts, reprise avec la consigne du moment.
 - Toute coupure est vérifiée (état publié après l'ordre, 5 s) ; non confirmée, elle ne compte pas comme
   économie, l'équipement suivant est délesté, et elle est retentée toutes les 2 s.
-- Mesure absente ou de plus de 10 s : aucune décision, `status.source_unavailable` à `true`.
+- Aucune source fraîche : aucune décision, `status.source_unavailable` à `true` — jamais « 0 VA ».
 
-**À savoir (15/10/2026)** : aucune entité de puissance générale n'existe encore côté Krissvia — le Linky arrive
-dans DomoMud par une trame MQTT qui n'a pas de plugin Krissvia. En attendant, seule la source
-`equipment_sum` (puissances nominales des radiateurs) est utilisable.
+Le Linky arrive par le plugin téléinfo (`plugins/Krissvia.Plugin.Teleinfo`). La pince Shelly n'a pas
+encore de plugin.
 

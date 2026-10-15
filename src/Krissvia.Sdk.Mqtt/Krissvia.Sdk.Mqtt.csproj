@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Lien MQTT des plugins C# qui lisent un broker (Zigbee2MQTT, téléinfo…). À part du SDK de base pour que
+       les plugins sans MQTT n'embarquent pas MQTTnet. -->
+  <ItemGroup>
+    <PackageReference Include="MQTTnet" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

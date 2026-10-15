@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using MQTTnet;
 using MQTTnet.Protocol;
 
-namespace Krissvia.Plugin.Zigbee2Mqtt.Mqtt;
+namespace Krissvia.Sdk.Mqtt;
 
 public sealed class MqttOptions
 {
@@ -12,11 +12,13 @@ public sealed class MqttOptions
     public int Port { get; set; } = 1883;
     public string? Username { get; set; }
     public string? Password { get; set; }
-    public string BaseTopic { get; set; } = "zigbee2mqtt";
+
+    /// <summary>Préfixe de l'identifiant client, pour reconnaître le plugin dans les journaux du broker.</summary>
+    public string ClientIdPrefix { get; set; } = "krissvia";
 }
 
-/// <summary>Connexion MQTTnet avec reconnexion. N'utilise pas de session persistante : bridge/devices est retenu.</summary>
-internal sealed partial class MqttNetLink(MqttOptions options, TimeProvider clock, ILogger<MqttNetLink> logger) : IMqttLink
+/// <summary>Connexion MQTTnet avec reconnexion. Pas de session persistante : à chaque connexion, on relit les messages retenus.</summary>
+public sealed partial class MqttNetLink(MqttOptions options, TimeProvider clock, ILogger<MqttNetLink> logger) : IMqttLink
 {
     private static readonly TimeSpan[] Attentes =
         [TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30)];
@@ -54,7 +56,7 @@ internal sealed partial class MqttNetLink(MqttOptions options, TimeProvider cloc
             {
                 var connexion = new MqttClientOptionsBuilder()
                     .WithTcpServer(options.Host, options.Port)
-                    .WithClientId($"krissvia-z2m-{Guid.NewGuid():N}"[..23])
+                    .WithClientId($"{options.ClientIdPrefix}-{Guid.NewGuid():N}"[..23])
                     .WithCleanSession()
                     .WithKeepAlivePeriod(TimeSpan.FromSeconds(30));
                 if (!string.IsNullOrEmpty(options.Username)) connexion.WithCredentials(options.Username, options.Password);

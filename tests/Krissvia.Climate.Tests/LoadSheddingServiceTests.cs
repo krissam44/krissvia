@@ -79,11 +79,22 @@ public class LoadSheddingServiceTests
         public LoadSheddingService Nouveau() => new(Magasin, Registre, Etats, Thermostats, Delesteur);
     }
 
+    private static PowerSourceConfiguration Linky_() => new() { Name = "Linky", PowerEntityId = Linky };
+
+    private static PowerSourceConfiguration Pince_() =>
+        new() { Name = "Pince", PowerEntityId = Pince, PowerQuality = PowerQuality.Active, ActiveToApparentFactor = 1.10 };
+
+    private static PowerSourceConfiguration Somme_() => new()
+    {
+        Name = "Somme", Kind = PowerSourceKind.EquipmentSum,
+        MeteredEquipment = [new MeteredEquipmentConfiguration { SwitchEntityId = Radiateur, NominalPower = 1500 }],
+    };
+
     private static LoadSheddingConfiguration Config() => new()
     {
         Enabled = true,
         SubscriptionKva = 6,
-        PowerEntityId = Linky,
+        Sources = [Linky_()],
         Devices =
         [
             new SheddableDeviceConfiguration { Id = "cumulus", Name = "Chauffe-eau", Priority = 1, NominalPower = 2000, SwitchEntityIds = [Cumulus] },
@@ -97,8 +108,8 @@ public class LoadSheddingServiceTests
         await b.Service.SaveAsync(Config());
         b.Etats.Set(Linky, 5200.0, T0);
 
-        var tick = await b.Delesteur.TickAsync(b.Service.ReadPower());
-        b.Service.RecordTick(b.Service.ReadPower(), tick, T0);
+        var tick = await b.Delesteur.TickAsync(b.Service.ReadPower(T0));
+        b.Service.RecordTick(b.Service.ReadPower(T0), tick, T0);
 
         Assert.Equal(["cumulus"], tick.Shed);
         Assert.Equal(["cumulus"], b.Service.Status.ShedDevices);
@@ -110,25 +121,73 @@ public class LoadSheddingServiceTests
     public async Task Une_pince_en_watts_est_majoree_avant_comparaison()
     {
         var b = new Banc();
-        await b.Service.SaveAsync(Config() with { PowerEntityId = Pince, PowerQuality = PowerQuality.Active, ActiveToApparentFactor = 1.10 });
+        await b.Service.SaveAsync(Config() with { Sources = [Pince_()] });
         b.Etats.Set(Pince, 4500.0, T0);
 
-        Assert.Equal(4950, b.Service.ReadPower()!.Value.Value, 6);
+        Assert.Equal(4950, b.Service.ReadPower(T0)!.Value.Value, 6);
     }
 
     [Fact]
     public async Task La_somme_des_equipements_peut_servir_de_source()
     {
         var b = new Banc();
-        await b.Service.SaveAsync(Config() with
-        {
-            SourceKind = PowerSourceKind.EquipmentSum,
-            PowerEntityId = null,
-            MeteredEquipment = [new MeteredEquipmentConfiguration { SwitchEntityId = Radiateur, NominalPower = 1500 }],
-        });
+        await b.Service.SaveAsync(Config() with { Sources = [Somme_()] });
         b.Etats.Set(Radiateur, true, T0);
 
-        Assert.Equal(1500, b.Service.ReadPower()!.Value.Value);
+        Assert.Equal(1500, b.Service.ReadPower(T0)!.Value.Value);
+    }
+
+    // ── Enchaînement des sources ─────────────────────────────────────────────
+
+    [Fact]
+    public async Task La_premiere_source_fraiche_l_emporte()
+    {
+        var b = new Banc();
+        await b.Service.SaveAsync(Config() with { Sources = [Linky_(), Pince_(), Somme_()] });
+        b.Etats.Set(Linky, 3000.0, T0);
+        b.Etats.Set(Pince, 2000.0, T0);
+
+        Assert.Equal(3000, b.Service.ReadPower(T0)!.Value.Value);
+        Assert.Equal("Linky", b.Service.ActiveSource);
+    }
+
+    [Fact]
+    public async Task Un_Linky_muet_passe_la_main_a_la_pince_majoree()
+    {
+        var b = new Banc();
+        await b.Service.SaveAsync(Config() with { Sources = [Linky_(), Pince_(), Somme_()] });
+        b.Etats.Set(Linky, 3000.0, T0.AddSeconds(-30));   // module TIC débranché depuis 30 s
+        b.Etats.Set(Pince, 2000.0, T0);
+
+        Assert.Equal(2200, b.Service.ReadPower(T0)!.Value.Value, 6);
+        Assert.Equal("Pince", b.Service.ActiveSource);
+    }
+
+    [Fact]
+    public async Task Sans_Linky_ni_pince_la_somme_des_equipements_prend_le_relais()
+    {
+        var b = new Banc();
+        await b.Service.SaveAsync(Config() with { Sources = [Linky_(), Pince_(), Somme_()] });
+        b.Etats.Set(Linky, 3000.0, T0, disponible: false);
+        b.Etats.Set(Radiateur, true, T0);
+
+        Assert.Equal(1500, b.Service.ReadPower(T0)!.Value.Value);
+        Assert.Equal("Somme", b.Service.ActiveSource);
+    }
+
+    [Fact]
+    public async Task Aucune_source_fraiche_pas_de_mesure_jamais_zero()
+    {
+        var b = new Banc();
+        await b.Service.SaveAsync(Config() with { Sources = [Linky_(), Pince_()] });
+        b.Etats.Set(Linky, 3000.0, T0.AddMinutes(-5));
+
+        Assert.Null(b.Service.ReadPower(T0));
+        Assert.Null(b.Service.ActiveSource);
+
+        var tick = await b.Delesteur.TickAsync(b.Service.ReadPower(T0));
+        b.Service.RecordTick(null, tick, T0);
+        Assert.True(b.Service.Status.SourceUnavailable);
     }
 
     [Fact]
@@ -143,6 +202,7 @@ public class LoadSheddingServiceTests
         Assert.Equal(12, apres.Configuration.SubscriptionKva);
         Assert.Equal(10200, apres.Status.AlertThreshold);
         Assert.Equal("cumulus", Assert.Single(apres.Configuration.Devices).Id);
+        Assert.Equal("Linky", Assert.Single(apres.Configuration.Sources).Name);
         Assert.Null(apres.LoadError);
     }
 
@@ -160,9 +220,11 @@ public class LoadSheddingServiceTests
 
     public static TheoryData<string, Func<LoadSheddingConfiguration, LoadSheddingConfiguration>> Invalides => new()
     {
-        { "n'existe pas", c => c with { PowerEntityId = "sensor.inconnu" } },
-        { "pas un Sensor", c => c with { PowerEntityId = Cumulus } },
-        { "obligatoire", c => c with { PowerEntityId = null } },
+        { "n'existe pas", c => c with { Sources = [Linky_() with { PowerEntityId = "sensor.inconnu" }] } },
+        { "pas un Sensor", c => c with { Sources = [Linky_() with { PowerEntityId = Cumulus }] } },
+        { "obligatoire", c => c with { Sources = [Linky_() with { PowerEntityId = null }] } },
+        { "aucune source", c => c with { Sources = [] } },
+        { "aucun équipement à additionner", c => c with { Sources = [Somme_() with { MeteredEquipment = [] }] } },
         { "aucun switch", c => c with { Devices = [c.Devices[0] with { SwitchEntityIds = [] }] } },
         { "pas un Switch", c => c with { Devices = [c.Devices[0] with { SwitchEntityIds = [Linky] }] } },
         { "thermostat « salon » n'existe pas", c => c with { Devices = [c.Devices[0] with { ThermostatId = "salon" }] } },
@@ -170,7 +232,7 @@ public class LoadSheddingServiceTests
         { "positive", c => c with { Devices = [c.Devices[0] with { NominalPower = 0 }] } },
         { "priorité", c => c with { Devices = [c.Devices[0] with { Priority = 0 }] } },
         { "restauration", c => c with { RestorePercent = 90 } },
-        { "majoration", c => c with { ActiveToApparentFactor = 0.9 } },
+        { "majoration", c => c with { Sources = [Pince_() with { ActiveToApparentFactor = 0.9 }] } },
     };
 
     [Theory]
@@ -201,7 +263,7 @@ public class LoadSheddingServiceTests
             Devices = [new SheddableDeviceConfiguration { Id = "salon", Priority = 5, NominalPower = 1500, SwitchEntityIds = [Radiateur], ThermostatId = "salon" }],
         });
         b.Etats.Set(Linky, 7000.0, T0);
-        await b.Delesteur.TickAsync(b.Service.ReadPower());
+        await b.Delesteur.TickAsync(b.Service.ReadPower(T0));
 
         Assert.Equal("salon", c.Devices[0].ThermostatId);
         Assert.Contains(InhibitionReasons.Delestage, b.Inhibiteur.GetReasons("salon"));

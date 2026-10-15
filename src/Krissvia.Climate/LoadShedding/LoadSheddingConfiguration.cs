@@ -18,6 +18,24 @@ public sealed record MeteredEquipmentConfiguration
     public double NominalPower { get; init; }
 }
 
+/// <summary>Une source de puissance du délesteur.</summary>
+public sealed record PowerSourceConfiguration
+{
+    /// <summary>Nom affiché (« Linky », « Pince », « Somme »…).</summary>
+    public string Name { get; init; } = "";
+
+    public PowerSourceKind Kind { get; init; } = PowerSourceKind.Entity;
+    public string? PowerEntityId { get; init; }
+
+    /// <summary>Apparente (VA, Linky) ou active (W, pince) : une mesure en W est majorée avant comparaison.</summary>
+    public PowerQuality PowerQuality { get; init; } = PowerQuality.Apparent;
+
+    /// <summary>Majoration d'une mesure en W pour la comparer à des seuils en VA. ≥ 1.</summary>
+    public double ActiveToApparentFactor { get; init; } = 1.10;
+
+    public IReadOnlyList<MeteredEquipmentConfiguration> MeteredEquipment { get; init; } = [];
+}
+
 /// <summary>Un équipement délestable, tel qu'enregistré.</summary>
 public sealed record SheddableDeviceConfiguration
 {
@@ -51,16 +69,12 @@ public sealed record LoadSheddingConfiguration
     public double AlertPercent { get; init; } = 80;
     public double RestorePercent { get; init; } = 70;
 
-    public PowerSourceKind SourceKind { get; init; } = PowerSourceKind.Entity;
-    public string? PowerEntityId { get; init; }
-
-    /// <summary>Apparente (VA, Linky) ou active (W, pince) : une mesure en W est majorée avant comparaison.</summary>
-    public PowerQuality PowerQuality { get; init; } = PowerQuality.Apparent;
-
-    /// <summary>Majoration d'une mesure en W pour la comparer à des seuils en VA. ≥ 1.</summary>
-    public double ActiveToApparentFactor { get; init; } = 1.10;
-
-    public IReadOnlyList<MeteredEquipmentConfiguration> MeteredEquipment { get; init; } = [];
+    /// <summary>
+    /// Sources par ordre de préférence (Linky, puis pince, puis somme) : chaque tick prend la première dont la
+    /// mesure est fraîche. Une seule source qui se tait laisserait le délesteur sans décision — la protection
+    /// disparaîtrait en silence, au moment où on en a besoin.
+    /// </summary>
+    public IReadOnlyList<PowerSourceConfiguration> Sources { get; init; } = [];
 
     public int MaxReadingAgeSeconds { get; init; } = 10;
     public int SettleDelaySeconds { get; init; } = 5;
@@ -82,6 +96,7 @@ public sealed record LoadSheddingStatus(
     bool Enabled,
     double? Power,
     DateTimeOffset? MeasuredAt,
+    string? ActiveSource,
     bool SourceUnavailable,
     double AlertThreshold,
     double RestoreThreshold,

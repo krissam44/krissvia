@@ -1,5 +1,5 @@
 using Krissvia.Contracts;
-using Krissvia.Plugin.Zigbee2Mqtt.Mqtt;
+using Krissvia.Sdk.Mqtt;
 using Krissvia.Plugin.Zigbee2Mqtt.Z2m;
 using Krissvia.Sdk;
 using Microsoft.Extensions.Logging;

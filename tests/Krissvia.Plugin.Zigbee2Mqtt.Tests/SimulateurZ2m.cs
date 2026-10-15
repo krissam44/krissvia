@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
-using Krissvia.Plugin.Zigbee2Mqtt.Mqtt;
+using Krissvia.Sdk.Mqtt;
 
 namespace Krissvia.Plugin.Zigbee2Mqtt.Tests;
 
