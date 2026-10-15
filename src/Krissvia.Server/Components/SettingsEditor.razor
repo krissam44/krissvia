@@ -1,0 +1,63 @@
+@* Formulaire tiré de la description des réglages d'un plugin (plugin.json). Récursif : une sous-section par objet,
+   un cadre par élément de liste. Écrit directement dans l'objet JSON reçu. *@
+
+@foreach (var champ in Champ.Properties)
+{
+    switch (champ.Type)
+    {
+        case SettingType.Object:
+            <MudText Typo="Typo.subtitle1" Class="mt-3 mb-1"><b>@champ.Label</b></MudText>
+            @if (champ.Description is { } aide)
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">@aide</MudText>
+            }
+            <div class="pl-3">
+                <SettingsEditor Champ="champ" Valeur="SousObjet(champ)" />
+            </div>
+            break;
+
+        case SettingType.Array:
+            <MudText Typo="Typo.subtitle1" Class="mt-3 mb-1"><b>@champ.Label</b></MudText>
+            @if (champ.Description is { } aideListe)
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary mb-1">@aideListe</MudText>
+            }
+            var liste = Liste(champ);
+            @for (var i = 0; i < liste.Count; i++)
+            {
+                var element = (JsonObject)liste[i]!;
+                var indice = i;
+                <MudPaper Outlined="true" Class="pa-3 mb-2 rounded-lg" @key="element">
+                    <MudStack Row="true" AlignItems="AlignItems.Start">
+                        <div style="flex: 1">
+                            <SettingsEditor Champ="champ" Valeur="element" />
+                        </div>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                       OnClick="() => liste.RemoveAt(indice)" aria-label="Retirer" />
+                    </MudStack>
+                </MudPaper>
+            }
+            <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="() => Ajouter(champ)">Ajouter</MudButton>
+            break;
+
+        case SettingType.Boolean:
+            <MudSwitch T="bool" Label="@champ.Label" Color="Color.Primary"
+                       Value="Booleen(champ)" ValueChanged="v => Ecrire(champ, v)" />
+            break;
+
+        case SettingType.Integer:
+        case SettingType.Number:
+            <MudNumericField T="double?" Label="@champ.Label" HelperText="@champ.Description" Required="champ.Required"
+                             Min="champ.Minimum" Max="champ.Maximum" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2"
+                             Value="Nombre(champ)" ValueChanged="v => Ecrire(champ, v)" />
+            break;
+
+        default:
+            <MudTextField T="string" Label="@champ.Label" HelperText="@champ.Description" Required="champ.Required"
+                          InputType="@(champ.Secret ? InputType.Password : InputType.Text)"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2"
+                          Value="Texte(champ)" ValueChanged="v => Ecrire(champ, v)" />
+            break;
+    }
+}

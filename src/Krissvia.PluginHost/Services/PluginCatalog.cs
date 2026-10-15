@@ -19,6 +19,9 @@ public sealed record PluginManifest
     /// <summary>Nom de l'exécutable, sans extension (<c>.exe</c> ajouté sous Windows).</summary>
     public required string Executable { get; init; }
 
+    /// <summary>Description des réglages (voir <see cref="SettingsSchema"/>), d'où la page tire son formulaire.</summary>
+    public JsonElement? Settings { get; init; }
+
     /// <summary>Dossier où la fiche a été trouvée (renseigné par le catalogue).</summary>
     [JsonIgnore]
     public string Directory { get; init; } = "";

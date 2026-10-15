@@ -67,7 +67,8 @@ public sealed partial class PluginSupervisor(
     PluginHostOptions options,
     IPluginLauncher launcher,
     TimeProvider clock,
-    ILogger<PluginSupervisor> logger)
+    ILogger<PluginSupervisor> logger,
+    IPluginSettingsProvider? settings = null)
 {
     public const string Collection = "services";
     private const int LignesGardees = 200;
@@ -211,6 +212,9 @@ public sealed partial class PluginSupervisor(
             .ToList();
     }
 
+    /// <summary>La fiche du plugin installé, ou null.</summary>
+    public PluginManifest? GetManifest(string id) => _services.TryGetValue(id, out var s) ? s.Fiche : null;
+
     public ServiceSnapshot? GetSnapshot(string id) =>
         Snapshots().FirstOrDefault(s => s.Id == id);
 
@@ -246,12 +250,14 @@ public sealed partial class PluginSupervisor(
 
         try
         {
-            var processus = launcher.Start(fiche, new Dictionary<string, string>
+            // Les réglages de la page d'abord ; l'adresse, le jeton et l'identité ensuite, que rien ne peut écraser.
+            var environnement = new Dictionary<string, string>(settings?.EnvironmentFor(service.Id) ?? new Dictionary<string, string>(), StringComparer.Ordinal)
             {
                 ["Krissvia__Url"] = CoreUrl,
                 ["Krissvia__Token"] = jeton,
                 ["Krissvia__PluginId"] = service.Id,
-            }, ligne => Noter(service, ligne));
+            };
+            var processus = launcher.Start(fiche, environnement, ligne => Noter(service, ligne));
 
             service.Processus = processus;
             service.DemarreLe = clock.GetUtcNow();

@@ -10,6 +10,7 @@ namespace Krissvia.Server;
 /// </summary>
 internal sealed partial class PluginSupervisorLifetime(
     PluginSupervisor supervisor,
+    PluginSettingsService settings,
     IServer server,
     IHostApplicationLifetime lifetime,
     IConfiguration configuration,
@@ -41,6 +42,7 @@ internal sealed partial class PluginSupervisorLifetime(
             supervisor.CatalogErrors = erreurs;
             foreach (var erreur in erreurs) FicheIllisible(logger, erreur);
 
+            await settings.LoadAsync();   // avant tout lancement : les réglages partent avec le plugin
             await supervisor.LoadAsync(plugins);
             Catalogue(logger, plugins.Count, string.Join(", ", dossiers));
             await supervisor.StartEnabledAsync();

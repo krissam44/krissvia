@@ -2,5 +2,31 @@
   "id": "teleinfo",
   "name": "Téléinfo Linky",
   "description": "Trame du compteur Linky (puissance apparente, index, tarif), publiée en JSON sur MQTT.",
-  "executable": "Krissvia.Plugin.Teleinfo"
+  "executable": "Krissvia.Plugin.Teleinfo",
+  "settings": {
+    "type": "object",
+    "properties": {
+      "Mqtt": {
+        "type": "object",
+        "title": "Broker MQTT",
+        "required": [ "Host" ],
+        "properties": {
+          "Host": { "type": "string", "title": "Adresse IP" },
+          "Port": { "type": "integer", "title": "Port", "default": 1883, "minimum": 1, "maximum": 65535 },
+          "Username": { "type": "string", "title": "Utilisateur" },
+          "Password": { "type": "string", "title": "Mot de passe", "format": "password" }
+        }
+      },
+      "Teleinfo": {
+        "type": "object",
+        "title": "Compteur",
+        "properties": {
+          "Topic": { "type": "string", "title": "Topic de la trame", "default": "energy/linky" },
+          "DeviceId": { "type": "string", "title": "Identifiant de l'appareil", "default": "linky", "description": "Ne plus le changer une fois les entités créées." },
+          "Name": { "type": "string", "title": "Nom", "default": "Linky" },
+          "SilenceSeconds": { "type": "integer", "title": "Silence avant « hors ligne » (s)", "default": 60, "minimum": 10, "maximum": 3600 }
+        }
+      }
+    }
+  }
 }
