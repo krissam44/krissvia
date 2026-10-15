@@ -42,7 +42,7 @@ public sealed partial class PluginHub(
         var hello = await AttendreHelloAsync(channel, ct);
         if (hello is null) return;
 
-        var session = new PluginSession(hello.PluginId, channel, registry, states, options, clock, logger);
+        var session = new PluginSession(hello.PluginId, channel, registry, states, options, clock, logger) { Version = hello.PluginVersion };
         PluginSession? remplacee = null;
         _sessions.AddOrUpdate(hello.PluginId, session, (_, ancienne) => { remplacee = ancienne; return session; });
 
@@ -70,6 +70,9 @@ public sealed partial class PluginHub(
             if (derniere) events?.Publish(new PluginConnectionChanged(hello.PluginId, Connected: false));
         }
     }
+
+    /// <summary>Version annoncée par un plugin connecté, ou null.</summary>
+    public string? GetPluginVersion(string pluginId) => _sessions.TryGetValue(pluginId, out var s) ? s.Version : null;
 
     internal bool TryGetSession(string pluginId, out PluginSession session) =>
         _sessions.TryGetValue(pluginId, out session!);

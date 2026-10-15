@@ -183,7 +183,12 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
 4. Port des moteurs, chacun précédé de ses tests de caractérisation : Climate (régulation des thermostats
    faite le 15/10/2026, voir TESTS-CARACTERISATION.md pour ce qui reste), Délestage, Présence,
    Alarme, Automatismes.
-5. API publique et premier frontend avec les widgets de base.
+5. API publique et premier frontend avec les widgets de base. Commencé le 15/10/2026 : page **Services**
+   (Blazor + MudBlazor, `/parametres/services`, en développement seulement tant qu'il n'y a pas de connexion
+   utilisateur) — une ligne par plugin installé (`plugin.json` à côté de l'exécutable), statut, interrupteur,
+   fiche avec journal. Le cœur lance lui-même les plugins activés (désactivés par défaut), avec un jeton neuf à
+   chaque lancement, les relance après un plantage (2 s à 1 min) et refuse d'en lancer un déjà connecté
+   ailleurs. Restent : formulaire de réglages par `configure`, et l'authentification.
 6. Un plugin Python d'exemple.
 7. Import des données DomoMud, une seule fois, pour les deux installations (6 kVA et 12 kVA).
 

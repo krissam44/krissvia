@@ -10,6 +10,9 @@ using Krissvia.Core.Registry;
 using Krissvia.Core.States;
 using Krissvia.Persistence.Sqlite;
 using Krissvia.PluginHost;
+using Krissvia.PluginHost.Services;
+using Krissvia.Server.Components;
+using MudBlazor.Services;
 using Krissvia.Server;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -61,13 +64,33 @@ builder.Services.AddSingleton<LoadSheddingService>();
 builder.Services.AddHostedService<StateStoreLifetime>();
 builder.Services.AddHostedService<CommandJournal>();
 builder.Services.AddHostedService<ThermostatLoop>();
-builder.Services.AddHostedService<LoadSheddingLoop>();   // après les thermostats, que sa configuration référence
+builder.Services.AddHostedService<LoadSheddingLoop>();
+
+// Services : les plugins installés sur cette machine, lancés et surveillés par le cœur.
+builder.Services.AddSingleton<IPluginLauncher, ProcessPluginLauncher>();
+builder.Services.AddSingleton<PluginSupervisor>();
+builder.Services.AddHostedService<PluginSupervisorLifetime>();
+
+// Interface d'administration (Blazor + MudBlazor).
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddMudServices();   // après les thermostats, que sa configuration référence
 
 var app = builder.Build();
 
 app.UseWebSockets();
 
-app.MapGet("/", () => "Krissvia");
+// L'interface d'administration lance des programmes sur le serveur : tant qu'il n'y a pas de connexion
+// utilisateur, elle n'existe qu'en développement.
+if (app.Environment.IsDevelopment())
+{
+    app.UseAntiforgery();
+    app.MapStaticAssets();
+    app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+}
+else
+{
+    app.MapGet("/", () => "Krissvia");
+}
 
 // API publique (premier morceau du contrat 3) : protégée par la clé d'API.
 var api = app.MapGroup("/api").AddEndpointFilter<ApiKeyFilter>();

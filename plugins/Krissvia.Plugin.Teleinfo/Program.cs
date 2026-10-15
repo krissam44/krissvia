@@ -8,6 +8,9 @@ using Microsoft.Extensions.Logging;
 
 // Configuration : appsettings.json, puis appsettings.Local.json (jamais versionné : mot de passe du broker, jeton),
 // puis variables d'environnement, puis ligne de commande. Racine = dossier de l'exécutable.
+// Sortie en UTF-8 : le superviseur du cœur lit ce journal (page Services), accents compris.
+Console.OutputEncoding = System.Text.Encoding.UTF8;
+
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { Args = args, ContentRootPath = AppContext.BaseDirectory });
 builder.Configuration
     .AddJsonFile("appsettings.Local.json", optional: true)

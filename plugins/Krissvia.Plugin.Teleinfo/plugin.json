@@ -1,0 +1,6 @@
+{
+  "id": "teleinfo",
+  "name": "Téléinfo Linky",
+  "description": "Trame du compteur Linky (puissance apparente, index, tarif), publiée en JSON sur MQTT.",
+  "executable": "Krissvia.Plugin.Teleinfo"
+}

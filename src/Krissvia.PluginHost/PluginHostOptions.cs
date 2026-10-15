@@ -16,7 +16,8 @@ public sealed class PluginHostOptions
     public TimeSpan CommandTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>Jeton attendu par plugin. Un plugin présent ici DOIT présenter son jeton.</summary>
-    public Dictionary<string, string> Tokens { get; set; } = new(StringComparer.Ordinal);
+    /// <remarks>Concurrent : le superviseur y inscrit le jeton de chaque plugin qu'il lance pendant que le hub le lit.</remarks>
+    public System.Collections.Concurrent.ConcurrentDictionary<string, string> Tokens { get; set; } = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Accepter sans jeton un plugin absent de <see cref="Tokens"/>. Faux par défaut : n'importe quelle machine
