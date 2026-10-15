@@ -49,6 +49,37 @@ public class BoutEnBoutTests
     }
 
     [Fact]
+    public async Task Une_coupure_verifiee_est_confirmee_par_l_etat_que_republie_la_prise()
+    {
+        await using var banc = await BancBoutEnBout.DemarrerAsync();
+        await banc.Z2m.DemarrerAsync();
+        var prise = await banc.EntityIdAsync($"{Prise}:state");
+        await BancBoutEnBout.AttendreAsync(() => banc.Etats.Get(prise) is { Available: true }, "prise disponible");
+
+        var resultat = await banc.Commandeur.SendVerifiedAsync(
+            new Krissvia.Core.Commands.EntityCommand(prise, StandardCommands.TurnOff) { Priority = CommandPriority.Safety });
+
+        Assert.True(resultat.Confirmed);
+    }
+
+    [Fact]
+    public async Task Une_prise_qui_ne_republie_rien_laisse_la_coupure_non_confirmee()
+    {
+        await using var banc = await BancBoutEnBout.DemarrerAsync();
+        await banc.Z2m.DemarrerAsync();
+        var prise = await banc.EntityIdAsync($"{Prise}:state");
+        await BancBoutEnBout.AttendreAsync(() => banc.Etats.Get(prise) is { Available: true }, "prise disponible");
+        banc.Z2m.AppareilsRepondent = false;
+
+        var resultat = await banc.Commandeur.SendVerifiedAsync(
+            new Krissvia.Core.Commands.EntityCommand(prise, StandardCommands.TurnOff) { Priority = CommandPriority.Safety },
+            timeout: TimeSpan.FromMilliseconds(500));
+
+        Assert.Equal(CommandOutcome.Accepted, resultat.Outcome);
+        Assert.Equal(Krissvia.Core.Commands.CommandVerification.NotConfirmed, resultat.Verification);
+    }
+
+    [Fact]
     public async Task Un_ordre_impossible_echoue_sans_rien_publier()
     {
         await using var banc = await BancBoutEnBout.DemarrerAsync();

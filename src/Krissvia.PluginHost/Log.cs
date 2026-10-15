@@ -66,9 +66,6 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Warning, Message = "Plugin {PluginId} : pas de réponse à la commande {Command} sur « {UniqueId} ».")]
     public static partial void CommandeSansReponse(ILogger logger, string pluginId, string command, string uniqueId);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Commande {Command} vers l'entité inconnue « {EntityId} » : refusée.")]
-    public static partial void CommandeEntiteInconnue(ILogger logger, string entityId, string command);
-
     [LoggerMessage(Level = LogLevel.Warning, Message = "Commande {Command} vers « {EntityId} » : le plugin {PluginId} n'est pas connecté.")]
     public static partial void CommandePluginAbsent(ILogger logger, string pluginId, string entityId, string command);
 }

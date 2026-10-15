@@ -42,8 +42,19 @@ fonctionne dans DomoMud (moteurs de chauffage, délestage, alarme, présence) et
 - **Magasin d'états** : dernière valeur **et horodatage réel** par entité, persisté. Après un redémarrage,
   une mesure garde sa vraie date (sinon tout contrôle de fraîcheur devient aveugle). Structures
   concurrentes dès le départ.
-- **Bus d'événements interne** (remplace les `OnStateChanged` par service) ; abonnés protégés un par un.
-- **Bus de commandes** : toute commande renvoie un résultat (`accepted`, `failed`, `unreachable`).
+- **Bus d'événements interne** (`Krissvia.Core.Events.EventBus`, fait le 15/10/2026) : remplace les
+  `OnStateChanged` par service. Chaque abonné a sa file et sa boucle : `Publish` ne bloque jamais et
+  n'appelle aucun abonné sur le fil du publieur (le gel du circuit par `HaDiscoveryService` dans DomoMud),
+  une exception est signalée sans priver les autres abonnés. Files non bornées : perdre un changement
+  casserait un déclencheur sur front ; `Diagnostics()` montre un abonné en retard. Événements :
+  `EntityStateChanged` (avec l'état **précédent** ; la première valeur n'est pas un front),
+  `RegistryChanged`, `PluginConnectionChanged`, `CommandCompleted`.
+- **Bus de commandes** (`Krissvia.Core.Commands.CommandBus`, fait le 15/10/2026) : passage unique de tous
+  les ordres, dont le PluginHost n'est que le transport (`ICommandDispatcher`). Toute commande renvoie un
+  résultat (`accepted`, `failed`, `unreachable`). Entité inconnue ou commande non déclarée ⇒ `failed`
+  sans rien envoyer ; entité désactivée ⇒ refus des ordres normaux, **jamais** d'un ordre de sécurité.
+  Journal des 200 derniers ordres, publiés sur le bus d'événements. `SendVerifiedAsync` applique le §7.3 :
+  seul un état publié **après** l'ordre le confirme, l'état déjà connu n'étant que la croyance du cœur.
 - **Entités calculées** : moyennes de sondes (`avg/…` de DomoMud), somme des équipements, consommations
   jour/semaine/mois, coûts. Elles passent en `unavailable` quand leurs entrées manquent, elles ne
   disparaissent jamais.
@@ -165,7 +176,8 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
 
 1. ~~Contrat v0.2, `PluginHost` et transport (WebSocket)~~ — fait le 15/10/2026 (`TRANSPORT.md`).
 2. ~~Plugin Zigbee2MQTT interne, avec un simulateur pour les tests~~ — fait le 15/10/2026, reste à valider sur un vrai réseau.
-3. Cœur : magasin d'états, bus d'événements, bus de commandes.
+3. ~~Cœur : magasin d'états, bus d'événements, bus de commandes~~ — fait le 15/10/2026. Reste à faire
+   passer les coupures du délesteur et des inhibitions par `SendVerifiedAsync` (§7, règles 2 et 3).
 4. Port des moteurs, chacun précédé de ses tests de caractérisation : Climate, Délestage, Présence,
    Alarme, Automatismes.
 5. API publique et premier frontend avec les widgets de base.

@@ -11,16 +11,15 @@ namespace Krissvia.Core.Registry;
 /// Règles tirées de DomoMud :
 /// <list type="bullet">
 /// <item>un seul verrou, jamais imbriqué : les méthodes publiques de lecture ne le prennent que pour le chargement initial ;</item>
-/// <item>l'événement <see cref="Changed"/> n'est jamais levé en tenant le verrou ;</item>
+/// <item>l'événement <see cref="Krissvia.Core.Events.RegistryChanged"/> n'est jamais publié en tenant le verrou ;</item>
 /// <item>l'instantané n'est remplacé qu'après une écriture réussie.</item>
 /// </list>
 /// </remarks>
-public sealed class EntityRegistry(IEntityRepository repository) : IEntityRegistry
+public sealed class EntityRegistry(IEntityRepository repository, Krissvia.Core.Events.IEventPublisher? events = null) : IEntityRegistry
 {
     private readonly SemaphoreSlim _ecriture = new(1, 1);
     private volatile Snapshot? _instantane;
 
-    public event Action? Changed;
 
     private sealed record Snapshot(
         IReadOnlyList<RegisteredDevice> Devices,
@@ -171,7 +170,7 @@ public sealed class EntityRegistry(IEntityRepository repository) : IEntityRegist
             _ecriture.Release();
         }
 
-        if (modifie) Changed?.Invoke();
+        if (modifie) events?.Publish(new Krissvia.Core.Events.RegistryChanged());
         return new RegistrationResult(crees, devenusManquants);
     }
 
@@ -237,7 +236,7 @@ public sealed class EntityRegistry(IEntityRepository repository) : IEntityRegist
             _ecriture.Release();
         }
 
-        if (modifie) Changed?.Invoke();
+        if (modifie) events?.Publish(new Krissvia.Core.Events.RegistryChanged());
     }
 
     /// <summary>Lecture publique : ne prend le verrou que pour le tout premier chargement.</summary>

@@ -46,9 +46,8 @@ public class EntityRegistryTests
     [Fact]
     public async Task Redeclarer_la_meme_chose_ne_change_rien()
     {
-        var registre = NouveauRegistre();
-        var evenements = 0;
-        registre.Changed += () => evenements++;
+        var publies = new List<Krissvia.Core.Events.CoreEvent>();
+        var registre = new EntityRegistry(new InMemoryEntityRepository(), new PublieurEnListe(publies));
 
         await registre.RegisterAsync(Plugin, [Prise()]);
         var seconde = await registre.RegisterAsync(Plugin, [Prise()]);
@@ -56,7 +55,7 @@ public class EntityRegistryTests
         Assert.Empty(seconde.Created);
         Assert.Empty(seconde.NowMissing);
         Assert.Equal(2, (await registre.ListAsync()).Count);
-        Assert.Equal(1, evenements);
+        Assert.IsType<Krissvia.Core.Events.RegistryChanged>(Assert.Single(publies));
     }
 
     [Fact]
@@ -199,5 +198,14 @@ public class EntityRegistryTests
         await registre.RegisterAsync(Plugin, [Prise()]);
 
         await Assert.ThrowsAnyAsync<ArgumentException>(() => registre.RenameAsync("switch.prise_salon", "   "));
+    }
+}
+
+/// <summary>Publieur synchrone pour les tests : garde les événements dans l'ordre.</summary>
+internal sealed class PublieurEnListe(List<Krissvia.Core.Events.CoreEvent> liste) : Krissvia.Core.Events.IEventPublisher
+{
+    public void Publish(Krissvia.Core.Events.CoreEvent e)
+    {
+        lock (liste) liste.Add(e);
     }
 }

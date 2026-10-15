@@ -90,7 +90,7 @@ internal sealed class PluginSession(
     /// <see cref="CommandOutcome.Unreachable"/> : le cœur ne suppose jamais qu'un ordre est passé.
     /// </summary>
     public async Task<CommandOutcome> EnvoyerCommandeAsync(
-        string entityUniqueId, string command, CommandPriority priority, int? ttlSeconds, CancellationToken ct)
+        string entityUniqueId, string command, System.Text.Json.JsonElement? args, CommandPriority priority, int? ttlSeconds, CancellationToken ct)
     {
         var id = Guid.NewGuid().ToString("N");
         var attente = new TaskCompletionSource<CommandOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -105,6 +105,7 @@ internal sealed class PluginSession(
                 Id = id,
                 EntityUniqueId = entityUniqueId,
                 Command = command,
+                Args = args,
                 Priority = priority,
                 TtlSeconds = ttlSeconds,
             }), ct);

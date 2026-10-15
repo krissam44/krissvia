@@ -4,9 +4,6 @@ namespace Krissvia.Core.Registry;
 
 public interface IEntityRegistry
 {
-    /// <summary>Levé après chaque modification, hors de tout verrou.</summary>
-    event Action? Changed;
-
     /// <summary>
     /// Applique l'instantané COMPLET d'un plugin (message « declare »). Idempotent : les champs de
     /// l'utilisateur sont conservés, les entités absentes sont marquées « manquantes », jamais supprimées.
