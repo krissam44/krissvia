@@ -268,7 +268,9 @@ public sealed class LoadShedder(ICommandBus commander, ThermostatInhibitor inhib
         {
             try
             {
-                return await commander.SendAsync(id, commande, priorite, null, ct) == CommandOutcome.Accepted;
+                // Signé comme les coupures : le journal des ordres doit dire que c'est le délesteur qui rallume.
+                var ordre = new EntityCommand(id, commande) { Priority = priorite, Origin = "delestage" };
+                return await commander.SendAsync(ordre, ct) == CommandOutcome.Accepted;
             }
             catch (OperationCanceledException)
             {

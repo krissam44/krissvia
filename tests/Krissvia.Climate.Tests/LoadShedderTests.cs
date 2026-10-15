@@ -166,6 +166,20 @@ public class LoadShedderTests
         Assert.Equal(new[] { "cumulus" }, reussite.Restored.ToArray());
     }
 
+    [Fact]
+    public async Task D2_la_remise_sous_tension_est_signee_par_le_delesteur()
+    {
+        var b = new Bench();
+        await b.ConfigureAsync(Cumulus());
+        await b.TickAsync(5200);
+
+        b.Avancer(121);
+        await b.TickAsync(1000);
+
+        var remise = Assert.Single(b.Commander.Envoyes, e => e.Command == StandardCommands.TurnOn);
+        Assert.Equal("delestage", remise.Origin);
+    }
+
     // ── D3 : hystérésis ──────────────────────────────────────────────────────
 
     [Fact]

@@ -63,8 +63,9 @@ Planning : `"schedule_active": true` et
 }
 ```
 
-Une fin à `00:00:00` veut dire minuit du soir ; une fin avant le début fait un créneau de nuit, actif le soir
-**et le matin du même jour** (comportement de DomoMud).
+Une fin à `00:00:00` veut dire minuit du soir ; une fin avant le début fait un créneau de nuit, du soir de son jour
+**jusqu'au lendemain matin** (lundi 22:00 → 06:00 couvre la nuit du lundi au mardi). DomoMud comprenait le soir et
+le matin du même jour : à convertir à l'import.
 
 ## Délestage
 

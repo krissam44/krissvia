@@ -1,0 +1,261 @@
+@page "/delestage"
+@implements IDisposable
+
+<PageTitle>Délestage · Krissvia</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">Délestage</MudText>
+
+@if (Service.LoadError is { } erreurChargement)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">
+        La configuration enregistrée n'a pas pu être appliquée au démarrage, le délesteur est inactif : @erreurChargement
+    </MudAlert>
+}
+
+@* ── État en direct ─────────────────────────────────────────────────────── *@
+<MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
+        <MudText Typo="Typo.h6">En ce moment</MudText>
+        <MudChip T="string" Size="Size.Small" Color="@(_etat.Enabled ? Color.Success : Color.Default)">
+            @(_etat.Enabled ? "Actif" : "Désactivé")
+        </MudChip>
+    </MudStack>
+
+    @if (!_etat.Enabled)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2">Le délesteur ne coupe rien. Activez-le dans la configuration ci-dessous.</MudText>
+    }
+    else if (_etat.SourceUnavailable || _etat.Power is null)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+            Aucune mesure de puissance fraîche : le délesteur ne décide rien tant qu'une source ne répond pas. Il ne lit jamais une mesure absente comme 0 VA.
+        </MudAlert>
+    }
+    else
+    {
+        <MudStack Row="true" AlignItems="AlignItems.End" Spacing="2" Class="mt-2">
+            <MudText Typo="Typo.h3">@Va(_etat.Power.Value)</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">
+                mesure « @_etat.ActiveSource », @Age(_etat.MeasuredAt)
+            </MudText>
+        </MudStack>
+    }
+
+    <div class="jauge mt-3" title="Seuil de rétablissement @Va(_etat.RestoreThreshold), seuil d'alerte @Va(_etat.AlertThreshold)">
+        @if (_etat.Enabled && _etat.Power is { } p && !_etat.SourceUnavailable)
+        {
+            <div class="niveau" style="@($"width:{Pourcent(p)};background:{CouleurJauge(p)}")"></div>
+        }
+        <div class="repere retablissement" style="left:@Pourcent(_etat.RestoreThreshold)"></div>
+        <div class="repere alerte" style="left:@Pourcent(_etat.AlertThreshold)"></div>
+    </div>
+    <div class="d-flex justify-space-between mud-text-secondary" style="font-size: .75rem">
+        <span>0</span>
+        <span>rétablit sous @Va(_etat.RestoreThreshold) · déleste au-dessus de @Va(_etat.AlertThreshold)</span>
+        <span>@Va(Abonnement)</span>
+    </div>
+
+    @if (_etat.ShedDevices.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle2" Class="mt-4">Délestés</MudText>
+        @foreach (var id in _etat.ShedDevices)
+        {
+            var nonConfirme = _etat.UnconfirmedDevices.Contains(id);
+            <MudChip T="string" Size="Size.Small" Color="@(nonConfirme ? Color.Error : Color.Warning)">
+                @NomEquipement(id)@(nonConfirme ? " — coupure non confirmée, retentée" : "")
+            </MudChip>
+        }
+    }
+    else if (_etat.Enabled)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">Rien n'est délesté.</MudText>
+    }
+</MudPaper>
+
+@* ── Configuration ──────────────────────────────────────────────────────── *@
+@if (_erreur is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_erreur</MudAlert>
+}
+
+<MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
+    <MudText Typo="Typo.h6" Class="mb-2">Abonnement et seuils</MudText>
+    <MudSwitch T="bool" @bind-Value="_m.Enabled" Color="Color.Primary" Label="Délestage actif" />
+    <MudGrid Class="mt-1">
+        <MudItem xs="12" sm="4">
+            <MudNumericField @bind-Value="_m.Kva" Label="Puissance souscrite (kVA)" Min="1" Step="1" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="6" sm="4">
+            <MudNumericField @bind-Value="_m.Alerte" Label="Délester au-dessus de (%)" Min="1" Max="100" Variant="Variant.Outlined" Margin="Margin.Dense"
+                             HelperText="@($"soit {Va(_m.Kva * 10 * _m.Alerte)}")" />
+        </MudItem>
+        <MudItem xs="6" sm="4">
+            <MudNumericField @bind-Value="_m.Retablissement" Label="Rétablir sous (%)" Min="1" Max="100" Variant="Variant.Outlined" Margin="Margin.Dense"
+                             HelperText="@($"soit {Va(_m.Kva * 10 * _m.Retablissement)}")" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
+        <div>
+            <MudText Typo="Typo.h6">Sources de puissance</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                Par ordre de préférence : à chaque passage, la première dont la mesure a moins de @_m.AgeMax s est utilisée.
+                Mettez la somme des équipements en dernier recours.
+            </MudText>
+        </div>
+        <MudStack Row="true" Spacing="1">
+            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" OnClick="AjouterMesure">Mesure</MudButton>
+            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Functions" OnClick="AjouterSomme">Somme d'équipements</MudButton>
+        </MudStack>
+    </MudStack>
+
+    @if (_m.Sources.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Color="Color.Warning" Class="mt-3">Aucune source : le délesteur ne pourrait rien décider.</MudText>
+    }
+
+    @for (var i = 0; i < _m.Sources.Count; i++)
+    {
+        var rang = i;
+        var s = _m.Sources[i];
+        <div class="bloc mt-3" @key="s">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                <MudText Typo="Typo.subtitle2" Style="min-width: 24px">@(rang + 1).</MudText>
+                <MudTextField @bind-Value="s.Nom" Label="Nom" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 180px" />
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">@(s.Somme ? "somme des équipements" : "mesure d'une entité")</MudText>
+                <MudSpacer />
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Disabled="@(rang == 0)" OnClick="() => Deplacer(rang, -1)" aria-label="Monter" />
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Disabled="@(rang == _m.Sources.Count - 1)" OnClick="() => Deplacer(rang, 1)" aria-label="Descendre" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="() => _m.Sources.Remove(s)" aria-label="Supprimer la source" />
+            </MudStack>
+
+            @if (!s.Somme)
+            {
+                <div class="ligne mt-2">
+                    <MudSelect T="string" @bind-Value="s.Entite" Label="Entité de puissance" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var e in Options(_puissances, s.Entite))
+                        {
+                            <MudSelectItem Value="e.EntityId">@Libelle(e)</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudSelect T="PowerQuality" @bind-Value="s.Qualite" Label="Nature" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem Value="PowerQuality.Apparent">Apparente (VA) — Linky</MudSelectItem>
+                        <MudSelectItem Value="PowerQuality.Active">Active (W) — pince</MudSelectItem>
+                    </MudSelect>
+                    @if (s.Qualite == PowerQuality.Active)
+                    {
+                        <MudNumericField @bind-Value="s.Majoration" Label="Majoration W → VA" Min="1" Step="0.05" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                         HelperText="1,10 par défaut : une pince en W sous-estime l'apparente" />
+                    }
+                </div>
+            }
+            else
+            {
+                @foreach (var e in s.Equipements)
+                {
+                    <div class="ligne mt-2" @key="e">
+                        <MudSelect T="string" @bind-Value="e.Interrupteur" Label="Équipement (switch)" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            @foreach (var x in Options(_interrupteurs, e.Interrupteur))
+                            {
+                                <MudSelectItem Value="x.EntityId">@Libelle(x)</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudSelect T="string" @bind-Value="e.Mesure" Label="Sa mesure (facultative)" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="@Aucune">— puissance nominale —</MudSelectItem>
+                            @foreach (var x in Options(_puissances, e.Mesure))
+                            {
+                                <MudSelectItem Value="x.EntityId">@Libelle(x)</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudNumericField @bind-Value="e.Nominale" Label="Nominale (W)" Min="0" Step="100" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="() => s.Equipements.Remove(e)" aria-label="Retirer de la somme" />
+                    </div>
+                }
+                <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Class="mt-1" OnClick="() => s.Equipements.Add(new EquipementSomme())">Équipement</MudButton>
+            }
+        </div>
+    }
+</MudPaper>
+
+<MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
+        <div>
+            <MudText Typo="Typo.h6">Équipements délestables</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                Priorité 1 : coupé en premier. Au retour, chacun reste coupé au moins son délai, puis ils reviennent un par un,
+                les priorités les plus hautes d'abord. Lié à un thermostat, un radiateur est coupé par le thermostat lui-même :
+                sa consigne et son mode restent intacts.
+            </MudText>
+        </div>
+        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" OnClick="AjouterEquipement">Équipement</MudButton>
+    </MudStack>
+
+    @if (_m.Equipements.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">Aucun équipement : le délesteur mesurerait sans rien pouvoir couper.</MudText>
+    }
+
+    @foreach (var d in _m.Equipements.OrderBy(d => d.Priorite))
+    {
+        <div class="bloc mt-3" @key="d">
+            <div class="ligne">
+                <MudTextField T="string" Value="d.Nom" ValueChanged="v => NomEquipementChange(d, v)" Label="Nom" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudNumericField @bind-Value="d.Priorite" Label="Priorité (1-10)" Min="1" Max="10" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudNumericField @bind-Value="d.Nominale" Label="Puissance (W)" Min="0" Step="100" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                 HelperText="économisée par la coupure" />
+                <MudNumericField @bind-Value="d.DelaiRetablissement" Label="Coupé au moins (s)" Min="0" Step="30" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="() => _m.Equipements.Remove(d)" aria-label="Supprimer l'équipement" />
+            </div>
+            <div class="ligne mt-2">
+                <MudSelect T="string" Value="d.Thermostat" ValueChanged="v => ThermostatChange(d, v)" Label="Thermostat lié (facultatif)" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem Value="@Aucune">— aucun : coupure directe —</MudSelectItem>
+                    @foreach (var t in Thermostats.List())
+                    {
+                        <MudSelectItem Value="t.Id">@(t.Name is { Length: > 0 } n ? n : t.Id)</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudSelect T="string" @bind-SelectedValues="d.Interrupteurs" MultiSelection="true" Label="Switches à couper" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           MultiSelectionTextFunc="@(v => string.Join(", ", v.Select(NomEntite)))">
+                    @foreach (var x in Options(_interrupteurs, d.Interrupteurs.ToArray()))
+                    {
+                        <MudSelectItem Value="x.EntityId">@Libelle(x)</MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+        </div>
+    }
+</MudPaper>
+
+<MudExpansionPanels Class="mb-4" Elevation="1">
+    <MudExpansionPanel Text="Délais — réglages avancés">
+        <MudGrid>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_m.AgeMax" Label="Mesure périmée après (s)" Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_m.Stabilisation" Label="Attente après une action (s)" Min="0" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                 HelperText="avant de redécider sur une nouvelle mesure" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_m.Verification" Label="Confirmation d'une coupure (s)" Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+        </MudGrid>
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
+<MudStack Row="true" Spacing="2">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="EnregistrerAsync">Enregistrer</MudButton>
+    <MudButton Variant="Variant.Text" OnClick="Recharger">Annuler les modifications</MudButton>
+</MudStack>
+
+<style>
+    .jauge { position: relative; height: 14px; border-radius: 7px; background: var(--mud-palette-background-gray); overflow: hidden; }
+    .jauge .niveau { position: absolute; top: 0; bottom: 0; left: 0; transition: width .4s; }
+    .jauge .repere { position: absolute; top: 0; bottom: 0; width: 3px; z-index: 1; box-shadow: 0 0 0 1px #fff; }
+    .jauge .retablissement { background: #4f8fc0; }
+    .jauge .alerte { background: #c62828; }
+    .bloc { border: 1px solid var(--mud-palette-lines-default); border-radius: 8px; padding: 12px; }
+    .ligne { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) 40px; gap: 12px; align-items: center; }
+</style>

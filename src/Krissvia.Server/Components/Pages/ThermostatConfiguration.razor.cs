@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text;
 using Krissvia.Contracts;
 using Krissvia.Core.Registry;
 
@@ -76,7 +74,7 @@ public partial class ThermostatConfiguration
     private void NomChange(string nom)
     {
         _m!.Name = nom;
-        if (Creation && (!_idSaisi || string.IsNullOrEmpty(_m.Id))) _m.Id = Identifiant(nom);
+        if (Creation && (!_idSaisi || string.IsNullOrEmpty(_m.Id))) _m.Id = Phrases.Identifiant(nom);
     }
 
     private void IdChange(string id)
@@ -115,22 +113,6 @@ public partial class ThermostatConfiguration
         await Service.DeleteAsync(_existant.Id);
         Snackbar.Add("Thermostat supprimé.", Severity.Info);
         Navigation.NavigateTo("/thermostats");
-    }
-
-    /// <summary>« Chambre RdC » → « chambre_rdc ».</summary>
-    internal static string Identifiant(string nom)
-    {
-        var sb = new StringBuilder();
-        foreach (var c in nom.Normalize(NormalizationForm.FormD))
-        {
-            if (CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.NonSpacingMark) continue;
-            var minuscule = char.ToLowerInvariant(c);
-            if (minuscule is (>= 'a' and <= 'z') or (>= '0' and <= '9')) sb.Append(minuscule);
-            else if (sb.Length > 0 && sb[^1] != '_') sb.Append('_');
-        }
-
-        var id = sb.ToString().Trim('_');
-        return id.Length > 64 ? id[..64] : id;
     }
 
     /// <summary>Le formulaire : des champs modifiables, convertis en <see cref="ThermostatSettings"/> à l'enregistrement.</summary>
