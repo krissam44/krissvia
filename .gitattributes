@@ -1,0 +1,5 @@
+# Fins de ligne normalisées dans le dépôt ; Git les adapte au poste.
+* text=auto
+# Scripts et lanceurs Linux : toujours LF, sinon bash refuse (« $'\r': command not found »).
+*.sh       text eol=lf
+*.desktop  text eol=lf

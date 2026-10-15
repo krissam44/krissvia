@@ -1,0 +1,179 @@
+# Krissvia — Architecture (brouillon v0)
+
+> Statut : proposition à valider. Tout ce qui est marqué **[à décider]** attend un avis.
+> Source : analyse des services et modèles de DomoMud, et des échanges de conception.
+
+## 1. Objectif
+
+Krissvia est une plateforme domotique en trois blocs, successeur de DomoMud. Elle reprend ce qui
+fonctionne dans DomoMud (moteurs de chauffage, délestage, alarme, présence) et sépare ce qui
+était monolithique.
+
+| Bloc | Rôle | Langage |
+|---|---|---|
+| **Cœur** | registre d'entités, états, bus d'événements et de commandes, moteurs, API publique | C# |
+| **Plugins** | intégrations : parlent à un équipement ou à un service et publient des entités | C# ou Python, **processus séparés** |
+| **Frontend** | tableau de bord personnalisable, widgets associés aux entités | application web (Web Components) |
+
+## 2. Principes
+
+1. **Un plugin est un processus séparé.** Aucun code tiers dans le cœur.
+2. **Un plugin fournit des mesures et exécute des ordres. Il ne régule jamais.** Thermostat, délestage,
+   alarme et automatismes sont des moteurs du cœur, qui consomment des entités abstraites.
+3. **Plugin mort ⇒ entités `unavailable` ⇒ les failsafes du cœur prennent le relais.**
+4. **Le registre est la seule source de vérité sur les entités.** Tout se référence par `entity_id`,
+   jamais par topic ni par nom (cause de l'incident « Chbre » / « Chambre » du 03/10/2026).
+5. **Une mesure absente n'est pas zéro.** Une valeur périmée ou manquante est un état explicite.
+6. **Un ordre de sécurité part immédiatement et se vérifie.** Voir §7.
+
+## 3. Les quatre contrats
+
+| # | Contrat | Statut |
+|---|---|---|
+| 1 | Intégration plugin ↔ cœur (messages JSON) | v0.1 écrit, v0.2 proposé : `CONTRACT-V0.2-PROPOSITION.md` |
+| 2 | Services sortants (notifications, publication vers Home Assistant…) : capacités appelées par le cœur | à écrire |
+| 3 | API publique cœur ↔ frontend (REST + abonnement WebSocket ; clé en en-tête, comparaison en temps constant) | à écrire |
+| 4 | Manifeste de widget : types d'entités et de plugins que le widget sait afficher | à écrire |
+
+## 4. Le cœur
+
+- **Registre d'entités** : déjà écrit (`Krissvia.Core.Registry`). Identité `entity_id` définitive, champs
+  plugin / champs utilisateur séparés, entités absentes marquées `missing`.
+- **Magasin d'états** : dernière valeur **et horodatage réel** par entité, persisté. Après un redémarrage,
+  une mesure garde sa vraie date (sinon tout contrôle de fraîcheur devient aveugle). Structures
+  concurrentes dès le départ.
+- **Bus d'événements interne** (remplace les `OnStateChanged` par service) ; abonnés protégés un par un.
+- **Bus de commandes** : toute commande renvoie un résultat (`accepted`, `failed`, `unreachable`).
+- **Entités calculées** : moyennes de sondes (`avg/…` de DomoMud), somme des équipements, consommations
+  jour/semaine/mois, coûts. Elles passent en `unavailable` quand leurs entrées manquent, elles ne
+  disparaissent jamais.
+- **Moteurs** : Climate (thermostats TPI), Délestage, Alarme, Automatismes, Présence et Absence, Énergie.
+
+## 5. Partage cœur / plugins
+
+| DomoMud | Krissvia |
+|---|---|
+| Thermostat TPI, auto-TPI, planning, absence | **cœur**, module Climate |
+| Délesteur | **cœur**, module Délestage |
+| Alarme (machine à états, codes, verrou, journal) | **cœur**, module Alarme |
+| Automatismes, conditions, déclencheurs | **cœur** |
+| Alertes (déduplication, quarantaine) | **cœur** |
+| Zigbee2MQTT, MQTT générique (+ modèles Theengs, Shelly), RFXCom | plugins |
+| Shelly HTTP (relais, EM) | plugin |
+| Linky (trame MQTT) | plugin |
+| Livebox (présence, WAN), Proxmox, Raspberry, météo, Tempo | plugins (produisent des entités) |
+| ntfy, publication Home Assistant | services sortants (contrat 2) |
+| openHASP (platines) | plugin à deux sens (entités + affichage) |
+
+## 6. Énergie : le compteur logique
+
+Les plugins publient ce qu'ils savent mesurer, en unités standard (pince : W, éventuellement A, V, kWh ;
+Linky : VA, index par tarif, tarif courant). Le cœur définit un **compteur logique** lié à des
+entités par rôle :
+
+| Rôle | Obligatoire | Consommé par |
+|---|---|---|
+| `puissance_instantanee` (VA de préférence, sinon W) | oui | délestage, widget de puissance |
+| `index_energie` (total croissant) | non | consommations, coûts |
+| `tarif_courant` | non | coût par tarif, heures creuses |
+
+- Avec un index : consommation = différence d'index. Sans index : intégration de la puissance, marquée
+  « estimée ».
+- Le moteur reçoit une valeur `(valeur, unité, horodatage, qualité)`, qualité ∈ {apparente, active, estimée}.
+  Une mesure en W est signalée « approchée » ; aucune conversion silencieuse.
+- La fraîcheur se juge avec `expected_interval_seconds` déclaré par le plugin (Linky : 2 s).
+- Installation monophasée : pas de rôle par phase.
+- Le délestage a trois sources, ramenées à deux : une entité de puissance liée, ou la somme des
+  équipements (mesure réelle si publiée, sinon puissance nominale).
+- Implémentation : `IEntityStateReader` (dans `Core`, que le magasin d'états implémentera),
+  `EntityPowerSource`, `EquipmentSumPowerSource` et `PowerReadings.ToReading` (dans
+  `Krissvia.Climate.LoadShedding`). Une mesure en W est majorée d'un facteur ≥ 1 réglable avant d'être
+  comparée aux seuils en VA.
+
+## 7. Ordres de sécurité
+
+1. Un ordre de sécurité (`priority: safety`) n'attend aucun tick : il est émis tout de suite par le module
+   qui le décide.
+2. Un drapeau « coupure envoyée » n'est posé qu'après un résultat `accepted`. Un échec est retenté.
+3. Une coupure est **vérifiée** : l'état résultant de l'entité (ou la baisse de puissance) la confirme,
+   le résultat de la commande seul ne suffit pas.
+4. Une coupure échouée ne compte pas comme économie de puissance : l'équipement suivant est délesté.
+5. Une protection coupe sans condition, même si le moteur croit que la charge est déjà éteinte.
+6. Ces règles valent pour : délestage, fenêtre ouverte, sonde perdue, sirène.
+
+## 8. Module Délestage ↔ Climate
+
+DomoMud passait par un drapeau lu au tick suivant du thermostat (10 s). Dans Krissvia :
+
+1. Le module Climate expose des **inhibitions** par thermostat, identifiées par un motif :
+   `delestage`, `fenetre_ouverte`, `sonde_perdue`. Tant qu'une inhibition existe, le thermostat ne chauffe pas.
+2. Le délestage appelle `Climate.Inhiber(thermostat, "delestage")`. L'appel, dans l'ordre :
+   pose l'inhibition (verrou du thermostat), **puis** émet immédiatement la coupure sur tous ses switches,
+   **puis** retourne le résultat.
+3. La consigne, le mode, le planning et l'intégrale du thermostat **ne sont pas modifiés**.
+4. À la restauration : `Climate.Lever(thermostat, "delestage")`. Le thermostat reprend avec la consigne
+   **du moment**, y compris si l'utilisateur ou le planning l'a changée entre-temps.
+5. Un équipement non lié à un thermostat est coupé et rétabli directement.
+6. L'état de délestage n'est pas persisté : après un redémarrage, il est recalculé depuis la mesure.
+
+**[décidé le 14/10/2026]** Le choix initial était de modifier la consigne puis de la restaurer. Les
+inhibitions ont été retenues : une consigne modifiée et persistée doit être restaurée (consigne perdue si le serveur
+redémarre pendant le délestage, écrasement d'un changement fait entre-temps, état hors-gel qui
+ressemble à un réglage voulu). Une inhibition en mémoire se corrige seule au redémarrage. Si tu veux
+néanmoins que la consigne affichée baisse pendant le délestage, c'est un choix d'affichage, sans
+conséquence sur la régulation.
+
+**[décidé]** Trois comportements de DomoMud sont corrigés (voir `TESTS-CARACTERISATION.md`, D4 à D6) :
+sur-délestage avant que la mesure ait baissé, restauration groupée sans marge, mesure absente lue comme 0.
+Implémentation : `Krissvia.Climate.LoadShedding.LoadShedder`.
+
+## 9. Module Alarme : la sirène
+
+La sirène ne sonne plus d'un seul tenant. Réglages (par installation) :
+
+| Réglage | Plage | Défaut proposé |
+|---|---|---|
+| `duree_sonnerie_secondes` | **10 à 30** | 30 |
+| `nombre_sonneries` | 1 à 10 (proposition) | 3 |
+| `pause_entre_sonneries_secondes` | 5 à 120 (proposition) | 30 |
+
+Le « 0 = illimité » de DomoMud disparaît : les trois valeurs sont bornées à l'enregistrement.
+
+Déroulement, dans l'état `Declenchee` (qui dure jusqu'au désarmement) :
+
+1. Sonnerie 1 : sirène ON pendant la durée réglée.
+2. Pause (sirène OFF), puis sonnerie suivante, jusqu'à `nombre_sonneries`.
+3. Après la dernière : sirène OFF, l'état reste `Declenchee` (c'est lui qui raconte l'intrusion).
+4. Désarmement : sirène OFF **sans condition** (priorité `safety`, vérifiée comme au §7).
+5. Un nouveau capteur qui détecte pendant `Declenchee` n'est pas relancé (comportement actuel conservé).
+
+L'état de la machine reçoit deux champs, `SonnerieEnCours` (n°) et `EnSonnerie` (sonne ou pause) ;
+le compteur existant sert de minuterie. La machine reste une fonction pure, testable avec une
+horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même programme.
+
+## 10. Frontend
+
+- Application web qui ne parle qu'à l'API publique (REST + WebSocket).
+- **Widgets en Web Components**, associés par règles : `kind` + `device_class` + usage choisissent le widget
+  par défaut ; un plugin peut en livrer ; l'utilisateur peut en changer.
+- Disposition : JSON en base validé par JSON Schema, éditée visuellement ; une vue YAML en import/export.
+- Menu construit à partir des manifestes de plugins (clés stables).
+- Blazor reste possible pour les écrans d'administration.
+- Modèle de confiance des widgets : code de confiance installé par l'administrateur, à documenter.
+
+## 11. Feuille de route
+
+1. Contrat v0.2, `PluginHost` et transport (WebSocket).
+2. Plugin Zigbee2MQTT interne, avec un simulateur pour les tests.
+3. Cœur : magasin d'états, bus d'événements, bus de commandes.
+4. Port des moteurs, chacun précédé de ses tests de caractérisation : Climate, Délestage, Présence,
+   Alarme, Automatismes.
+5. API publique et premier frontend avec les widgets de base.
+6. Un plugin Python d'exemple.
+7. Import des données DomoMud, une seule fois, pour les deux installations (6 kVA et 12 kVA).
+
+## 12. Décisions ouvertes
+
+- Plages de la sirène hors 10 à 30 s, et valeurs par défaut.
+- Seuils du délestage : 80 % / 70 % pour le 6 kVA ; retenus aussi pour le 12 kVA jusqu'à avis contraire.
+- Forme des états structurés (prévision météo).

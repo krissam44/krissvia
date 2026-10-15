@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Krissvia.Contracts\Krissvia.Contracts.csproj" />
+    <ProjectReference Include="..\Krissvia.Core\Krissvia.Core.csproj" />
+    <ProjectReference Include="..\Krissvia.Climate\Krissvia.Climate.csproj" />
+    <ProjectReference Include="..\Krissvia.Persistence\Krissvia.Persistence.csproj" />
+    <ProjectReference Include="..\Krissvia.PluginHost\Krissvia.PluginHost.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,126 @@
+using System.Text.Json;
+
+namespace Krissvia.Contracts;
+
+/// <summary>
+/// Famille technique d'une entité, fournie par le plugin. L'usage (radiateur, chauffe-eau…)
+/// est choisi par l'utilisateur dans le cœur et ne fait pas partie du contrat.
+/// </summary>
+public enum EntityKind
+{
+    Sensor,
+    BinarySensor,
+    Switch,
+    Light,
+    Cover,
+    Event,
+}
+
+public enum StateClass
+{
+    /// <summary>Mesure instantanée (température, puissance).</summary>
+    Measurement,
+
+    /// <summary>Compteur qui ne fait que croître (index d'énergie).</summary>
+    TotalIncreasing,
+}
+
+/// <summary>Une capacité d'un appareil : une mesure, un interrupteur, un volet…</summary>
+public sealed record EntityDescriptor
+{
+    /// <summary>
+    /// Identifiant immuable, unique au sein du plugin (ex. adresse IEEE + suffixe).
+    /// Jamais un nom affiché : un renommage ne doit rien casser.
+    /// </summary>
+    public required string UniqueId { get; init; }
+
+    public required EntityKind Kind { get; init; }
+
+    /// <summary>Nom proposé (« Gauche », « Puissance »…). L'utilisateur peut le changer dans le cœur.</summary>
+    public string? Name { get; init; }
+
+    /// <summary>Voir <see cref="DeviceClasses"/>. Chaîne ouverte : un plugin peut en proposer d'autres.</summary>
+    public string? DeviceClass { get; init; }
+
+    /// <summary>Voir <see cref="Units"/>.</summary>
+    public string? Unit { get; init; }
+
+    public StateClass? StateClass { get; init; }
+
+    /// <summary>Commandes acceptées (voir <see cref="StandardCommands"/>).</summary>
+    public IReadOnlyList<string> Commands { get; init; } = [];
+
+    /// <summary>Données propres au plugin, opaques pour le cœur (adresse IP, canal…).</summary>
+    public IReadOnlyDictionary<string, JsonElement>? Extra { get; init; }
+}
+
+/// <summary>Un appareil physique et ses entités.</summary>
+public sealed record DeviceDescriptor
+{
+    public required string UniqueId { get; init; }
+    public string? Name { get; init; }
+    public string? Manufacturer { get; init; }
+    public string? Model { get; init; }
+    public IReadOnlyList<EntityDescriptor> Entities { get; init; } = [];
+    public IReadOnlyDictionary<string, JsonElement>? Extra { get; init; }
+}
+
+/// <summary>
+/// Valeur d'une entité. Le type de <see cref="Value"/> dépend du <see cref="EntityKind"/> :
+/// nombre (sensor), booléen (binary_sensor, switch), objet (light, cover), chaîne (event).
+/// </summary>
+public sealed record EntityState
+{
+    public required string EntityUniqueId { get; init; }
+    public required JsonElement Value { get; init; }
+
+    /// <summary>Instant de la mesure côté plugin (UTC). Absent : le cœur utilise l'heure de réception.</summary>
+    public DateTimeOffset? Timestamp { get; init; }
+}
+
+/// <summary>Classes de mesure normalisées (valeur de <see cref="EntityDescriptor.DeviceClass"/>).</summary>
+public static class DeviceClasses
+{
+    public const string Temperature = "temperature";
+    public const string Humidity = "humidity";
+    public const string Power = "power";
+    public const string Energy = "energy";
+    public const string Voltage = "voltage";
+    public const string Current = "current";
+    public const string Battery = "battery";
+
+    /// <summary>binary_sensor : true = OUVERT (le plugin inverse les conventions contraires).</summary>
+    public const string Opening = "opening";
+
+    /// <summary>binary_sensor : true = présence détectée.</summary>
+    public const string Occupancy = "occupancy";
+}
+
+/// <summary>Unités normalisées : le plugin convertit, le cœur ne reçoit que celles-ci.</summary>
+public static class Units
+{
+    public const string Celsius = "°C";
+    public const string Percent = "%";
+    public const string Watt = "W";
+    public const string KilowattHour = "kWh";
+    public const string Volt = "V";
+    public const string Ampere = "A";
+}
+
+/// <summary>Commandes standard par famille. Un plugin peut en déclarer d'autres.</summary>
+public static class StandardCommands
+{
+    // switch, light
+    public const string TurnOn = "turn_on";
+    public const string TurnOff = "turn_off";
+    public const string Toggle = "toggle";
+
+    // light : args {"brightness": 0..100}
+    public const string SetBrightness = "set_brightness";
+
+    // cover
+    public const string Open = "open";
+    public const string Close = "close";
+    public const string Stop = "stop";
+    public const string SetPosition = "set_position";
+}
