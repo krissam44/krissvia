@@ -207,8 +207,12 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
    configuration dont les listes ne proposent que des entités du registre de la bonne famille. Les boutons passent
    par `ThermostatService`, comme l'API. Un changement de configuration réveille la boucle du moteur
    (`ThermostatService.Changed`, levé verrou rendu) : un mode choisi atteint le radiateur tout de suite au lieu
-   d'attendre jusqu'à 10 s. Reste à faire : l'éditeur de planning (en attendant, par l'API), le délestage, les
-   entités.
+   d'attendre jusqu'à 10 s. **Éditeur de planning** (`/thermostats/{id}/planning`) : créneaux par jour, mode
+   hors créneau, copie d'un jour vers la semaine, le week-end ou les jours ouvrés, et un aperçu de la semaine
+   calculé en interrogeant le planning lui-même quart d'heure par quart d'heure — il montre ce que fera le moteur,
+   créneaux de nuit et chevauchements compris. Les chevauchements sont signalés (le plus matinal l'emporte, C12) ;
+   un créneau de durée nulle est refusé. L'enregistrement ne remplace que le planning
+   (`SetScheduleAsync`, `PUT /api/thermostats/{id}/schedule`). Reste à faire : le délestage, les entités.
 6. Un plugin Python d'exemple.
 7. Import des données DomoMud, une seule fois, pour les deux installations (6 kVA et 12 kVA).
 

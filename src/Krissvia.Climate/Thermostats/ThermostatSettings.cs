@@ -27,6 +27,21 @@ public sealed record ScheduleSlot(TimeSpan Start, TimeSpan End, ThermostatMode M
             ? heure >= Start || heure < fin
             : heure >= Start && heure < fin;
     }
+
+    /// <summary>Les plages couvertes dans la journée, [début, fin[ : deux pour un créneau de nuit.</summary>
+    internal IEnumerable<(TimeSpan From, TimeSpan To)> Segments()
+    {
+        var fin = FinEffective;
+        if (fin > Start)
+        {
+            yield return (Start, fin);
+        }
+        else
+        {
+            yield return (Start, TimeSpan.FromHours(24));
+            if (fin > TimeSpan.Zero) yield return (TimeSpan.Zero, fin);
+        }
+    }
 }
 
 /// <summary>Planning hebdomadaire : créneaux par jour, mode par défaut hors créneau.</summary>
@@ -51,6 +66,59 @@ public sealed record WeeklySchedule
 
         return DefaultMode;
     }
+
+    /// <summary>
+    /// Les paires de créneaux d'un même jour qui se recouvrent. Pas une erreur (le plus matinal gagne, C12), mais
+    /// presque toujours une faute de saisie : l'écran les signale.
+    /// </summary>
+    public IReadOnlyList<(ScheduleSlot First, ScheduleSlot Second)> Overlaps(DayOfWeek jour)
+    {
+        if (!Days.TryGetValue(jour, out var creneaux)) return [];
+
+        var paires = new List<(ScheduleSlot, ScheduleSlot)>();
+        for (var i = 0; i < creneaux.Count; i++)
+            for (var j = i + 1; j < creneaux.Count; j++)
+                if (creneaux[i].Segments().Any(a => creneaux[j].Segments().Any(b => a.From < b.To && b.From < a.To)))
+                    paires.Add((creneaux[i], creneaux[j]));
+        return paires;
+    }
+
+    /// <summary>Lève une exception lisible pour un créneau hors de la journée ou de durée nulle.</summary>
+    public void Validate()
+    {
+        foreach (var (jour, creneaux) in Days)
+        {
+            foreach (var c in creneaux)
+            {
+                if (c.Start < TimeSpan.Zero || c.Start >= TimeSpan.FromHours(24) || c.End < TimeSpan.Zero || c.End >= TimeSpan.FromHours(24))
+                    throw new ArgumentException($"planning, {Jours.Nom(jour)} : heures entre 00:00 et 23:59.");
+                if (c.Start == c.End && c.End != TimeSpan.Zero)
+                    throw new ArgumentException($"planning, {Jours.Nom(jour)} : un créneau commence et finit à {c.Start:hh\\:mm}, il ne durerait rien.");
+            }
+        }
+    }
+}
+
+/// <summary>Noms des jours en français, pour les messages : <see cref="DayOfWeek"/> ne parle qu'anglais.</summary>
+public static class Jours
+{
+    /// <summary>Du lundi au dimanche : l'ordre d'affichage.</summary>
+    public static readonly DayOfWeek[] Semaine =
+    [
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
+        DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday,
+    ];
+
+    public static string Nom(DayOfWeek jour) => jour switch
+    {
+        DayOfWeek.Monday => "lundi",
+        DayOfWeek.Tuesday => "mardi",
+        DayOfWeek.Wednesday => "mercredi",
+        DayOfWeek.Thursday => "jeudi",
+        DayOfWeek.Friday => "vendredi",
+        DayOfWeek.Saturday => "samedi",
+        _ => "dimanche",
+    };
 }
 
 /// <summary>Paramètres de la régulation TPI (valeurs par défaut de DomoMud).</summary>
@@ -145,5 +213,13 @@ public sealed record ThermostatSettings
             throw new ArgumentException($"{Id} : le seuil bas d'inertie doit être inférieur au seuil haut.");
         if (FailsafeMinutes < 0 || OpeningDelayMinutes < 0 || ClosingDelayMinutes < 0)
             throw new ArgumentException($"{Id} : délai négatif.");
+        try
+        {
+            Schedule.Validate();
+        }
+        catch (ArgumentException ex)
+        {
+            throw new ArgumentException($"{Id} : {ex.Message}");
+        }
     }
 }

@@ -63,6 +63,12 @@ internal static class PublicApi
                 ? await Executer(async () => Resultat(id, await service.SetTargetAsync(id, r.Temperature, ct)))
                 : Refus("attendu : {\"temperature\": 19.5} ou {\"temperature\": null}"));
 
+        // Le planning seul : un écran ou un script qui le modifie n'écrase pas un mode choisi entre-temps.
+        groupe.MapPut("/{id}/schedule", async (string id, HttpRequest requete, ThermostatService service, CancellationToken ct) =>
+            await Lire<WeeklySchedule>(requete, ct) is { } planning
+                ? await Executer(async () => Resultat(id, await service.SetScheduleAsync(id, planning, ct)))
+                : Refus("attendu : {\"days\": {\"monday\": [{\"start\": \"06:00:00\", \"end\": \"08:00:00\", \"mode\": \"comfort\"}]}, \"default_mode\": \"eco\"}"));
+
         groupe.MapPost("/{id}/schedule", async (string id, HttpRequest requete, ThermostatService service, CancellationToken ct) =>
             await Lire<ScheduleRequest>(requete, ct) is { } r
                 ? await Executer(async () => Resultat(id, await service.SetScheduleActiveAsync(id, r.Active, ct)))

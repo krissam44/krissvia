@@ -149,6 +149,25 @@ public sealed partial class ThermostatService(IConfigurationStore store, IEntity
         }, creer: false, ct);
     }
 
+    /// <summary>
+    /// Remplace le planning, sans toucher au reste : ni au mode, ni à son activation, ni à la consigne ajustée. Un
+    /// enregistrement complet depuis un écran ouvert depuis dix minutes écraserait un mode choisi entre-temps.
+    /// Null si inconnu.
+    /// </summary>
+    public Task<ThermostatSettings?> SetScheduleAsync(string id, WeeklySchedule planning, CancellationToken ct = default)
+    {
+        try
+        {
+            planning.Validate();
+        }
+        catch (ArgumentException ex)
+        {
+            throw new ThermostatValidationException(ex.Message);
+        }
+
+        return ModifierAsync(id, t => t with { Schedule = planning }, creer: false, ct);
+    }
+
     /// <summary>Active ou suspend le planning ; la consigne ajustée est effacée. Null si inconnu.</summary>
     public Task<ThermostatSettings?> SetScheduleActiveAsync(string id, bool actif, CancellationToken ct = default) =>
         ModifierAsync(id, t => t with { ScheduleActive = actif, TargetOverride = null }, creer: false, ct);

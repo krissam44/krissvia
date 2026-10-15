@@ -81,4 +81,50 @@ public class PlanningThermostatTests
         Assert.Equal(ThermostatMode.Comfort2, reglages.ModeAt(Mercredi(7)));
         Assert.Equal(ThermostatMode.Comfort, (reglages with { ScheduleActive = true }).ModeAt(Mercredi(7)));
     }
+
+    private static ScheduleSlot Creneau(double debut, double fin, ThermostatMode mode = ThermostatMode.Comfort) =>
+        new(TimeSpan.FromHours(debut), TimeSpan.FromHours(fin), mode);
+
+    [Theory]
+    [InlineData(6, 8, 7, 9, true)]      // à cheval
+    [InlineData(6, 9, 7, 8, true)]      // l'un dans l'autre
+    [InlineData(6, 8, 8, 10, false)]    // bout à bout : la fin est exclue
+    [InlineData(22, 6, 5, 7, true)]     // nuit contre matin
+    [InlineData(22, 6, 23, 0, true)]    // nuit contre fin de soirée
+    [InlineData(22, 0, 0, 6, false)]    // « jusqu'à minuit » ne touche pas le petit matin
+    [InlineData(22, 6, 6, 22, false)]   // la nuit et la journée se complètent
+    public void Les_chevauchements_sont_detectes_y_compris_la_nuit(double d1, double f1, double d2, double f2, bool attendu)
+    {
+        var p = Planning(DayOfWeek.Wednesday, Creneau(d1, f1), Creneau(d2, f2, ThermostatMode.Eco));
+
+        Assert.Equal(attendu, p.Overlaps(DayOfWeek.Wednesday).Count == 1);
+        Assert.Empty(p.Overlaps(DayOfWeek.Thursday));
+    }
+
+    [Fact]
+    public void Un_creneau_de_duree_nulle_est_refuse()
+    {
+        var p = Planning(DayOfWeek.Friday, Creneau(7, 7));
+
+        var ex = Assert.Throws<ArgumentException>(p.Validate);
+        Assert.Contains("vendredi", ex.Message);
+    }
+
+    [Fact]
+    public void De_minuit_a_minuit_couvre_toute_la_journee()
+    {
+        var p = Planning(DayOfWeek.Wednesday, Creneau(0, 0));
+
+        p.Validate();
+        Assert.Equal(ThermostatMode.Comfort, p.ModeAt(Mercredi(0)));
+        Assert.Equal(ThermostatMode.Comfort, p.ModeAt(Mercredi(23, 59)));
+    }
+
+    [Theory]
+    [InlineData(-1, 8)]
+    [InlineData(6, 24)]
+    public void Une_heure_hors_de_la_journee_est_refusee(double debut, double fin)
+    {
+        Assert.Throws<ArgumentException>(Planning(DayOfWeek.Monday, Creneau(debut, fin)).Validate);
+    }
 }

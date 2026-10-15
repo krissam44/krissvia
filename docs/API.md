@@ -25,6 +25,7 @@ l'API sans la connaître. Le cookie est `SameSite=Lax`, donc un autre site ne pe
 | POST | `/api/thermostats/{id}/mode` | `{"mode": "comfort"}` | Choisit un mode : **suspend le planning** et efface la consigne ajustée |
 | POST | `/api/thermostats/{id}/target` | `{"temperature": 19.5}` ou `null` | Ajuste la consigne (5 à 30 °C) ; `null` revient à celle du mode. Refusée en mode `off` (Off est ferme : choisir d'abord un mode) |
 | POST | `/api/thermostats/{id}/schedule` | `{"active": true}` | Active ou suspend le planning |
+| PUT | `/api/thermostats/{id}/schedule` | `{"days": {…}, "default_mode": "eco"}` | Remplace le planning **seul** : mode, activation et consigne ajustée restent tels quels. Refuse un créneau de durée nulle ou hors de 00:00–23:59 |
 
 Modes : `off`, `frost_protection`, `eco`, `comfort2`, `comfort1`, `comfort`. Choisir un mode efface la consigne
 ajustée : pour chauffer à 24 °C, `mode` **puis** `target`.

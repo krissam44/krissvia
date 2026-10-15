@@ -121,7 +121,8 @@ else if (_m is not null)
     @if (!Creation)
     {
         <MudAlert Severity="Severity.Normal" Dense="true" Class="mb-4">
-            Mode, consigne ajustée et planning sont conservés tels quels : ils se règlent depuis la carte du thermostat.
+            Mode, consigne ajustée et activation du planning sont conservés tels quels : ils se règlent depuis la carte du thermostat.
+            Les créneaux se règlent dans <MudLink Href="@($"/thermostats/{Id}/planning")">l'éditeur de planning</MudLink>.
         </MudAlert>
     }
 

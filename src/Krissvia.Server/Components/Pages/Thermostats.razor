@@ -31,6 +31,7 @@
                         {
                             <MudChip T="string" Size="Size.Small" Color="@LibellesThermostat.Couleur(etat.Status)">@LibellesThermostat.Statut(etat.Status)</MudChip>
                         }
+                        <MudIconButton Href="@($"/thermostats/{t.Id}/planning")" Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" aria-label="Planning" />
                         <MudIconButton Href="@($"/thermostats/{t.Id}")" Icon="@Icons.Material.Filled.Settings" Size="Size.Small" aria-label="Configuration" />
                     </MudStack>
                 </MudStack>
