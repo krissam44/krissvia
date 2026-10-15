@@ -2,5 +2,22 @@
   "id": "zigbee2mqtt",
   "name": "Zigbee2MQTT",
   "description": "Appareils Zigbee : sondes, prises, relais, lumières, boutons, via le broker MQTT.",
-  "executable": "Krissvia.Plugin.Zigbee2Mqtt"
+  "executable": "Krissvia.Plugin.Zigbee2Mqtt",
+  "settings": {
+    "type": "object",
+    "properties": {
+      "Mqtt": {
+        "type": "object",
+        "title": "Broker MQTT",
+        "required": [ "Host" ],
+        "properties": {
+          "Host": { "type": "string", "title": "Adresse IP", "description": "Une adresse IP plutôt qu'un nom : la résolution DNS échoue parfois en silence sous systemd." },
+          "Port": { "type": "integer", "title": "Port", "default": 1883, "minimum": 1, "maximum": 65535 },
+          "Username": { "type": "string", "title": "Utilisateur" },
+          "Password": { "type": "string", "title": "Mot de passe", "format": "password" },
+          "BaseTopic": { "type": "string", "title": "Topic de base", "default": "zigbee2mqtt" }
+        }
+      }
+    }
+  }
 }

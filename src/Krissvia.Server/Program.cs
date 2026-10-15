@@ -68,6 +68,8 @@ builder.Services.AddHostedService<LoadSheddingLoop>();
 
 // Services : les plugins installés sur cette machine, lancés et surveillés par le cœur.
 builder.Services.AddSingleton<IPluginLauncher, ProcessPluginLauncher>();
+builder.Services.AddSingleton<PluginSettingsService>();
+builder.Services.AddSingleton<IPluginSettingsProvider>(sp => sp.GetRequiredService<PluginSettingsService>());
 builder.Services.AddSingleton<PluginSupervisor>();
 builder.Services.AddHostedService<PluginSupervisorLifetime>();
 

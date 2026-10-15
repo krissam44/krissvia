@@ -9,6 +9,10 @@ Zigbee2MQTT ──MQTT──▶ plugin ──WebSocket (contrat 0.2)──▶ c�
 
 ## Configuration
 
+**Lancé par le cœur (page Services)** : les réglages se saisissent dans la fiche du service, qui les lui
+transmet au lancement ; ils l'emportent sur les fichiers ci-dessous. **Lancé à la main** (Visual Studio,
+service systemd) :
+
 `appsettings.json` à côté de l'exécutable, complété par `appsettings.Local.json` (jamais versionné : mot de
 passe du broker, jeton), puis par les variables d'environnement et la ligne de commande. Modèle :
 `appsettings.Local.example.json`, à copier en `appsettings.Local.json`.

@@ -188,7 +188,11 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
    utilisateur) — une ligne par plugin installé (`plugin.json` à côté de l'exécutable), statut, interrupteur,
    fiche avec journal. Le cœur lance lui-même les plugins activés (désactivés par défaut), avec un jeton neuf à
    chaque lancement, les relance après un plantage (2 s à 1 min) et refuse d'en lancer un déjà connecté
-   ailleurs. Restent : formulaire de réglages par `configure`, et l'authentification.
+   ailleurs. Réglages : chaque `plugin.json` les décrit (sous-ensemble de JSON Schema), la fiche du service en
+   tire un formulaire, et le cœur les transmet **au lancement** par variables d'environnement (prioritaires sur
+   `appsettings.Local.json`), puis relance le plugin s'ils changent — plus simple et plus sûr qu'une
+   reconfiguration à chaud. Le message `configure` reste pour les plugins d'une autre machine. Reste :
+   l'authentification.
 6. Un plugin Python d'exemple.
 7. Import des données DomoMud, une seule fois, pour les deux installations (6 kVA et 12 kVA).
 

@@ -45,7 +45,7 @@ public class SuperviseurTests
         public void Planter(int code = 1) => _sortie.TrySetResult(code);
     }
 
-    private sealed class FauxLanceur : IPluginLauncher
+    internal sealed class FauxLanceur : IPluginLauncher
     {
         private int _pid = 1000;
         public ConcurrentQueue<(PluginManifest Plugin, IReadOnlyDictionary<string, string> Env, FauxProcessus Processus)> Lancements { get; } = new();

@@ -2,5 +2,31 @@
   "id": "shelly",
   "name": "Shelly",
   "description": "Pinces de mesure et relais Shelly, interrogés en HTTP sur le réseau local.",
-  "executable": "Krissvia.Plugin.Shelly"
+  "executable": "Krissvia.Plugin.Shelly",
+  "settings": {
+    "type": "object",
+    "properties": {
+      "Shelly": {
+        "type": "object",
+        "title": "Shelly",
+        "required": [ "Devices" ],
+        "properties": {
+          "Devices": {
+            "type": "array",
+            "title": "Appareils",
+            "description": "Le plugin reconnaît seul le modèle, la génération et les voies de chaque appareil.",
+            "items": {
+              "type": "object",
+              "required": [ "Host" ],
+              "properties": {
+                "Host": { "type": "string", "title": "Adresse IP" },
+                "Name": { "type": "string", "title": "Nom" }
+              }
+            }
+          },
+          "PollSeconds": { "type": "integer", "title": "Interrogation (s)", "default": 2, "minimum": 1, "maximum": 60 }
+        }
+      }
+    }
+  }
 }

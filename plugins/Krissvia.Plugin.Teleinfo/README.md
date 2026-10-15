@@ -10,6 +10,10 @@ module TIC ──MQTT (JSON)──▶ plugin ──WebSocket (contrat 0.2)──
 
 ## Configuration
 
+**Lancé par le cœur (page Services)** : les réglages se saisissent dans la fiche du service, qui les lui
+transmet au lancement ; ils l'emportent sur les fichiers ci-dessous. **Lancé à la main** (Visual Studio,
+service systemd) :
+
 `appsettings.json`, complété par `appsettings.Local.json` (jamais versionné ; modèle :
 `appsettings.Local.example.json`), puis variables d'environnement et ligne de commande.
 
