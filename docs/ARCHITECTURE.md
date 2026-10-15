@@ -184,15 +184,24 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
    faite le 15/10/2026, voir TESTS-CARACTERISATION.md pour ce qui reste), Délestage, Présence,
    Alarme, Automatismes.
 5. API publique et premier frontend avec les widgets de base. Commencé le 15/10/2026 : page **Services**
-   (Blazor + MudBlazor, `/parametres/services`, en développement seulement tant qu'il n'y a pas de connexion
-   utilisateur) — une ligne par plugin installé (`plugin.json` à côté de l'exécutable), statut, interrupteur,
+   (Blazor + MudBlazor, `/parametres/services`) — une ligne par plugin installé (`plugin.json` à côté de l'exécutable), statut, interrupteur,
    fiche avec journal. Le cœur lance lui-même les plugins activés (désactivés par défaut), avec un jeton neuf à
    chaque lancement, les relance après un plantage (2 s à 1 min) et refuse d'en lancer un déjà connecté
    ailleurs. Réglages : chaque `plugin.json` les décrit (sous-ensemble de JSON Schema), la fiche du service en
    tire un formulaire, et le cœur les transmet **au lancement** par variables d'environnement (prioritaires sur
    `appsettings.Local.json`), puis relance le plugin s'ils changent — plus simple et plus sûr qu'une
-   reconfiguration à chaud. Le message `configure` reste pour les plugins d'une autre machine. Reste :
-   l'authentification.
+   reconfiguration à chaud. Le message `configure` reste pour les plugins d'une autre machine.
+   **Authentification** (15/10/2026) : toute l'interface exige une connexion, en développement comme en
+   production. Comptes dans la collection `comptes` (PBKDF2-SHA256, 100 000 itérations, sel par compte) ; le
+   premier se crée sur `/installation` avec un jeton à usage unique écrit dans le journal du serveur, tiré
+   seulement tant qu'aucun compte n'existe — sinon le premier venu du réseau créerait le compte avant le
+   propriétaire. Verrou global : 5 échecs, puis une minute de refus, quel que soit l'identifiant tapé. On ne
+   supprime ni son propre compte ni le dernier. Connexion et installation sont des formulaires HTML simples
+   (le cookie se pose dans une réponse HTTP, pas dans un circuit Blazor), protégés par le jeton antiforgery ;
+   l'adresse de retour n'est suivie que si elle est locale. Cookie `krissvia` (HttpOnly, SameSite=Lax,
+   14 jours glissants) ; clés Data Protection dans `keys/`, à côté de la base, pour qu'un redémarrage ne
+   déconnecte personne — ce dossier se protège comme la base. Une session ouverte vaut la clé d'API sur
+   `/api` et `/debug`.
 6. Un plugin Python d'exemple.
 7. Import des données DomoMud, une seule fois, pour les deux installations (6 kVA et 12 kVA).
 

@@ -1,0 +1,42 @@
+@page "/connexion"
+@layout Layout.AccueilLayout
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@inject Krissvia.Core.Accounts.AccountService Comptes
+@inject NavigationManager Navigation
+
+<PageTitle>Connexion · Krissvia</PageTitle>
+
+<h1>Connexion</h1>
+<p class="aide">Interface d'administration.</p>
+
+@if (Erreur == "invalide")
+{
+    <div class="erreur">Identifiant ou mot de passe faux.</div>
+}
+else if (Erreur == "verrou")
+{
+    <div class="erreur">Trop d'essais : réessayez dans @Secondes s.</div>
+}
+
+<form method="post" action="/connexion">
+    <AntiforgeryToken />
+    <input type="hidden" name="retour" value="@Retour" />
+    <label for="utilisateur">Identifiant</label>
+    <input id="utilisateur" name="utilisateur" autocomplete="username" autofocus required />
+    <label for="motdepasse">Mot de passe</label>
+    <input id="motdepasse" name="motdepasse" type="password" autocomplete="current-password" required />
+    <button type="submit">Se connecter</button>
+</form>
+
+@code {
+    [SupplyParameterFromQuery] public string? Erreur { get; set; }
+    [SupplyParameterFromQuery] public int Secondes { get; set; }
+    [SupplyParameterFromQuery] public string? Retour { get; set; }
+
+    // Aucun compte encore : rien à quoi se connecter, on va créer le premier.
+    protected override void OnInitialized()
+    {
+        if (!Comptes.HasAccounts) Navigation.NavigateTo("/installation");
+    }
+}

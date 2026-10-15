@@ -1,0 +1,23 @@
+@inherits LayoutComponentBase
+
+@* Mise en page des écrans d'accès (connexion, installation) : du HTML simple, rendu côté serveur, sans circuit. *@
+
+<style>
+    body { margin: 0; background: #f2f3f8; font-family: Roboto, "Segoe UI", sans-serif; color: #1f2430; }
+    .acces { max-width: 380px; margin: 10vh auto; background: #fff; border-radius: 12px; padding: 28px 28px 24px;
+             box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+    .acces h1 { font-size: 1.4rem; font-weight: 500; margin: 0 0 4px; }
+    .acces p.aide { color: #6b7080; font-size: .85rem; margin: 0 0 18px; }
+    .acces label { display: block; font-size: .8rem; color: #555b6e; margin: 12px 0 4px; }
+    .acces input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #c9ccd6; border-radius: 6px; font-size: 1rem; }
+    .acces input:focus { outline: 2px solid #594ae2; border-color: #594ae2; }
+    .acces button { margin-top: 20px; width: 100%; padding: 11px; border: 0; border-radius: 6px; background: #594ae2;
+                    color: #fff; font-size: .95rem; font-weight: 500; letter-spacing: .03em; cursor: pointer; }
+    .acces .erreur { background: #fdecea; color: #a12622; border-radius: 6px; padding: 10px 12px; font-size: .85rem; margin-bottom: 8px; }
+    .acces .marque { color: #594ae2; font-weight: 700; font-size: .9rem; letter-spacing: .06em; margin-bottom: 18px; }
+</style>
+
+<main class="acces">
+    <div class="marque">KRISSVIA</div>
+    @Body
+</main>
