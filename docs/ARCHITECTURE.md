@@ -170,7 +170,9 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
 - Disposition : JSON en base validé par JSON Schema, éditée visuellement ; une vue YAML en import/export.
 - Menu construit à partir des manifestes de plugins (clés stables).
 - Blazor reste possible pour les écrans d'administration.
-- Modèle de confiance des widgets : code de confiance installé par l'administrateur, à documenter.
+- Modèle de confiance des widgets : code de confiance installé par l'administrateur.
+- **Contrat des widgets : `WIDGETS.md`** (proposition du 16/10/2026) — Web Component ou composant Blazor, slots
+  d'entités, hôte `kv` pour les ordres vérifiés, choix par carte > par entité > par défaut.
 
 ## 11. Feuille de route
 
