@@ -24,7 +24,7 @@ public partial class Comptes
     {
         if (await Service.CreateAsync(_nouvelIdentifiant?.Trim() ?? "", _nouveauMotDePasse ?? "") is { } refus)
         {
-            Snackbar.Add(Phrase(refus), Severity.Warning);
+            Snackbar.Add(Phrases.Majuscule(refus), Severity.Warning);
             return;
         }
 
@@ -34,7 +34,7 @@ public partial class Comptes
 
     private async Task SupprimerAsync(string compte)
     {
-        if (await Service.DeleteAsync(compte, _moi) is { } refus) Snackbar.Add(Phrase(refus), Severity.Warning);
+        if (await Service.DeleteAsync(compte, _moi) is { } refus) Snackbar.Add(Phrases.Majuscule(refus), Severity.Warning);
         else Snackbar.Add($"Compte « {compte} » supprimé.", Severity.Info);
     }
 
@@ -48,14 +48,11 @@ public partial class Comptes
 
         if (await Service.ChangePasswordAsync(_moi, _actuel ?? "", _nouveau ?? "") is { } refus)
         {
-            Snackbar.Add(Phrase(refus), Severity.Warning);
+            Snackbar.Add(Phrases.Majuscule(refus), Severity.Warning);
             return;
         }
 
         Snackbar.Add("Mot de passe changé.", Severity.Success);
         _actuel = _nouveau = _confirmation = null;
     }
-
-    // Les refus d'AccountService sont des fragments (« mot de passe actuel faux. ») : on en fait une phrase.
-    private static string Phrase(string refus) => char.ToUpperInvariant(refus[0]) + refus[1..];
 }

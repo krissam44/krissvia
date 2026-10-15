@@ -13,7 +13,7 @@
 
 @if (!string.IsNullOrEmpty(Erreur))
 {
-    <div class="erreur">@(char.ToUpperInvariant(Erreur[0]) + Erreur[1..])</div>
+    <div class="erreur">@Phrases.Majuscule(Erreur)</div>
 }
 
 <form method="post" action="/installation">

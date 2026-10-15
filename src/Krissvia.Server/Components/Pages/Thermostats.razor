@@ -1,0 +1,97 @@
+@page "/"
+@page "/thermostats"
+@implements IDisposable
+
+<PageTitle>Thermostats · Krissvia</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+    <MudText Typo="Typo.h5">Thermostats</MudText>
+    <MudButton Href="/thermostats/nouveau" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">Nouveau</MudButton>
+</MudStack>
+
+@foreach (var erreur in Service.LoadErrors)
+{
+    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">Configuration illisible, thermostat écarté : @erreur</MudAlert>
+}
+
+@if (_thermostats.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">Aucun thermostat. Créez-en un : il lui faut une sonde de température et au moins un radiateur.</MudAlert>
+}
+
+<MudGrid>
+    @foreach (var (t, etat) in _thermostats)
+    {
+        <MudItem xs="12" sm="6" lg="4" @key="t.Id">
+            <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.h6">@(string.IsNullOrEmpty(t.Name) ? t.Id : t.Name)</MudText>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
+                        @if (etat is not null)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="@LibellesThermostat.Couleur(etat.Status)">@LibellesThermostat.Statut(etat.Status)</MudChip>
+                        }
+                        <MudIconButton Href="@($"/thermostats/{t.Id}")" Icon="@Icons.Material.Filled.Settings" Size="Size.Small" aria-label="Configuration" />
+                    </MudStack>
+                </MudStack>
+
+                <MudStack Row="true" AlignItems="AlignItems.End" Class="mt-2">
+                    <MudText Typo="Typo.h3">@Temperature(etat?.Temperature)</MudText>
+                    <div class="mb-2">
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">consigne</MudText>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
+                            <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small" OnClick="() => AjusterAsync(t, -0.5)"
+                                           Disabled="@ConsigneFigee(t)" aria-label="Baisser la consigne" />
+                            <MudText Typo="Typo.h6">@Temperature(Consigne(t, etat))</MudText>
+                            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="() => AjusterAsync(t, 0.5)"
+                                           Disabled="@ConsigneFigee(t)" aria-label="Monter la consigne" />
+                        </MudStack>
+                    </div>
+                </MudStack>
+
+                @if (t.TargetOverride is not null)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Undo"
+                               OnClick="() => RetablirAsync(t)">Revenir à la consigne du mode</MudButton>
+                }
+
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1">
+                    @if (etat is not null)
+                    {
+                        <span>Puissance @((etat.Power * 100).ToString("0")) %</span>
+                        @if (etat.OutdoorTemperature is { } ext)
+                        {
+                            <span> · dehors @Temperature(ext)</span>
+                        }
+                    }
+                    else
+                    {
+                        <span>En attente du premier calcul…</span>
+                    }
+                </MudText>
+
+                @if (etat is { InhibitionReasons.Count: > 0 })
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Warning">Coupé : @string.Join(", ", etat.InhibitionReasons.Select(LibellesThermostat.Motif))</MudText>
+                }
+                @if (etat is { UnknownSwitches.Count: > 0 })
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Error">Radiateur introuvable : @string.Join(", ", etat.UnknownSwitches)</MudText>
+                }
+
+                <div class="d-flex flex-wrap gap-1 mt-3">
+                    @foreach (var mode in LibellesThermostat.Modes)
+                    {
+                        var actif = !t.ScheduleActive && t.ManualMode == mode;
+                        <MudButton Size="Size.Small" Variant="@(actif ? Variant.Filled : Variant.Outlined)"
+                                   Color="@(actif ? Color.Primary : Color.Default)"
+                                   OnClick="() => ModeAsync(t, mode)">@LibellesThermostat.Mode(mode)</MudButton>
+                    }
+                </div>
+
+                <MudSwitch T="bool" Value="t.ScheduleActive" ValueChanged="actif => PlanningAsync(t, actif)" Color="Color.Primary" Class="mt-2"
+                           Label="@(t.ScheduleActive && etat is not null ? $"Planning ({LibellesThermostat.Mode(etat.Mode)} en ce moment)" : "Planning")" />
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>
