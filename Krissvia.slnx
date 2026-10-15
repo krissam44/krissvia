@@ -12,6 +12,7 @@
     <Project Path="src/Krissvia.Climate/Krissvia.Climate.csproj" />
     <Project Path="src/Krissvia.Persistence/Krissvia.Persistence.csproj" />
     <Project Path="src/Krissvia.PluginHost/Krissvia.PluginHost.csproj" />
+    <Project Path="src/Krissvia.Sdk/Krissvia.Sdk.csproj" />
     <Project Path="src/Krissvia.Server/Krissvia.Server.csproj" />
   </Folder>
   <Folder Name="/plugins/">
@@ -24,6 +25,7 @@
     <Project Path="tests/Krissvia.Core.Tests/Krissvia.Core.Tests.csproj" />
     <Project Path="tests/Krissvia.Persistence.Tests/Krissvia.Persistence.Tests.csproj" />
     <Project Path="tests/Krissvia.PluginHost.Tests/Krissvia.PluginHost.Tests.csproj" />
+    <Project Path="tests/Krissvia.Plugin.Zigbee2Mqtt.Tests/Krissvia.Plugin.Zigbee2Mqtt.Tests.csproj" />
   </Folder>
   <Folder Name="/docs/">
     <File Path="docs/CONTRACT-V0.md" />

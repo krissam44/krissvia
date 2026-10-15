@@ -16,12 +16,14 @@ public class ProjectReferenceRulesTests
         ["Krissvia.Climate"] = ["Krissvia.Core", "Krissvia.Contracts"],
         ["Krissvia.Persistence"] = ["Krissvia.Core", "Krissvia.Contracts"],
         ["Krissvia.PluginHost"] = ["Krissvia.Core", "Krissvia.Contracts"],
+        // Kit des plugins C# : ne voit que le contrat, comme un plugin Python.
+        ["Krissvia.Sdk"] = ["Krissvia.Contracts"],
         ["Krissvia.Server"] =
         [
             "Krissvia.Contracts", "Krissvia.Core", "Krissvia.Climate",
             "Krissvia.Persistence", "Krissvia.PluginHost"
         ],
-        ["Krissvia.Plugin.Zigbee2Mqtt"] = ["Krissvia.Contracts"],
+        ["Krissvia.Plugin.Zigbee2Mqtt"] = ["Krissvia.Contracts", "Krissvia.Sdk"],
     };
 
     [Fact]

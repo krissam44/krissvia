@@ -164,7 +164,7 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
 ## 11. Feuille de route
 
 1. ~~Contrat v0.2, `PluginHost` et transport (WebSocket)~~ — fait le 15/10/2026 (`TRANSPORT.md`).
-2. Plugin Zigbee2MQTT interne, avec un simulateur pour les tests.
+2. ~~Plugin Zigbee2MQTT interne, avec un simulateur pour les tests~~ — fait le 15/10/2026, reste à valider sur un vrai réseau.
 3. Cœur : magasin d'états, bus d'événements, bus de commandes.
 4. Port des moteurs, chacun précédé de ses tests de caractérisation : Climate, Délestage, Présence,
    Alarme, Automatismes.
