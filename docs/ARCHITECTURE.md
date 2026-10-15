@@ -210,7 +210,8 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
    d'attendre jusqu'à 10 s. **Éditeur de planning** (`/thermostats/{id}/planning`) : créneaux par jour, mode
    hors créneau, copie d'un jour vers la semaine, le week-end ou les jours ouvrés, et un aperçu de la semaine
    calculé en interrogeant le planning lui-même quart d'heure par quart d'heure — il montre ce que fera le moteur,
-   créneaux de nuit et chevauchements compris. Les chevauchements sont signalés (le plus matinal l'emporte, C12) ;
+   créneaux de nuit et chevauchements compris. Un créneau de nuit (22:00 → 06:00) finit le LENDEMAIN matin
+   (écart voulu avec DomoMud, C11). Les chevauchements sont signalés (le plus matinal l'emporte, C12) ;
    un créneau de durée nulle est refusé. L'enregistrement ne remplace que le planning
    (`SetScheduleAsync`, `PUT /api/thermostats/{id}/schedule`). Reste à faire : le délestage, les entités.
 6. Un plugin Python d'exemple.

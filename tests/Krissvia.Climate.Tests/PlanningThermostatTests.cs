@@ -30,15 +30,70 @@ public class PlanningThermostatTests
         Assert.Equal(attendu, p.ModeAt(Mercredi(h, m)));
     }
 
-    [Theory]
-    [InlineData(23, ThermostatMode.Comfort1)]
-    [InlineData(3, ThermostatMode.Comfort1)]
-    [InlineData(12, ThermostatMode.Eco)]
-    public void Un_creneau_de_nuit_est_actif_le_soir_et_le_matin_du_meme_jour(int h, ThermostatMode attendu)
+    // Jeudi 15 octobre 2026, lendemain du mercredi de ces tests.
+    private static DateTime Jeudi(int heure, int minute = 0) => new(2026, 10, 15, heure, minute, 0);
+
+    [Fact]
+    public void Un_creneau_de_nuit_finit_le_lendemain_matin()
     {
         var p = Planning(DayOfWeek.Wednesday, new ScheduleSlot(H22, H6, ThermostatMode.Comfort1));
 
-        Assert.Equal(attendu, p.ModeAt(Mercredi(h)));
+        Assert.Equal(ThermostatMode.Eco, p.ModeAt(Mercredi(21, 59)));
+        Assert.Equal(ThermostatMode.Comfort1, p.ModeAt(Mercredi(23)));
+        Assert.Equal(ThermostatMode.Comfort1, p.ModeAt(Jeudi(3)));
+        Assert.Equal(ThermostatMode.Eco, p.ModeAt(Jeudi(6)));
+        Assert.Equal(ThermostatMode.Eco, p.ModeAt(Mercredi(3)));   // l'ancienne règle de DomoMud (C11) : plus maintenant
+    }
+
+    [Fact]
+    public void Un_creneau_de_jour_ne_deborde_pas_sur_le_lendemain()
+    {
+        var p = Planning(DayOfWeek.Wednesday, new ScheduleSlot(H6, H8, ThermostatMode.Comfort));
+
+        Assert.Equal(ThermostatMode.Eco, p.ModeAt(Jeudi(7)));
+    }
+
+    [Fact]
+    public void La_nuit_du_dimanche_finit_le_lundi_matin()
+    {
+        var p = Planning(DayOfWeek.Sunday, new ScheduleSlot(H22, H6, ThermostatMode.Comfort1));
+
+        Assert.Equal(ThermostatMode.Comfort1, p.ModeAt(new DateTime(2026, 10, 19, 3, 0, 0)));   // lundi
+    }
+
+    [Fact]
+    public void La_fin_de_la_nuit_l_emporte_sur_un_creneau_du_matin()
+    {
+        var p = new WeeklySchedule
+        {
+            Days = new Dictionary<DayOfWeek, IReadOnlyList<ScheduleSlot>>
+            {
+                [DayOfWeek.Wednesday] = [new ScheduleSlot(H22, H6, ThermostatMode.Comfort2)],
+                [DayOfWeek.Thursday] = [new ScheduleSlot(TimeSpan.FromHours(5), H8, ThermostatMode.Comfort)],
+            },
+        };
+
+        Assert.Equal(ThermostatMode.Comfort2, p.ModeAt(Jeudi(5, 30)));
+        Assert.Equal(ThermostatMode.Comfort, p.ModeAt(Jeudi(6)));
+        var chevauchement = Assert.Single(p.Overlaps(DayOfWeek.Thursday));
+        Assert.Equal(DayOfWeek.Wednesday, chevauchement.WinnerDay);
+        Assert.Empty(p.Overlaps(DayOfWeek.Wednesday));
+    }
+
+    [Fact]
+    public void Un_chevauchement_par_dessus_la_fin_de_semaine_est_signale_le_lundi()
+    {
+        var p = new WeeklySchedule
+        {
+            Days = new Dictionary<DayOfWeek, IReadOnlyList<ScheduleSlot>>
+            {
+                [DayOfWeek.Sunday] = [new ScheduleSlot(H22, H6, ThermostatMode.Comfort2)],
+                [DayOfWeek.Monday] = [new ScheduleSlot(TimeSpan.FromHours(5), H8, ThermostatMode.Comfort)],
+            },
+        };
+
+        Assert.Equal(DayOfWeek.Sunday, Assert.Single(p.Overlaps(DayOfWeek.Monday)).WinnerDay);
+        Assert.Empty(p.Overlaps(DayOfWeek.Sunday));
     }
 
     [Fact]
@@ -89,7 +144,7 @@ public class PlanningThermostatTests
     [InlineData(6, 8, 7, 9, true)]      // à cheval
     [InlineData(6, 9, 7, 8, true)]      // l'un dans l'autre
     [InlineData(6, 8, 8, 10, false)]    // bout à bout : la fin est exclue
-    [InlineData(22, 6, 5, 7, true)]     // nuit contre matin
+    [InlineData(22, 6, 5, 7, false)]    // la nuit finit le LENDEMAIN : le matin du même jour est libre
     [InlineData(22, 6, 23, 0, true)]    // nuit contre fin de soirée
     [InlineData(22, 0, 0, 6, false)]    // « jusqu'à minuit » ne touche pas le petit matin
     [InlineData(22, 6, 6, 22, false)]   // la nuit et la journée se complètent

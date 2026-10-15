@@ -93,23 +93,23 @@ else
 
             @foreach (var c in creneaux)
             {
-                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-2" Wrap="Wrap.Wrap" @key="c">
-                    <MudTextField T="string" @bind-Value="c.Debut" Label="De" InputType="InputType.Time" Variant="Variant.Outlined"
-                                  Margin="Margin.Dense" Style="width: 130px" />
-                    <MudTextField T="string" @bind-Value="c.Fin" Label="À" InputType="InputType.Time" Variant="Variant.Outlined"
-                                  Margin="Margin.Dense" Style="width: 130px" />
-                    <MudSelect T="ThermostatMode" @bind-Value="c.Mode" Label="Mode" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 170px">
+                <div class="creneau mt-2" @key="c">
+                    <MudTextField T="string" @bind-Value="c.Debut" Label="De" InputType="InputType.Time" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField T="string" @bind-Value="c.Fin" Label="À" InputType="InputType.Time" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudSelect T="ThermostatMode" @bind-Value="c.Mode" Label="Mode" Variant="Variant.Outlined" Margin="Margin.Dense">
                         @foreach (var mode in LibellesThermostat.Modes)
                         {
                             <MudSelectItem Value="mode">@LibellesThermostat.Mode(mode)</MudSelectItem>
                         }
                     </MudSelect>
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="() => creneaux.Remove(c)" aria-label="Supprimer le créneau" />
-                    @if (Nuit(c))
-                    {
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">nuit : du soir jusqu'à minuit, puis de minuit au matin du même jour</MudText>
-                    }
-                </MudStack>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        @if (Nuit(c))
+                        {
+                            @($"nuit : jusqu'au {Jours.Nom(Jours.Lendemain(jour))} matin")
+                        }
+                    </MudText>
+                </div>
             }
 
             @foreach (var alerte in Alertes(jour))
@@ -132,6 +132,9 @@ else
     .apercu .bloc { position: absolute; top: 0; bottom: 0; }
     .apercu .graduation .barre { height: 14px; background: none; overflow: visible; }
     .apercu .graduation span { position: absolute; transform: translateX(-50%); white-space: nowrap; font-size: .7rem; color: var(--mud-palette-text-secondary); }
+    /* Une grille plutôt qu'une ligne souple : toutes les lignes s'alignent, qu'elles aient une mention « nuit » ou non. */
+    .creneau { display: grid; grid-template-columns: 130px 130px 180px 40px 1fr; gap: 16px; align-items: center; }
+    @@media (max-width: 700px) { .creneau { grid-template-columns: 1fr 1fr; } }
     .legende { font-size: .8rem; display: inline-flex; align-items: center; gap: 4px; }
     .legende i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 </style>

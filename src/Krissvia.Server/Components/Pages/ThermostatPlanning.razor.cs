@@ -108,11 +108,15 @@ public partial class ThermostatPlanning
         foreach (var c in _jours[jour].Select(c => c.Lire()!).Where(c => c.Start == c.End && c.End != TimeSpan.Zero))
             yield return $"Le créneau de {Heure(c.Start)} commence et finit à la même heure : il ne durerait rien.";
 
-        foreach (var (a, b) in planning.Overlaps(jour))
+        foreach (var o in planning.Overlaps(jour))
         {
-            var (premier, second) = a.Start <= b.Start ? (a, b) : (b, a);
-            yield return $"Les créneaux {Heure(premier.Start)}–{Heure(premier.End)} et {Heure(second.Start)}–{Heure(second.End)} se chevauchent : " +
-                         $"là où ils se recouvrent, celui de {Heure(premier.Start)} l'emporte ({LibellesThermostat.Mode(premier.Mode)}).";
+            var gagnant = o.WinnerDay == jour
+                ? $"celui de {Heure(o.Winner.Start)}"
+                : $"la nuit du {Jours.Nom(o.WinnerDay)} ({Heure(o.Winner.Start)}–{Heure(o.Winner.End)})";
+            var autre = o.WinnerDay == jour
+                ? $"Les créneaux {Heure(o.Winner.Start)}–{Heure(o.Winner.End)} et {Heure(o.Loser.Start)}–{Heure(o.Loser.End)} se chevauchent"
+                : $"Le créneau {Heure(o.Loser.Start)}–{Heure(o.Loser.End)} chevauche la nuit du {Jours.Nom(o.WinnerDay)}";
+            yield return $"{autre} : là où ils se recouvrent, {gagnant} l'emporte ({LibellesThermostat.Mode(o.Winner.Mode)}).";
         }
     }
 
@@ -143,7 +147,7 @@ public partial class ThermostatPlanning
         }
     }
 
-    private static bool Nuit(CreneauSaisi c) => c.Lire() is { } l && l.End != TimeSpan.Zero && l.End < l.Start;
+    private static bool Nuit(CreneauSaisi c) => c.Lire() is { CrossesMidnight: true };
 
     private static string Heure(TimeSpan t) => t.ToString(@"hh\:mm", CultureInfo.InvariantCulture);
 
