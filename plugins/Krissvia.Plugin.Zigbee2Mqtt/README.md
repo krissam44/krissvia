@@ -10,7 +10,8 @@ Zigbee2MQTT ──MQTT──▶ plugin ──WebSocket (contrat 0.2)──▶ c�
 ## Configuration
 
 `appsettings.json` à côté de l'exécutable, complété par `appsettings.Local.json` (jamais versionné : mot de
-passe du broker, jeton), puis par les variables d'environnement et la ligne de commande.
+passe du broker, jeton), puis par les variables d'environnement et la ligne de commande. Modèle :
+`appsettings.Local.example.json`, à copier en `appsettings.Local.json`.
 
 | Clé | Défaut | Rôle |
 |---|---|---|
@@ -53,6 +54,11 @@ donne que sa sonde : la régulation est au cœur.
   retournerait toutes les portes.
 - **Un appui de bouton n'est jamais rejoué** : les événements ne sont ni gardés ni renvoyés à la
   resynchronisation, sinon chaque reconnexion au cœur rappuierait sur le bouton.
+- **État des relais au démarrage** : un relais ne publie qu'au changement, et Zigbee2MQTT ne retient rien sur
+  le broker. À chaque connexion au broker, le plugin envoie donc un `/get` (lecture, sans effet sur le relais)
+  à chaque interrupteur ou lumière lisible dont il n'a rien entendu, une fois, espacés de 200 ms, en sautant
+  les appareils annoncés hors ligne. Vérifié le 15/10/2026 sur le réseau réel : les 5 relais renseignés en
+  quelques secondes, au lieu d'attendre leur prochain changement d'état.
 - **Resynchronisation** : à chaque connexion au cœur, le plugin renvoie la déclaration, toutes les dernières
   valeurs connues et les joignabilités.
 - **Joignabilité** : `{appareil}/availability` → appareil hors ligne ; `bridge/state` hors ligne ou broker

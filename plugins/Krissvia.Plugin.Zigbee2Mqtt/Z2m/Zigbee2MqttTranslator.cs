@@ -34,6 +34,8 @@ internal sealed partial class Zigbee2MqttTranslator(string baseTopic, ILogger? l
 
     private readonly Dictionary<string, JsonElement> _valeurs = new(StringComparer.Ordinal);
     private readonly Dictionary<string, bool> _joignabiliteParNom = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _lecturesDemandees = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _entenduesDepuisConnexion = new(StringComparer.Ordinal);
     private bool _pontEnLigne;
     private bool _mqttConnecte;
 
@@ -44,7 +46,15 @@ internal sealed partial class Zigbee2MqttTranslator(string baseTopic, ILogger? l
 
     public IReadOnlyList<Message> MqttConnecte()
     {
-        lock (_verrou) _mqttConnecte = true;
+        lock (_verrou)
+        {
+            _mqttConnecte = true;
+            // Pendant la coupure, un relais a pu changer d'état sans qu'on l'entende : la valeur gardée ne prouve
+            // plus rien, on redemandera.
+            _lecturesDemandees.Clear();
+            _entenduesDepuisConnexion.Clear();
+        }
+
         return [];   // bridge/state, retenu, dira si Zigbee2MQTT tourne
     }
 
@@ -144,10 +154,45 @@ internal sealed partial class Zigbee2MqttTranslator(string baseTopic, ILogger? l
             if (lien.Lire(document.RootElement, _valeurs.ContainsKey(lien.UniqueId) ? precedente : null) is not { } valeur) continue;
 
             if (!lien.EstEvenement) _valeurs[lien.UniqueId] = valeur;
+            _entenduesDepuisConnexion.Add(lien.UniqueId);
             etats.Add(new EntityState { EntityUniqueId = lien.UniqueId, Value = valeur });
         }
 
         return etats.Count == 0 ? [] : [new StateBatch { States = etats }];
+    }
+
+    // ── Lecture des états inconnus ───────────────────────────────────────────
+
+    /// <summary>
+    /// Les <c>/get</c> à publier : un par appareil dont un relais ou une lumière lisible n'a rien publié depuis la
+    /// connexion au broker, une seule fois par connexion. Un appareil annoncé hors ligne n'est pas interrogé. C'est une
+    /// lecture : elle ne change l'état d'aucun relais.
+    /// </summary>
+    public IReadOnlyList<PublicationMqtt> LecturesAFaire()
+    {
+        lock (_verrou)
+        {
+            var lectures = new List<PublicationMqtt>();
+            foreach (var (nom, appareil) in _parNom)
+            {
+                if (_lecturesDemandees.Contains(appareil.Source.IeeeAddress)) continue;
+                if (_joignabiliteParNom.TryGetValue(nom, out var enLigne) && !enLigne) continue;
+
+                var proprietes = appareil.Liens
+                    .Where(l => !_entenduesDepuisConnexion.Contains(l.UniqueId))
+                    .SelectMany(l => l.ProprietesADemander)
+                    .Distinct()
+                    .ToList();
+                if (proprietes.Count == 0) continue;
+
+                var charge = new System.Text.Json.Nodes.JsonObject();
+                foreach (var propriete in proprietes) charge[propriete] = "";
+                lectures.Add(new PublicationMqtt($"{baseTopic}/{nom}/get", charge.ToJsonString()));
+                _lecturesDemandees.Add(appareil.Source.IeeeAddress);
+            }
+
+            return lectures;
+        }
     }
 
     // ── Resynchronisation ────────────────────────────────────────────────────

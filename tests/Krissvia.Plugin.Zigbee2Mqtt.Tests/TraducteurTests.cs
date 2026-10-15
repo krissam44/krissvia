@@ -264,6 +264,59 @@ public class TraducteurTests
         Assert.False(_t.Instantane().OfType<Availability>().Single(a => a.DeviceUniqueId is null).Online);
     }
 
+    // ── Lecture des états au démarrage ───────────────────────────────────────
+
+    [Fact]
+    public void Les_relais_et_lumieres_sans_valeur_sont_interroges_une_fois()
+    {
+        _t.MqttConnecte();
+        Declarer();
+
+        var lectures = _t.LecturesAFaire().ToDictionary(l => l.Topic, l => l.Charge);
+
+        Assert.Equal(3, lectures.Count);
+        Assert.Equal("""{"state":""}""", lectures["zigbee2mqtt/Prise lave-linge/get"]);
+        Assert.Equal("""{"state_l1":"","state_l2":""}""", lectures["zigbee2mqtt/Inter cuisine/get"]);
+        Assert.Equal("""{"state":""}""", lectures["zigbee2mqtt/Lampe bureau/get"]);
+        Assert.Empty(_t.LecturesAFaire());
+    }
+
+    [Fact]
+    public void Un_relais_deja_entendu_ou_hors_ligne_n_est_pas_interroge()
+    {
+        _t.MqttConnecte();
+        Declarer();
+        Etat("Prise lave-linge", """{"state":"ON"}""");
+        _t.TraiterMessage("zigbee2mqtt/Lampe bureau/availability", "offline");
+
+        Assert.Equal(["zigbee2mqtt/Inter cuisine/get"], _t.LecturesAFaire().Select(l => l.Topic));
+    }
+
+    [Fact]
+    public void Apres_une_reconnexion_au_broker_on_redemande_meme_ce_qui_etait_connu()
+    {
+        _t.MqttConnecte();
+        Declarer();
+        Etat("Prise lave-linge", """{"state":"ON"}""");
+        _t.LecturesAFaire();
+
+        _t.MqttDeconnecte();
+        _t.MqttConnecte();
+
+        Assert.Contains("zigbee2mqtt/Prise lave-linge/get", _t.LecturesAFaire().Select(l => l.Topic));
+    }
+
+    [Fact]
+    public void Un_relais_non_lisible_n_est_pas_interroge()
+    {
+        _t.MqttConnecte();
+        var nonLisibles = Appareils().Replace("\"property\": \"state\", \"access\": 7", "\"property\": \"state\", \"access\": 3");
+        Assert.NotEqual(Appareils(), nonLisibles);
+        Declarer(nonLisibles);
+
+        Assert.DoesNotContain(_t.LecturesAFaire(), l => l.Topic is "zigbee2mqtt/Prise lave-linge/get" or "zigbee2mqtt/Lampe bureau/get");
+    }
+
     // ── Ordres ───────────────────────────────────────────────────────────────
 
     private (PublicationMqtt? Publication, string? Erreur) Ordre(string uniqueId, string commande, object? args = null) =>

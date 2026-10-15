@@ -20,6 +20,9 @@ internal sealed class SimulateurZ2m : IMqttLink
 
     public ConcurrentQueue<(string Topic, string Charge)> Publications { get; } = new();
 
+    /// <summary>État réel des appareils, que Zigbee2MQTT renvoie sur un <c>/get</c> (clé : friendly_name).</summary>
+    public ConcurrentDictionary<string, string> EtatsReels { get; } = new();
+
     public async Task RunAsync(string abonnement, IMqttHandler handler, CancellationToken ct)
     {
         Assert.Equal("zigbee2mqtt/#", abonnement);
@@ -43,6 +46,10 @@ internal sealed class SimulateurZ2m : IMqttLink
         Publications.Enqueue((topic, charge));
         if (AppareilsRepondent && topic.EndsWith("/set", StringComparison.Ordinal))
             await PublierAsync(topic[..^"/set".Length], charge.Replace("\"TOGGLE\"", "\"ON\""));
+
+        if (AppareilsRepondent && topic.EndsWith("/get", StringComparison.Ordinal) &&
+            EtatsReels.TryGetValue(topic["zigbee2mqtt/".Length..^"/get".Length], out var reel))
+            await PublierAsync(topic[..^"/get".Length], reel);
 
         return true;
     }

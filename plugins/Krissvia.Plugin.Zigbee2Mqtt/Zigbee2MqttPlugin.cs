@@ -34,7 +34,29 @@ internal sealed partial class Zigbee2MqttPlugin : ICorePlugin, IMqttHandler
 
     public Task DeconnecteAsync() => EnvoyerAsync(_traducteur.MqttDeconnecte());
 
-    public Task MessageAsync(string topic, string charge) => EnvoyerAsync(_traducteur.TraiterMessage(topic, charge));
+    public async Task MessageAsync(string topic, string charge)
+    {
+        await EnvoyerAsync(_traducteur.TraiterMessage(topic, charge));
+
+        var lectures = _traducteur.LecturesAFaire();
+        if (lectures.Count > 0) _ = Task.Run(() => DemanderAsync(lectures));
+    }
+
+    /// <summary>
+    /// Hors du fil de réception (qui doit continuer à lire les réponses), et espacées : une rafale de /get sur un
+    /// grand réseau encombrerait le maillage Zigbee.
+    /// </summary>
+    private async Task DemanderAsync(IReadOnlyList<PublicationMqtt> lectures)
+    {
+        foreach (var lecture in lectures)
+        {
+            if (!await _mqtt.PublishAsync(lecture.Topic, lecture.Charge, CancellationToken.None)) return;
+            LectureDemandee(_logger, lecture.Topic, lecture.Charge);
+            await Task.Delay(EspacementLectures);
+        }
+    }
+
+    internal static TimeSpan EspacementLectures { get; set; } = TimeSpan.FromMilliseconds(200);
 
     private async Task EnvoyerAsync(IReadOnlyList<Message> messages)
     {
@@ -66,6 +88,9 @@ internal sealed partial class Zigbee2MqttPlugin : ICorePlugin, IMqttHandler
         OrdrePublie(_logger, publication.Topic, publication.Charge);
         return new CommandResult { Id = request.Id, Outcome = CommandOutcome.Accepted };
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "État demandé : {Topic} {Charge}.")]
+    private static partial void LectureDemandee(ILogger logger, string topic, string charge);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Ordre {Command} sur « {UniqueId} » refusé : {Error}.")]
     private static partial void OrdreRefuse(ILogger logger, string command, string uniqueId, string? error);
