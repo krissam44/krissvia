@@ -41,6 +41,9 @@ internal sealed class PluginSession(
 
     public string PluginId => pluginId;
 
+    /// <summary>Version annoncée au hello.</summary>
+    public string? Version { get; init; }
+
     public async Task RunAsync(CancellationToken ct)
     {
         using var lie = CancellationTokenSource.CreateLinkedTokenSource(ct, _fin.Token);

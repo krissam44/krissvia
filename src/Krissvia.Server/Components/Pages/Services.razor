@@ -1,0 +1,43 @@
+@page "/"
+@page "/parametres/services"
+@implements IDisposable
+
+<PageTitle>Services · Krissvia</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">Paramètres</MudText>
+
+@foreach (var erreur in Supervisor.CatalogErrors)
+{
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">Fiche de plugin illisible : @erreur</MudAlert>
+}
+
+<MudPaper Elevation="1" Class="rounded-lg">
+    <MudTable Items="_services" Dense="true" Hover="true" Elevation="0" Breakpoint="Breakpoint.Sm">
+        <HeaderContent>
+            <MudTh>Services</MudTh>
+            <MudTh Style="width: 220px">Statut</MudTh>
+            <MudTh Style="width: 90px">Action</MudTh>
+            <MudTh Style="width: 60px"></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Service">
+                <MudText Typo="Typo.body1">@context.Name</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Nom interne : @context.Id</MudText>
+            </MudTd>
+            <MudTd DataLabel="Statut">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@Statuts.Couleur(context.Status)">@Statuts.Libelle(context.Status)</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Action" @key="context.Id">
+                <MudSwitch T="bool" Value="context.Enabled" ValueChanged="v => BasculerAsync(context.Id, v)"
+                           Disabled="@(!context.Installed && !context.Enabled)" Color="Color.Primary" />
+            </MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Href="@($"/parametres/services/{context.Id}")"
+                               aria-label="@($"Détail de {context.Name}")" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>Aucun plugin trouvé dans les dossiers configurés (Plugins:Directories).</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudPaper>

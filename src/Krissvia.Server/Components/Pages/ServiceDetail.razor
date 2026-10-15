@@ -1,0 +1,61 @@
+@page "/parametres/services/{Id}"
+@implements IDisposable
+
+<PageTitle>@(_service?.Name ?? Id) · Krissvia</PageTitle>
+
+<MudButton Href="/parametres/services" StartIcon="@Icons.Material.Filled.ArrowBack" Variant="Variant.Text" Class="mb-2">Services</MudButton>
+
+@if (_service is null)
+{
+    <MudAlert Severity="Severity.Info">Aucun plugin « @Id » : ni installé, ni connecté.</MudAlert>
+}
+else
+{
+    <MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <div>
+                <MudText Typo="Typo.h5">@_service.Name</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Nom interne : @_service.Id</MudText>
+            </div>
+            <MudStack Row="true" AlignItems="AlignItems.Center">
+                <MudChip T="string" Variant="Variant.Text" Color="@Statuts.Couleur(_service.Status)">@Statuts.Libelle(_service.Status)</MudChip>
+                <MudSwitch T="bool" Value="_service.Enabled" ValueChanged="BasculerAsync" Color="Color.Primary"
+                           Disabled="@(!_service.Installed && !_service.Enabled)" Label="Activé" />
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="RelancerAsync"
+                           Disabled="@(!_service.Enabled)">Redémarrer</MudButton>
+            </MudStack>
+        </MudStack>
+
+        @if (!string.IsNullOrEmpty(_service.Description))
+        {
+            <MudText Class="mt-3">@_service.Description</MudText>
+        }
+
+        <MudSimpleTable Dense="true" Elevation="0" Class="mt-3">
+            <tbody>
+                <tr><td>Version connectée</td><td>@(_service.PluginVersion ?? "—")</td></tr>
+                <tr><td>Processus</td><td>@(_service.ProcessId?.ToString() ?? "—")</td></tr>
+                <tr><td>Lancé le</td><td>@(_service.StartedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "—")</td></tr>
+                <tr><td>Relances</td><td>@_service.Restarts</td></tr>
+                <tr><td>Dernière sortie</td><td>@(_service.LastExit ?? "—")</td></tr>
+                <tr><td>Dossier</td><td><code>@(_service.Directory ?? "—")</code></td></tr>
+            </tbody>
+        </MudSimpleTable>
+
+        <MudAlert Severity="Severity.Normal" Dense="true" Class="mt-3">
+            Réglages : pour l'instant dans <code>appsettings.Local.json</code>, dans le dossier du plugin. Le formulaire viendra ici.
+        </MudAlert>
+    </MudPaper>
+
+    <MudText Typo="Typo.h6" Class="mb-2">Journal</MudText>
+    <MudPaper Elevation="0" Outlined="true" Class="pa-3 rounded-lg" Style="max-height: 420px; overflow-y: auto; font-family: Consolas, monospace; font-size: 0.8rem; white-space: pre-wrap;">
+        @if (_service.Logs.Count == 0)
+        {
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">Rien pour l'instant : le journal ne couvre que les plugins lancés par Krissvia.</MudText>
+        }
+        @foreach (var ligne in _service.Logs)
+        {
+            <div>@ligne</div>
+        }
+    </MudPaper>
+}

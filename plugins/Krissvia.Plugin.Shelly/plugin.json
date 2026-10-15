@@ -1,0 +1,6 @@
+{
+  "id": "shelly",
+  "name": "Shelly",
+  "description": "Pinces de mesure et relais Shelly, interrogés en HTTP sur le réseau local.",
+  "executable": "Krissvia.Plugin.Shelly"
+}

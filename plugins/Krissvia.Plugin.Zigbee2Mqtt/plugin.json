@@ -1,0 +1,6 @@
+{
+  "id": "zigbee2mqtt",
+  "name": "Zigbee2MQTT",
+  "description": "Appareils Zigbee : sondes, prises, relais, lumières, boutons, via le broker MQTT.",
+  "executable": "Krissvia.Plugin.Zigbee2Mqtt"
+}

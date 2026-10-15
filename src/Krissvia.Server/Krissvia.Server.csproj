@@ -8,4 +8,8 @@
     <ProjectReference Include="..\Krissvia.PluginHost\Krissvia.PluginHost.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="MudBlazor" />
+  </ItemGroup>
+
 </Project>

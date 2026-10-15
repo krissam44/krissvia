@@ -1,0 +1,19 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1" Dense="true">
+        <MudText Typo="Typo.h6">Krissvia</MudText>
+        <MudSpacer />
+        <MudButton Href="/parametres/services" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Extension">Services</MudButton>
+    </MudAppBar>
+    <MudMainContent Class="pt-16 px-4 pb-8">
+        <MudContainer MaxWidth="MaxWidth.Large">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
