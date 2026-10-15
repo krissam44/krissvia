@@ -44,7 +44,10 @@ public class MessageSerializationTests
             PluginVersion = "0.1.0",
             ContractVersion = ContractInfo.Version,
         };
+        yield return new Welcome { ContractVersion = ContractInfo.Version, HeartbeatSeconds = 15, TimeoutSeconds = 45 };
+        yield return new Rejected { Reason = RejectReason.IncompatibleContract, Detail = "le cœur parle le contrat 0.2" };
         yield return new Configure { Config = Json(new { broker = "192.168.1.10", port = 1883 }) };
+        yield return new ConfigureResult { Ok = false, Error = "broker injoignable" };
         yield return new Declare { Devices = [prise] };
         yield return new StateBatch
         {
@@ -59,6 +62,7 @@ public class MessageSerializationTests
             ],
         };
         yield return new Availability { DeviceUniqueId = "0x00158d0001a2b3c4", Online = false };
+        yield return new Availability { EntityUniqueId = "0x00158d0001a2b3c4:power", Online = false };
         yield return new Discovered { Candidates = [prise] };
         yield return new CommandRequest
         {
@@ -147,4 +151,45 @@ public class MessageSerializationTests
 
         Assert.ThrowsAny<Exception>(() => JsonSerializer.Deserialize<Message>(json, ContractJson.Options));
     }
+
+    [Fact]
+    public void Le_decodage_distingue_un_type_inconnu_d_une_trame_invalide()
+    {
+        // Un type inconnu vient d'un contrat plus récent : le cœur l'ignore. Une trame invalide est une faute.
+        Assert.Equal("message_du_futur", ContractJson.Decode("""{"type":"message_du_futur"}""").UnknownType);
+
+        foreach (var invalide in new[] { "{pas du json", "[1,2]", """{"plugin_id":"x"}""", """{"type":"hello","plugin_id":"x"}""" })
+        {
+            var lu = ContractJson.Decode(invalide);
+            Assert.Null(lu.Message);
+            Assert.Null(lu.UnknownType);
+            Assert.NotNull(lu.Error);
+        }
+    }
+
+    [Fact]
+    public void Les_accents_sont_ecrits_tels_quels()
+    {
+        Assert.Contains("mise à jour", Ecrire(new Shutdown { Reason = "mise à jour" }));
+    }
+
+    [Fact]
+    public void Le_decodage_rend_le_message()
+    {
+        var lu = ContractJson.Decode(Ecrire(new Ping()));
+
+        Assert.IsType<Ping>(lu.Message);
+        Assert.Null(lu.Error);
+    }
+
+    [Theory]
+    [InlineData(ContractInfo.Version, true)]
+    [InlineData("0.1", false)]
+    [InlineData("0.3", false)]
+    [InlineData("1.0", false)]
+    [InlineData("0.2.1", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void En_0_x_seule_la_meme_version_mineure_est_compatible(string? version, bool compatible) =>
+        Assert.Equal(compatible, ContractInfo.IsCompatible(version));
 }
