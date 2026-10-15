@@ -32,7 +32,7 @@ fonctionne dans DomoMud (moteurs de chauffage, délestage, alarme, présence) et
 |---|---|---|
 | 1 | Intégration plugin ↔ cœur (messages JSON sur WebSocket) | v0.2 en cours : `CONTRACT-V0.2-PROPOSITION.md`, transport dans `TRANSPORT.md` |
 | 2 | Services sortants (notifications, publication vers Home Assistant…) : capacités appelées par le cœur | à écrire |
-| 3 | API publique cœur ↔ frontend (REST + abonnement WebSocket ; clé en en-tête, comparaison en temps constant) | commencée : thermostats, `API-THERMOSTATS.md` |
+| 3 | API publique cœur ↔ frontend (REST + abonnement WebSocket ; clé en en-tête, comparaison en temps constant) | commencée : thermostats et délestage, `API.md` |
 | 4 | Manifeste de widget : types d'entités et de plugins que le widget sait afficher | à écrire |
 
 ## 4. Le cœur

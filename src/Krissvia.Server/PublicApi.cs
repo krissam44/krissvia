@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Krissvia.Climate.LoadShedding;
 using Krissvia.Climate.Thermostats;
 
 namespace Krissvia.Server;
@@ -14,10 +15,10 @@ internal sealed record TargetRequest(double? Temperature);
 internal sealed record ScheduleRequest(bool Active);
 
 /// <summary>
-/// API des thermostats (<c>/api/thermostats</c>). JSON en snake_case, énumérations en texte
+/// API publique : thermostats (<c>/api/thermostats</c>) et délestage. JSON en snake_case, énumérations en texte
 /// (<see cref="ThermostatService.Json"/>), le même format qu'en base.
 /// </summary>
-internal static class ThermostatApi
+internal static class PublicApi
 {
     public static void MapThermostatApi(this RouteGroupBuilder api)
     {
@@ -66,6 +67,38 @@ internal static class ThermostatApi
             await Lire<ScheduleRequest>(requete, ct) is { } r
                 ? await Executer(async () => Resultat(id, await service.SetScheduleActiveAsync(id, r.Active, ct)))
                 : Refus("attendu : {\"active\": true}"));
+    }
+
+    /// <summary>
+    /// Délestage (<c>/api/load-shedding</c>) : la configuration, un seul document, et l'état du moment.
+    /// </summary>
+    public static void MapLoadSheddingApi(this RouteGroupBuilder api)
+    {
+        api.MapGet("/load-shedding", (LoadSheddingService service) =>
+            Json(new { configuration = service.Configuration, status = service.Status, load_error = service.LoadError }));
+
+        api.MapPut("/load-shedding", async (HttpRequest requete, LoadSheddingService service, CancellationToken ct) =>
+        {
+            LoadSheddingConfiguration? corps;
+            try
+            {
+                corps = await JsonSerializer.DeserializeAsync<LoadSheddingConfiguration>(requete.Body, ThermostatService.Json, ct);
+            }
+            catch (JsonException ex)
+            {
+                return Refus($"JSON invalide : {ex.Message}");
+            }
+
+            if (corps is null) return Refus("corps vide");
+            try
+            {
+                return Json(await service.SaveAsync(corps, ct));
+            }
+            catch (LoadSheddingValidationException ex)
+            {
+                return Refus(ex.Message);
+            }
+        });
     }
 
     private static IResult Json(object valeur) => Results.Json(valeur, ThermostatService.Json);
