@@ -1,5 +1,7 @@
 using System.Text.Json;
 using Krissvia.Contracts;
+using Krissvia.Core.Commands;
+using Krissvia.Core.Events;
 using Krissvia.Core.Registry;
 using Krissvia.Core.States;
 using Krissvia.Persistence.Sqlite;
@@ -23,15 +25,16 @@ internal sealed class BancPlugins : IAsyncDisposable
     public EntityRegistry Registre { get; }
     public EntityStateStore Etats { get; }
     public PluginHub Hub { get; }
-    public PluginCommander Commandeur { get; }
+    public EventBus Bus { get; } = new();
+    public CommandBus Commandeur { get; }
 
     private BancPlugins(SqliteDatabase db, string fichier)
     {
         _fichier = fichier;
-        Registre = new EntityRegistry(new SqliteEntityRepository(db));
-        Etats = new EntityStateStore(new SqliteEntityStateRepository(db), Horloge);
-        Hub = new PluginHub(Registre, Etats, Options, Horloge, NullLogger<PluginHub>.Instance);
-        Commandeur = new PluginCommander(Hub, Registre, NullLogger<PluginCommander>.Instance);
+        Registre = new EntityRegistry(new SqliteEntityRepository(db), Bus);
+        Etats = new EntityStateStore(new SqliteEntityStateRepository(db), Horloge, Bus);
+        Hub = new PluginHub(Registre, Etats, Options, Horloge, NullLogger<PluginHub>.Instance, Bus);
+        Commandeur = new CommandBus(Registre, new PluginCommander(Hub, NullLogger<PluginCommander>.Instance), Bus, Horloge);
     }
 
     public static async Task<BancPlugins> CreerAsync()
@@ -141,6 +144,8 @@ internal sealed class BancPlugins : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await _arret.CancelAsync();
+        Commandeur?.Dispose();
+        await Bus.DisposeAsync();
         try
         {
             await Task.WhenAll(_sessions).WaitAsync(TimeSpan.FromSeconds(5));

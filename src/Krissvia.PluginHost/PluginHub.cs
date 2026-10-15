@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Krissvia.Contracts;
+using Krissvia.Core.Events;
 using Krissvia.Core.Registry;
 using Krissvia.Core.States;
 using Microsoft.Extensions.Logging;
@@ -24,7 +25,8 @@ public sealed partial class PluginHub(
     IEntityStateWriter states,
     PluginHostOptions options,
     TimeProvider clock,
-    ILogger<PluginHub> logger)
+    ILogger<PluginHub> logger,
+    IEventPublisher? events = null)
 {
     private readonly ConcurrentDictionary<string, PluginSession> _sessions = new(StringComparer.Ordinal);
 
@@ -51,6 +53,7 @@ public sealed partial class PluginHub(
         }
 
         Log.SessionOuverte(logger, hello.PluginId, hello.PluginVersion, hello.ContractVersion);
+        events?.Publish(new PluginConnectionChanged(hello.PluginId, Connected: true));
 
         try
         {
@@ -63,6 +66,8 @@ public sealed partial class PluginHub(
             var derniere = _sessions.TryRemove(new KeyValuePair<string, PluginSession>(hello.PluginId, session));
             await session.TerminerAsync(rendreIndisponible: derniere);
             Log.SessionFermee(logger, hello.PluginId);
+            // Une session remplacée n'annonce pas de déconnexion : le plugin, lui, est toujours là.
+            if (derniere) events?.Publish(new PluginConnectionChanged(hello.PluginId, Connected: false));
         }
     }
 

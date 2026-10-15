@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Krissvia.Core.Events;
 
 namespace Krissvia.Core.States;
 
@@ -31,9 +32,6 @@ public interface IEntityStateWriter
     void SetAvailability(string entityId, bool available);
 }
 
-/// <summary> Changement d'état, levé après chaque mise à jour de valeur et chaque changement de disponibilité.</summary>
-public sealed record EntityStateChange(string EntityId, EntityStateSnapshot Snapshot);
-
 /// <summary>
 /// Magasin d'états : dernière valeur et instant de mesure réel de chaque entité.
 /// </summary>
@@ -52,18 +50,19 @@ public sealed record EntityStateChange(string EntityId, EntityStateSnapshot Snap
 /// jusqu'à ce que le plugin les republie.</item>
 /// </list>
 /// </remarks>
+/// <remarks>
+/// Chaque mise à jour de valeur et chaque changement de disponibilité publie un <see cref="EntityStateChanged"/>
+/// sur le bus, avec l'état précédent.
+/// </remarks>
 public sealed class EntityStateStore(
     IEntityStateRepository repository,
     TimeProvider clock,
-    Action<Exception>? onSubscriberError = null) : IEntityStateReader, IEntityStateWriter
+    IEventPublisher? events = null) : IEntityStateReader, IEntityStateWriter
 {
     public static readonly TimeSpan FutureTolerance = TimeSpan.FromSeconds(5);
 
     private readonly ConcurrentDictionary<string, EntityStateSnapshot> _etats = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, byte> _aEcrire = new(StringComparer.Ordinal);
-
-    /// <summary>Levé hors de toute section critique, abonné par abonné.</summary>
-    public event Action<EntityStateChange>? Changed;
 
     public EntityStateSnapshot? Get(string entityId) =>
         _etats.TryGetValue(entityId, out var etat) ? etat : null;
@@ -82,10 +81,12 @@ public sealed class EntityStateStore(
         var instant = measuredAt is { } m && m <= maintenant + FutureTolerance ? m : maintenant;
 
         var etat = new EntityStateSnapshot(value.Clone(), instant.ToUniversalTime(), Available: true);
-        _etats[entityId] = etat;
+        EntityStateSnapshot? precedent = null;
+        // La fabrique peut tourner plusieurs fois en cas de concurrence : la dernière capture est la bonne.
+        _etats.AddOrUpdate(entityId, _ => { precedent = null; return etat; }, (_, ancien) => { precedent = ancien; return etat; });
         _aEcrire[entityId] = 0;
 
-        Notifier(new EntityStateChange(entityId, etat));
+        events?.Publish(new EntityStateChanged(entityId, precedent, etat));
     }
 
     public void SetAvailability(string entityId, bool available)
@@ -97,7 +98,7 @@ public sealed class EntityStateStore(
             var nouveau = actuel with { Available = available };
             if (!_etats.TryUpdate(entityId, nouveau, actuel)) continue;   // modifié entre-temps : on relit
 
-            Notifier(new EntityStateChange(entityId, nouveau));
+            events?.Publish(new EntityStateChanged(entityId, actuel, nouveau));
             return;
         }
     }
@@ -163,24 +164,6 @@ public sealed class EntityStateStore(
         {
             valeur = default;
             return false;
-        }
-    }
-
-    private void Notifier(EntityStateChange changement)
-    {
-        var abonnes = Changed;
-        if (abonnes is null) return;
-
-        foreach (var abonne in abonnes.GetInvocationList().Cast<Action<EntityStateChange>>())
-        {
-            try
-            {
-                abonne(changement);
-            }
-            catch (Exception ex)
-            {
-                onSubscriberError?.Invoke(ex);
-            }
         }
     }
 }

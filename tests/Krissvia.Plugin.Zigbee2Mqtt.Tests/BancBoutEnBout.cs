@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
+using Krissvia.Core.Commands;
+using Krissvia.Core.Events;
 using Krissvia.Core.Registry;
 using Krissvia.Core.States;
 using Krissvia.Persistence.Sqlite;
@@ -28,7 +30,8 @@ internal sealed class BancBoutEnBout : IAsyncDisposable
     public EntityRegistry Registre { get; private set; } = null!;
     public EntityStateStore Etats { get; private set; } = null!;
     public PluginHub Hub { get; private set; } = null!;
-    public PluginCommander Commandeur { get; private set; } = null!;
+    public EventBus Bus { get; } = new();
+    public CommandBus Commandeur { get; private set; } = null!;
     public SimulateurZ2m Z2m { get; } = new();
 
     public static async Task<BancBoutEnBout> DemarrerAsync()
@@ -37,11 +40,12 @@ internal sealed class BancBoutEnBout : IAsyncDisposable
         var db = new SqliteDatabase($"Data Source={banc._fichier};Pooling=False");
         await db.InitializeAsync();
 
-        banc.Registre = new EntityRegistry(new SqliteEntityRepository(db));
-        banc.Etats = new EntityStateStore(new SqliteEntityStateRepository(db), TimeProvider.System);
+        banc.Registre = new EntityRegistry(new SqliteEntityRepository(db), banc.Bus);
+        banc.Etats = new EntityStateStore(new SqliteEntityStateRepository(db), TimeProvider.System, banc.Bus);
         banc.Hub = new PluginHub(banc.Registre, banc.Etats, new PluginHostOptions { AllowUnregisteredPlugins = true },
-            TimeProvider.System, NullLogger<PluginHub>.Instance);
-        banc.Commandeur = new PluginCommander(banc.Hub, banc.Registre, NullLogger<PluginCommander>.Instance);
+            TimeProvider.System, NullLogger<PluginHub>.Instance, banc.Bus);
+        banc.Commandeur = new CommandBus(banc.Registre, new PluginCommander(banc.Hub, NullLogger<PluginCommander>.Instance),
+            banc.Bus, TimeProvider.System);
 
         var plugin = new Zigbee2MqttPlugin(new Zigbee2MqttTranslator("zigbee2mqtt"), banc.Z2m, NullLogger<Zigbee2MqttPlugin>.Instance);
         var client = new CoreClient(
@@ -106,6 +110,8 @@ internal sealed class BancBoutEnBout : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await _arret.CancelAsync();
+        Commandeur?.Dispose();
+        await Bus.DisposeAsync();
         try
         {
             await Task.WhenAll([.. _sessions, _plugin ?? Task.CompletedTask]).WaitAsync(TimeSpan.FromSeconds(5));

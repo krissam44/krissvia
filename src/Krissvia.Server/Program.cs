@@ -1,4 +1,7 @@
+using System.Text.Json;
+using Krissvia.Contracts;
 using Krissvia.Core.Commands;
+using Krissvia.Core.Events;
 using Krissvia.Core.Registry;
 using Krissvia.Core.States;
 using Krissvia.Persistence.Sqlite;
@@ -14,27 +17,36 @@ var cheminBase = Path.GetFullPath(builder.Configuration["Database:Path"] ?? "kri
 Directory.CreateDirectory(Path.GetDirectoryName(cheminBase)!);
 
 builder.Services.AddSingleton(TimeProvider.System);
+
+// Bus d'événements : tout ce qui change dans le cœur y passe (états, registre, plugins, ordres).
+builder.Services.AddSingleton(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<EventBus>>();
+    return new EventBus((abonne, ex) => logger.LogError(ex, "L'abonné {Abonne} du bus d'événements a échoué.", abonne));
+});
+builder.Services.AddSingleton<IEventBus>(sp => sp.GetRequiredService<EventBus>());
+builder.Services.AddSingleton<IEventPublisher>(sp => sp.GetRequiredService<EventBus>());
+
 builder.Services.AddSingleton(new SqliteDatabase($"Data Source={cheminBase}"));
 builder.Services.AddSingleton<IEntityRepository, SqliteEntityRepository>();
 builder.Services.AddSingleton<IEntityRegistry, EntityRegistry>();
 builder.Services.AddSingleton<IEntityStateRepository, SqliteEntityStateRepository>();
-builder.Services.AddSingleton(sp =>
-{
-    var logger = sp.GetRequiredService<ILogger<EntityStateStore>>();
-    return new EntityStateStore(
-        sp.GetRequiredService<IEntityStateRepository>(),
-        sp.GetRequiredService<TimeProvider>(),
-        ex => logger.LogError(ex, "Un abonné du magasin d'états a échoué."));
-});
+builder.Services.AddSingleton<EntityStateStore>();
 builder.Services.AddSingleton<IEntityStateReader>(sp => sp.GetRequiredService<EntityStateStore>());
 builder.Services.AddSingleton<IEntityStateWriter>(sp => sp.GetRequiredService<EntityStateStore>());
 
 builder.Services.AddSingleton(builder.Configuration.GetSection("PluginHost").Get<PluginHostOptions>() ?? new PluginHostOptions());
 builder.Services.AddSingleton<PluginHub>();
-builder.Services.AddSingleton<IEntityCommander, PluginCommander>();
+
+// Bus de commandes : passage unique de tous les ordres ; le PluginHost n'en est que le transport.
+builder.Services.AddSingleton<ICommandDispatcher, PluginCommander>();
+builder.Services.AddSingleton<CommandBus>();
+builder.Services.AddSingleton<ICommandBus>(sp => sp.GetRequiredService<CommandBus>());
+builder.Services.AddSingleton<IEntityCommander>(sp => sp.GetRequiredService<CommandBus>());
 
 // Schéma, puis restauration des états : les hosted services démarrent avant que Kestrel accepte un plugin.
 builder.Services.AddHostedService<StateStoreLifetime>();
+builder.Services.AddHostedService<CommandJournal>();
 
 var app = builder.Build();
 
@@ -58,17 +70,46 @@ app.Map("/plugins", async (HttpContext contexte, PluginHub hub) =>
 if (app.Environment.IsDevelopment())
 {
     // Diagnostic provisoire, en attendant l'API publique (contrat 3) : ce que le cœur sait en ce moment.
-    app.MapGet("/debug/states", async (IEntityRegistry registre, EntityStateStore etats, PluginHub hub) => new
+    app.MapGet("/debug/states", async (IEntityRegistry registre, EntityStateStore etats, PluginHub hub, EventBus bus) => new
     {
         plugins = hub.ConnectedPlugins,
+        bus = bus.Diagnostics().Select(d => new { d.Subscriber, d.Pending }),
         entities = (await registre.ListAsync()).Select(e => new
         {
             e.EntityId,
             e.IntegrationId,
             e.Missing,
+            e.Commands,
             State = etats.Get(e.EntityId) is { } s ? new { s.Value, s.MeasuredAt, s.Available } : null,
         }),
+    });
+
+    app.MapGet("/debug/commands", (ICommandBus commandes) => commandes.RecentCommands.Select(c => new
+    {
+        c.Command.EntityId,
+        c.Command.Command,
+        c.Command.Origin,
+        Priority = c.Command.Priority.ToString(),
+        Outcome = c.Outcome.ToString(),
+        Verification = c.Verification.ToString(),
+        c.Detail,
+        c.SentAt,
+        DurationMs = (int)c.Duration.TotalMilliseconds,
+    }));
+
+    // Envoi manuel d'un ordre, vérifié : {"entity_id": "switch.…", "command": "turn_off", "args": {…}}.
+    app.MapPost("/debug/commands", async (OrdreManuel ordre, ICommandBus commandes, CancellationToken ct) =>
+    {
+        var resultat = await commandes.SendVerifiedAsync(
+            new EntityCommand(ordre.EntityId, ordre.Command) { Args = ordre.Args, Origin = "debug" }, ct: ct);
+        return new { Outcome = resultat.Outcome.ToString(), Verification = resultat.Verification.ToString() };
     });
 }
 
 app.Run();
+
+/// <summary>Corps de POST /debug/commands.</summary>
+internal sealed record OrdreManuel(
+    [property: System.Text.Json.Serialization.JsonPropertyName("entity_id")] string EntityId,
+    string Command,
+    JsonElement? Args);
