@@ -7,7 +7,7 @@ using Microsoft.Extensions.Time.Testing;
 namespace Krissvia.Climate.Tests;
 
 /// <summary>Bus de commandes de test : enregistre les ordres, la réponse dépend de l'entité et de la commande.</summary>
-internal sealed class ScriptedCommander : IEntityCommander
+internal sealed class ScriptedCommander : FauxBusCommandes
 {
     private readonly object _verrou = new();
 
@@ -15,11 +15,10 @@ internal sealed class ScriptedCommander : IEntityCommander
 
     public Func<string, string, CommandOutcome> Respond { get; set; } = (_, _) => CommandOutcome.Accepted;
 
-    public Task<CommandOutcome> SendAsync(
-        string entityId, string command, CommandPriority priority, int? ttlSeconds, CancellationToken ct)
+    protected override CommandOutcome Envoyer(string entityId, string command, CommandPriority priority)
     {
         lock (_verrou) Sent.Add((entityId, command, priority));
-        return Task.FromResult(Respond(entityId, command));
+        return Respond(entityId, command);
     }
 }
 
@@ -285,6 +284,66 @@ public class LoadShedderTests
 
         Assert.Equal(new[] { "chambre", "salon" }, tick.Shed.ToArray());
         Assert.Equal(new[] { "chambre" }, tick.Unconfirmed.ToArray());
+    }
+
+    [Fact]
+    public async Task D7_une_coupure_acceptee_mais_non_confirmee_ne_compte_pas_non_plus()
+    {
+        // Le cas de juillet 2026 : l'ordre part, le Shelly reste alimenté. Sans confirmation par l'état, le
+        // cumulus n'a rien économisé : le délesteur doit couper le suivant au lieu de croire l'excédent résorbé.
+        var b = new Bench();
+        await b.ConfigureAsync(Cumulus(), Chambre(), Salon());
+        b.Commander.Obeit = (id, _) => id != "switch.cumulus";
+
+        var tick = await b.TickAsync(5300);   // excédent de 1 100 : le cumulus suffirait
+
+        Assert.Equal(new[] { "cumulus", "chambre", "salon" }, tick.Shed.ToArray());
+        Assert.Equal(new[] { "cumulus" }, tick.Unconfirmed.ToArray());
+        Assert.All(b.Commander.Sent, s => Assert.Equal(StandardCommands.TurnOff, s.Command));
+    }
+
+    [Fact]
+    public async Task D7_la_coupure_non_confirmee_est_retentee_et_soldee_quand_l_etat_la_confirme()
+    {
+        var b = new Bench();
+        await b.ConfigureAsync(Cumulus(), Chambre());
+        b.Commander.Obeit = (id, _) => id != "switch.cumulus";
+        await b.TickAsync(5300);
+
+        b.Avancer(6);
+        Assert.Equal(new[] { "cumulus" }, (await b.TickAsync(4500)).Unconfirmed.ToArray());
+
+        b.Commander.Obeit = (_, _) => true;
+        b.Avancer(6);
+        Assert.Empty((await b.TickAsync(4500)).Unconfirmed);
+        Assert.Equal(3, b.Commander.Sent.Count(s => s.EntityId == "switch.cumulus"));
+    }
+
+    [Fact]
+    public async Task D7_un_equipement_a_deux_relais_n_est_coupe_que_si_les_deux_le_sont()
+    {
+        var b = new Bench();
+        var plancher = new SheddableDevice("plancher", "Plancher chauffant", 1, 3000, TimeSpan.FromSeconds(120),
+            ["switch.plancher_zone1", "switch.plancher_zone2"]);
+        await b.ConfigureAsync(plancher, Chambre());
+        b.Commander.Obeit = (id, _) => id != "switch.plancher_zone2";
+
+        var tick = await b.TickAsync(5300);
+
+        Assert.Equal(new[] { "plancher", "chambre" }, tick.Shed.ToArray());
+        Assert.Equal(new[] { "plancher" }, tick.Unconfirmed.ToArray());
+    }
+
+    [Fact]
+    public async Task Une_coupure_directe_attend_sa_confirmation_le_delai_regle()
+    {
+        var b = new Bench();
+        await b.Shedder.ConfigureAsync(Reglages6Kva with { CutVerificationTimeout = TimeSpan.FromSeconds(3) }, [Cumulus()]);
+
+        await b.TickAsync(5200);
+
+        var coupure = Assert.Single(b.Commander.Verifies);
+        Assert.Equal(("switch.cumulus", "delestage", (TimeSpan?)TimeSpan.FromSeconds(3)), coupure);
     }
 
     [Fact]

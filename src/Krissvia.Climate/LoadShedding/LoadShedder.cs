@@ -13,8 +13,9 @@ namespace Krissvia.Climate.LoadShedding;
 /// nominale de l'équipement reste sous le seuil d'alerte (le premier équipement éligible qui tient) ;</item>
 /// <item>D6 : une mesure absente ou périmée n'est jamais lue comme zéro : le délesteur ne décide rien et
 /// signale <see cref="LoadSheddingTick.SourceUnavailable"/> ;</item>
-/// <item>D7 : une coupure dont l'ordre n'est pas accepté ne compte pas comme économie, l'équipement suivant
-/// est délesté, la coupure est retentée à chaque tick ;</item>
+/// <item>D7 : une coupure qui n'est pas CONFIRMÉE par l'état de l'entité (ordre refusé, ou accepté sans effet
+/// constaté, ARCHITECTURE.md §7.3) ne compte pas comme économie, l'équipement suivant est délesté, la coupure
+/// est retentée à chaque tick ;</item>
 /// <item>D8 : un équipement retiré pendant un délestage est rétabli ;</item>
 /// <item>D11 : un équipement lié à un thermostat est coupé par une inhibition immédiate.</item>
 /// </list>
@@ -24,7 +25,7 @@ namespace Krissvia.Climate.LoadShedding;
 /// <see cref="ConfigureAsync"/> peut venir de l'interface. Les deux se sérialisent sur un verrou qui n'est
 /// jamais imbriqué ni tenu pendant la levée d'un événement.
 /// </remarks>
-public sealed class LoadShedder(IEntityCommander commander, ThermostatInhibitor inhibitor, TimeProvider clock)
+public sealed class LoadShedder(ICommandBus commander, ThermostatInhibitor inhibitor, TimeProvider clock)
 {
     private readonly SemaphoreSlim _verrou = new(1, 1);
     private readonly Dictionary<string, DeviceState> _etats = new(StringComparer.Ordinal);
@@ -38,7 +39,7 @@ public sealed class LoadShedder(IEntityCommander commander, ThermostatInhibitor 
     {
         public DateTimeOffset DelesteLe { get; } = delesteLe;
 
-        /// <summary>Vrai quand la coupure a été acceptée ; faux tant qu'elle est retentée.</summary>
+        /// <summary>Vrai quand la coupure est confirmée ; faux tant qu'elle est retentée.</summary>
         public bool Confirme { get; set; } = confirme;
     }
 
@@ -140,16 +141,30 @@ public sealed class LoadShedder(IEntityCommander commander, ThermostatInhibitor 
         var economie = 0.0;
 
         // OrderBy est stable : à priorité égale, l'ordre de la liste fournie est conservé.
-        foreach (var equipement in _equipements.Where(e => !_etats.ContainsKey(e.Id)).OrderBy(e => e.Priority))
+        var candidats = _equipements.Where(e => !_etats.ContainsKey(e.Id)).OrderBy(e => e.Priority).ToList();
+        var suivant = 0;
+
+        // Par vagues : chaque coupure attend sa confirmation (jusqu'à quelques secondes), donc on coupe EN MÊME
+        // TEMPS tout ce que l'excédent réclame, au lieu d'attendre appareil après appareil pendant une surcharge.
+        // Une vague dont une coupure n'est pas confirmée en appelle une autre (D7).
+        while (economie < excedent && suivant < candidats.Count)
         {
-            if (economie >= excedent) break;
+            var vague = new List<SheddableDevice>();
+            for (var prevu = economie; prevu < excedent && suivant < candidats.Count; suivant++)
+            {
+                vague.Add(candidats[suivant]);
+                prevu += candidats[suivant].NominalPower;
+            }
 
-            var confirme = await CouperAsync(equipement, ct);
-            _etats[equipement.Id] = new DeviceState(maintenant, confirme);
-            delestes.Add(equipement.Id);
+            var confirmations = await Task.WhenAll(vague.Select(e => CouperAsync(e, ct)));
+            for (var i = 0; i < vague.Count; i++)
+            {
+                _etats[vague[i].Id] = new DeviceState(maintenant, confirmations[i]);
+                delestes.Add(vague[i].Id);
 
-            // D7 : seule une coupure acceptée compte comme économie.
-            if (confirme) economie += equipement.NominalPower;
+                // D7 : seule une coupure confirmée compte comme économie.
+                if (confirmations[i]) economie += vague[i].NominalPower;
+            }
         }
 
         if (delestes.Count > 0) _derniereAction = maintenant;
@@ -158,7 +173,17 @@ public sealed class LoadShedder(IEntityCommander commander, ThermostatInhibitor 
     private Task<bool> CouperAsync(SheddableDevice equipement, CancellationToken ct) =>
         equipement.ThermostatId is { } thermostat
             ? CouperThermostatAsync(thermostat, equipement, ct)
-            : EnvoyerATousAsync(equipement.SwitchEntityIds, StandardCommands.TurnOff, CommandPriority.Safety, ct);
+            : CouperDirectementAsync(equipement.SwitchEntityIds, ct);
+
+    /// <summary>Coupure vérifiée de chaque switch, en parallèle : acquise seulement si TOUS sont confirmés.</summary>
+    private async Task<bool> CouperDirectementAsync(IReadOnlyList<string> entityIds, CancellationToken ct)
+    {
+        if (entityIds.Count == 0) return false;
+
+        var resultats = await Task.WhenAll(entityIds.Select(id =>
+            Coupures.CouperAsync(commander, id, "delestage", _reglages.CutVerificationTimeout, ct)));
+        return resultats.All(Coupures.EstCoupe);
+    }
 
     private async Task<bool> CouperThermostatAsync(string thermostat, SheddableDevice equipement, CancellationToken ct)
     {
@@ -179,7 +204,7 @@ public sealed class LoadShedder(IEntityCommander commander, ThermostatInhibitor 
         {
             var confirme = equipement.ThermostatId is { } thermostat
                 ? equipement.SwitchEntityIds.Count > 0 && inhibitor.GetPendingSwitches(thermostat).Count == 0
-                : await EnvoyerATousAsync(equipement.SwitchEntityIds, StandardCommands.TurnOff, CommandPriority.Safety, ct);
+                : await CouperDirectementAsync(equipement.SwitchEntityIds, ct);
 
             if (confirme) _etats[equipement.Id].Confirme = true;
         }
