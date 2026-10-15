@@ -87,13 +87,29 @@ public static class DeviceClasses
     public const string Energy = "energy";
     public const string Voltage = "voltage";
     public const string Current = "current";
+    /// <summary>sensor : niveau en %. binary_sensor : true = pile faible.</summary>
     public const string Battery = "battery";
+    public const string Pressure = "pressure";
+    public const string Illuminance = "illuminance";
+    public const string CarbonDioxide = "carbon_dioxide";
 
     /// <summary>binary_sensor : true = OUVERT (le plugin inverse les conventions contraires).</summary>
     public const string Opening = "opening";
 
     /// <summary>binary_sensor : true = présence détectée.</summary>
     public const string Occupancy = "occupancy";
+
+    /// <summary>binary_sensor : true = fuite d'eau détectée.</summary>
+    public const string Moisture = "moisture";
+
+    /// <summary>binary_sensor : true = fumée détectée.</summary>
+    public const string Smoke = "smoke";
+
+    /// <summary>binary_sensor : true = boîtier ouvert ou arraché.</summary>
+    public const string Tamper = "tamper";
+
+    /// <summary>binary_sensor : true = vibration détectée.</summary>
+    public const string Vibration = "vibration";
 }
 
 /// <summary>Unités normalisées : le plugin convertit, le cœur ne reçoit que celles-ci.</summary>
@@ -105,6 +121,9 @@ public static class Units
     public const string KilowattHour = "kWh";
     public const string Volt = "V";
     public const string Ampere = "A";
+    public const string Hectopascal = "hPa";
+    public const string Lux = "lx";
+    public const string PartsPerMillion = "ppm";
 }
 
 /// <summary>Commandes standard par famille. Un plugin peut en déclarer d'autres.</summary>
