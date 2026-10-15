@@ -213,7 +213,10 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
    créneaux de nuit et chevauchements compris. Un créneau de nuit (22:00 → 06:00) finit le LENDEMAIN matin
    (écart voulu avec DomoMud, C11). Les chevauchements sont signalés (le plus matinal l'emporte, C12) ;
    un créneau de durée nulle est refusé. L'enregistrement ne remplace que le planning
-   (`SetScheduleAsync`, `PUT /api/thermostats/{id}/schedule`). Reste à faire : le délestage, les entités.
+   (`SetScheduleAsync`, `PUT /api/thermostats/{id}/schedule`). **Écran Délestage** (`/delestage`) : état en direct (jauge
+   avec les deux seuils, source utilisée, absence de mesure signalée — jamais lue comme 0 VA —, équipements
+   délestés et coupures non confirmées) et toute la configuration (abonnement, seuils, sources ordonnées, somme
+   d'équipements, équipements délestables ; lier un thermostat reprend ses radiateurs). Reste à faire : les entités.
 6. Un plugin Python d'exemple.
 7. Import des données DomoMud, une seule fois, pour les deux installations (6 kVA et 12 kVA).
 
