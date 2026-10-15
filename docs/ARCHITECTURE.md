@@ -225,7 +225,12 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
    `Krissvia.Climate.DeviceSchedules`) : planning allumé / éteint avec le même éditeur, moteur qui n'agit qu'aux
    changements de créneau (état attendu appliqué au démarrage et après modification, ordres vérifiés et repris), un
    seul pilote par switch. Le délesteur rétablit désormais l'état VOULU (`DesiredSwitchStates`) et non « allumé ».
-   Reste à faire : les entités (avec la puissance déclarée et la somme automatique).
+   **Écran Entités** (`/entites`, sur le modèle de l'écran Équipements de DomoMud) :
+   filtres par type, recherche, tri, valeur et fraîcheur en direct, niveau de pile de l'appareil ; dialogue pour les
+   champs de l'utilisateur — nom, pièce (de l'appareil), **puissance déclarée** (W, schéma v4) et activation.
+   **Somme des équipements automatique** : chaque switch actif allumé dont la puissance est déclarée, ou la mesure
+   de son appareil. Elle est datée de la lecture : un switch ne publie qu'à son changement, l'âge de son état ne dit
+   rien ; c'est la disponibilité (plugin mort, appareil injoignable) qui écarte une composante.
 6. Un plugin Python d'exemple.
 7. Import des données DomoMud, une seule fois, pour les deux installations (6 kVA et 12 kVA).
 

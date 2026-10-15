@@ -97,6 +97,51 @@ public sealed class SqliteEntityRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task La_puissance_declaree_survit_au_redemarrage_et_a_une_redeclaration()
+    {
+        var avant = await OuvrirRegistreAsync();
+        await avant.RegisterAsync("test", [Prise()]);
+        await avant.SetNominalPowerAsync("switch.prise_salon", 2000);
+
+        var apres = await OuvrirRegistreAsync();
+        await apres.RegisterAsync("test", [Prise()]);
+
+        Assert.Equal(2000, (await apres.GetAsync("switch.prise_salon"))!.NominalPower);
+        Assert.Null((await apres.GetAsync("sensor.prise_salon_energy"))!.NominalPower);
+    }
+
+    [Fact]
+    public async Task La_piece_d_un_appareil_survit_au_redemarrage_et_a_une_redeclaration()
+    {
+        var avant = await OuvrirRegistreAsync();
+        await avant.RegisterAsync("test", [Prise()]);
+        var appareil = Assert.Single(await avant.ListDevicesAsync());
+        await avant.SetRoomAsync(appareil.DeviceId, " Salon ");
+
+        var apres = await OuvrirRegistreAsync();
+        await apres.RegisterAsync("test", [Prise()]);
+
+        Assert.Equal("Salon", Assert.Single(await apres.ListDevicesAsync()).Room);
+    }
+
+    [Fact]
+    public async Task Une_base_existante_gagne_la_colonne_de_puissance()
+    {
+        // Base au schéma v3, telle qu'elle existait avant la puissance déclarée.
+        var db = await OuvrirAsync();
+        await using (var connexion = await db.OpenAsync())
+        {
+            await Dapper.SqlMapper.ExecuteAsync(connexion, "ALTER TABLE entities DROP COLUMN nominal_power; PRAGMA user_version = 3;");
+        }
+
+        var registre = await OuvrirRegistreAsync();
+        await registre.RegisterAsync("test", [Prise()]);
+        await registre.SetNominalPowerAsync("switch.prise_salon", 1500);
+
+        Assert.Equal(1500, (await (await OuvrirRegistreAsync()).GetAsync("switch.prise_salon"))!.NominalPower);
+    }
+
+    [Fact]
     public async Task Le_statut_manquant_est_persiste()
     {
         var avant = await OuvrirRegistreAsync();

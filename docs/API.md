@@ -85,8 +85,7 @@ Un seul document de configuration par installation.
   "sources": [
     { "name": "Linky", "power_entity_id": "sensor.linky_apparent_power", "power_quality": "apparent" },
     { "name": "Pince", "power_entity_id": "sensor.pince_maison_apparent_power_0", "power_quality": "apparent" },
-    { "name": "Somme", "kind": "equipment_sum",
-      "metered_equipment": [ { "switch_entity_id": "switch.radiateur_chambre_rdc", "nominal_power": 1500 } ] }
+    { "name": "Somme", "kind": "equipment_sum" }
   ],
   "devices": [
     { "id": "cumulus", "name": "Chauffe-eau", "priority": 1, "nominal_power": 2000,
@@ -102,8 +101,8 @@ Un seul document de configuration par installation.
   (`max_reading_age_seconds`) ; `status.active_source` dit laquelle, et le journal note chaque bascule. Une
   source unique qui se tait laisserait le délesteur sans décision : la protection disparaîtrait en silence.
 - Une source est `entity` (Linky en VA, `power_quality: "apparent"` ; pince en W, `"active"`, majorée de
-  `active_to_apparent_factor`, 1,10 par défaut) ou `equipment_sum` (`metered_equipment` : switch, mesure
-  facultative, puissance nominale).
+  `active_to_apparent_factor`, 1,10 par défaut) ou `equipment_sum` : la somme des switches allumés dont la puissance
+  est déclarée dans les Entités (ou la mesure de leur appareil), sans liste à tenir.
 - Priorité 1 = délesté en premier. Un équipement lié à un thermostat (`thermostat_id`) est coupé par
   inhibition : consigne et mode intacts, reprise avec la consigne du moment.
 - Toute coupure est vérifiée (état publié après l'ordre, 5 s) ; non confirmée, elle ne compte pas comme

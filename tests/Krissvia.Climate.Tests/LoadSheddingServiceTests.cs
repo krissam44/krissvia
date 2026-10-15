@@ -73,10 +73,13 @@ public class LoadSheddingServiceTests
                 Appareil("rad", "Radiateur salon", EntityKind.Switch),
                 Appareil("sonde", "Sonde salon", EntityKind.Sensor, DeviceClasses.Temperature),
             ]).GetAwaiter().GetResult();
+
+            // La somme des équipements additionne ce qui est déclaré dans le registre.
+            Registre.SetNominalPowerAsync(Radiateur, 1500).GetAwaiter().GetResult();
         }
 
         /// <summary>Un service neuf sur le même stockage : le redémarrage du serveur.</summary>
-        public LoadSheddingService Nouveau() => new(Magasin, Registre, Etats, Thermostats, Delesteur);
+        public LoadSheddingService Nouveau() => new(Magasin, Registre, Etats, Thermostats, Delesteur, Horloge);
     }
 
     private static PowerSourceConfiguration Linky_() => new() { Name = "Linky", PowerEntityId = Linky };
@@ -87,7 +90,6 @@ public class LoadSheddingServiceTests
     private static PowerSourceConfiguration Somme_() => new()
     {
         Name = "Somme", Kind = PowerSourceKind.EquipmentSum,
-        MeteredEquipment = [new MeteredEquipmentConfiguration { SwitchEntityId = Radiateur, NominalPower = 1500 }],
     };
 
     private static LoadSheddingConfiguration Config() => new()
@@ -224,7 +226,6 @@ public class LoadSheddingServiceTests
         { "pas un Sensor", c => c with { Sources = [Linky_() with { PowerEntityId = Cumulus }] } },
         { "obligatoire", c => c with { Sources = [Linky_() with { PowerEntityId = null }] } },
         { "aucune source", c => c with { Sources = [] } },
-        { "aucun équipement à additionner", c => c with { Sources = [Somme_() with { MeteredEquipment = [] }] } },
         { "aucun switch", c => c with { Devices = [c.Devices[0] with { SwitchEntityIds = [] }] } },
         { "pas un Switch", c => c with { Devices = [c.Devices[0] with { SwitchEntityIds = [Linky] }] } },
         { "thermostat « salon » n'existe pas", c => c with { Devices = [c.Devices[0] with { ThermostatId = "salon" }] } },

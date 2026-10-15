@@ -33,6 +33,33 @@ public class EntityRegistryTests
     };
 
     [Fact]
+    public async Task La_puissance_declaree_se_regle_s_efface_et_refuse_le_negatif()
+    {
+        var registre = NouveauRegistre();
+        await registre.RegisterAsync(Plugin, [Prise()]);
+
+        await registre.SetNominalPowerAsync("switch.prise_salon", 1499.6);
+        Assert.Equal(1500, (await registre.GetAsync("switch.prise_salon"))!.NominalPower);
+
+        await registre.SetNominalPowerAsync("switch.prise_salon", 0);
+        Assert.Null((await registre.GetAsync("switch.prise_salon"))!.NominalPower);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => registre.SetNominalPowerAsync("switch.prise_salon", -5));
+    }
+
+    [Fact]
+    public async Task Les_entites_chargees_sont_lisibles_sans_attente()
+    {
+        var registre = NouveauRegistre();
+        Assert.Empty(registre.Loaded);
+
+        await registre.RegisterAsync(Plugin, [Prise()]);
+        await registre.SetNominalPowerAsync("switch.prise_salon", 800);
+
+        Assert.Equal(800, Assert.Single(registre.Loaded, e => e.EntityId == "switch.prise_salon").NominalPower);
+    }
+
+    [Fact]
     public async Task Une_declaration_attribue_des_identifiants_lisibles()
     {
         var registre = NouveauRegistre();

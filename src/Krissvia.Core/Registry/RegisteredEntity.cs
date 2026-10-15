@@ -48,6 +48,12 @@ public sealed record RegisteredEntity
     public string? Usage { get; init; }
     public bool Enabled { get; init; } = true;
 
+    /// <summary>
+    /// Puissance consommée allumé, en W, déclarée par l'utilisateur (null : non renseignée). Sert à la somme des
+    /// équipements du délesteur et à préremplir les équipements délestables.
+    /// </summary>
+    public double? NominalPower { get; init; }
+
     /// <summary>Le plugin ne déclare plus cette entité. Elle reste dans le registre : ses références ne disparaissent pas.</summary>
     public bool Missing { get; init; }
 }

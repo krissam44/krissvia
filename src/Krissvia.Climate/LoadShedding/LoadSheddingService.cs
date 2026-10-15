@@ -24,7 +24,8 @@ public sealed class LoadSheddingService(
     IEntityRegistry registry,
     IEntityStateReader states,
     ThermostatService thermostats,
-    LoadShedder shedder)
+    LoadShedder shedder,
+    TimeProvider clock)
 {
     public const string Collection = "delestage";
     public const string DocumentId = "config";
@@ -45,6 +46,8 @@ public sealed class LoadSheddingService(
         await _verrou.WaitAsync(ct);
         try
         {
+            // Le registre est chargé d'emblée : la somme des équipements le lit sans attendre, toutes les 2 s.
+            await registry.ListAsync(ct);
             var document = (await store.ListAsync(Collection, ct)).FirstOrDefault(d => d.Id == DocumentId);
             if (document is null) return;
 
@@ -128,8 +131,7 @@ public sealed class LoadSheddingService(
         {
             IPowerSource source = s.Kind == PowerSourceKind.Entity
                 ? new EntityPowerSource(states, s.PowerEntityId ?? "", s.PowerQuality)
-                : new EquipmentSumPowerSource(states,
-                    s.MeteredEquipment.Select(e => new MeteredEquipment(e.SwitchEntityId, e.PowerEntityId, e.NominalPower)).ToList());
+                : new EquipmentSumPowerSource(states, () => DeclaredEquipment.FromRegistry(registry.Loaded), clock);
             return (s.Name is { Length: > 0 } nom ? nom : $"source {i + 1}", source, Math.Max(1.0, s.ActiveToApparentFactor));
         }).ToList(), TimeSpan.FromSeconds(c.MaxReadingAgeSeconds));
         _sourceUtilisee = null;
@@ -165,16 +167,6 @@ public sealed class LoadSheddingService(
                 if (string.IsNullOrWhiteSpace(s.PowerEntityId))
                     throw new LoadSheddingValidationException($"{role} : l'entité de puissance est obligatoire.");
                 await VerifierAsync(s.PowerEntityId, EntityKind.Sensor, role, ct);
-            }
-            else
-            {
-                if (s.MeteredEquipment.Count == 0)
-                    throw new LoadSheddingValidationException($"{role} : aucun équipement à additionner.");
-                foreach (var e in s.MeteredEquipment)
-                {
-                    await VerifierAsync(e.SwitchEntityId, EntityKind.Switch, role, ct);
-                    if (e.PowerEntityId is { } p) await VerifierAsync(p, EntityKind.Sensor, role, ct);
-                }
             }
         }
 

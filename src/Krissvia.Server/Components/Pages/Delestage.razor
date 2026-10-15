@@ -153,27 +153,19 @@
             }
             else
             {
-                @foreach (var e in s.Equipements)
-                {
-                    <div class="ligne mt-2" @key="e">
-                        <MudSelect T="string" @bind-Value="e.Interrupteur" Label="Équipement (switch)" Variant="Variant.Outlined" Margin="Margin.Dense">
-                            @foreach (var x in Options(_interrupteurs, e.Interrupteur))
-                            {
-                                <MudSelectItem Value="x.EntityId">@Libelle(x)</MudSelectItem>
-                            }
-                        </MudSelect>
-                        <MudSelect T="string" @bind-Value="e.Mesure" Label="Sa mesure (facultative)" Variant="Variant.Outlined" Margin="Margin.Dense">
-                            <MudSelectItem Value="@Aucune">— puissance nominale —</MudSelectItem>
-                            @foreach (var x in Options(_puissances, e.Mesure))
-                            {
-                                <MudSelectItem Value="x.EntityId">@Libelle(x)</MudSelectItem>
-                            }
-                        </MudSelect>
-                        <MudNumericField @bind-Value="e.Nominale" Label="Nominale (W)" Min="0" Step="100" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="() => s.Equipements.Remove(e)" aria-label="Retirer de la somme" />
-                    </div>
-                }
-                <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Class="mt-1" OnClick="() => s.Equipements.Add(new EquipementSomme())">Équipement</MudButton>
+                var declares = DeclaredEquipment.FromRegistry(_entites);
+                <MudText Typo="Typo.body2" Class="mt-2">
+                    Additionne chaque équipement allumé dont la puissance est déclarée dans les
+                    <MudLink Href="/entites">Entités</MudLink>, ou la mesure réelle de son appareil s'il en publie une.
+                    @if (declares.Count == 0)
+                    {
+                        <b> Aucune puissance déclarée pour l'instant : cette source ne peut rien mesurer.</b>
+                    }
+                    else
+                    {
+                        <span> En ce moment : @declares.Count équipement(s), @string.Join(", ", declares.Select(e => $"{NomEntite(e.SwitchEntityId)} {e.NominalPower:0} W")).</span>
+                    }
+                </MudText>
             }
         </div>
     }
@@ -216,7 +208,7 @@
                         <MudSelectItem Value="t.Id">@(t.Name is { Length: > 0 } n ? n : t.Id)</MudSelectItem>
                     }
                 </MudSelect>
-                <MudSelect T="string" @bind-SelectedValues="d.Interrupteurs" MultiSelection="true" Label="Switches à couper" Variant="Variant.Outlined" Margin="Margin.Dense"
+                <MudSelect T="string" SelectedValues="d.Interrupteurs" SelectedValuesChanged="v => InterrupteursChange(d, v)" MultiSelection="true" Label="Switches à couper" Variant="Variant.Outlined" Margin="Margin.Dense"
                            MultiSelectionTextFunc="@(v => string.Join(", ", v.Select(NomEntite)))">
                     @foreach (var x in Options(_interrupteurs, d.Interrupteurs.ToArray()))
                     {

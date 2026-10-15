@@ -1,0 +1,79 @@
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Style="color: #00b4d8;" />
+            <MudText Typo="Typo.h6">Modifier l'entité</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div style="min-height: 380px;">
+        <MudTabs Rounded="true" Centered="true" Color="Color.Primary" Class="mt-1" TabPanelsClass="pt-4">
+            <MudTabPanel Text="Général" Icon="@Icons.Material.Filled.Tune">
+                @if (_erreur is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@_erreur</MudAlert>
+                }
+                <MudGrid Spacing="2">
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_nom" Label="Nom affiché" Variant="Variant.Outlined"
+                                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Label" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField Value="@Categories.De(Entite).Libelle" Label="Type" ReadOnly="true" Variant="Variant.Outlined"
+                                      Adornment="Adornment.Start" AdornmentIcon="@Categories.De(Entite).Icone"
+                                      AdornmentColor="Color.Inherit" HelperText="Déclaré par le plugin" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_piece" Label="Pièce / emplacement" Variant="Variant.Outlined"
+                                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Room"
+                                      HelperText="@(AutresEntites.Count == 0 ? "Ex : Salon, Chambre…" : $"Celle de l'appareil : commune à ses {AutresEntites.Count + 1} entités")" />
+                    </MudItem>
+                    @if (Entite.Kind == EntityKind.Switch)
+                    {
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="_puissance" Label="Puissance consommée (W)" Min="0" Max="20000" Step="50" Variant="Variant.Outlined"
+                                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Bolt"
+                                             HelperText="Puissance nominale. 0 = non renseignée. Utilisée pour la somme des équipements du délestage." />
+                        </MudItem>
+                    }
+                </MudGrid>
+                <MudSwitch T="bool" @bind-Value="_active" Color="Color.Success" Label="Active" Class="mt-3" />
+                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">
+                    Désactivée, elle n'est plus proposée dans les listes ni comptée dans la somme des équipements.
+                </MudText>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Informations" Icon="@Icons.Material.Filled.Info">
+                <MudSimpleTable Dense="true" Elevation="0">
+                    <tbody>
+                        <tr><td>Identifiant</td><td><code>@Entite.EntityId</code></td></tr>
+                        <tr><td>Famille</td><td>@Entite.Kind @(Entite.DeviceClass is { } c ? $"· {c}" : "") @(Entite.Unit is { } u ? $"· {u}" : "")</td></tr>
+                        @if (Entite.Commands.Count > 0)
+                        {
+                            <tr><td>Commandes</td><td>@string.Join(", ", Entite.Commands)</td></tr>
+                        }
+                        <tr><td>Plugin</td><td>@Entite.IntegrationId</td></tr>
+                        <tr><td>Appareil</td><td>@Appareil?.DisplayName</td></tr>
+                        @if (Appareil?.Manufacturer is not null || Appareil?.Model is not null)
+                        {
+                            <tr><td>Modèle</td><td>@Appareil?.Manufacturer @Appareil?.Model</td></tr>
+                        }
+                        <tr><td>Identifiant matériel</td><td><code>@Appareil?.UniqueId</code></td></tr>
+                        @if (AutresEntites.Count > 0)
+                        {
+                            <tr><td>Même appareil</td><td>@string.Join(", ", AutresEntites.Select(x => x.DisplayName))</td></tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    Le pilotage (adresse, protocole) se règle dans le plugin : Services → sa fiche.
+                </MudText>
+            </MudTabPanel>
+        </MudTabs>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => MudDialog.Cancel()">Annuler</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="EnregistrerAsync">Enregistrer</MudButton>
+    </DialogActions>
+</MudDialog>

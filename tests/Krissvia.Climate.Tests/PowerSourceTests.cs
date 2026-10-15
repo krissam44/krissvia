@@ -1,3 +1,5 @@
+using Krissvia.Contracts;
+using Krissvia.Core.Registry;
 using System.Text.Json;
 using Krissvia.Climate;
 using Krissvia.Climate.LoadShedding;
@@ -26,6 +28,7 @@ internal sealed class FakeStateReader : IEntityStateReader
 public class PowerSourceTests
 {
     private static readonly DateTimeOffset T0 = new(2026, 10, 14, 12, 0, 0, TimeSpan.Zero);
+    private static readonly FakeTimeProvider Horloge = new(T0);
 
     // ── Source branchée sur une entité ───────────────────────────────────────
 
@@ -70,14 +73,14 @@ public class PowerSourceTests
         etats.Set("sensor.nulle_power", 0.0, T0);
         // switch.inconnu : aucun état, il est ignoré
 
-        var source = new EquipmentSumPowerSource(etats,
+        var source = new EquipmentSumPowerSource(etats, () =>
         [
             new MeteredEquipment("switch.mesure", "sensor.mesure_power", 1000),
             new MeteredEquipment("switch.fil_pilote", null, 1500),
             new MeteredEquipment("switch.eteint", null, 2000),
             new MeteredEquipment("switch.mesure_nulle", "sensor.nulle_power", 700),
             new MeteredEquipment("switch.inconnu", null, 3000),
-        ]);
+        ], Horloge);
 
         var echantillon = source.Read();
 
@@ -85,7 +88,7 @@ public class PowerSourceTests
         var e = echantillon.GetValueOrDefault();
         Assert.Equal(800 + 1500 + 700, e.Value);
         Assert.Equal(PowerQuality.Estimated, e.Quality);
-        Assert.Equal(T0 - TimeSpan.FromSeconds(5), e.MeasuredAt);   // l'état le plus ancien
+        Assert.Equal(T0, e.MeasuredAt);   // datée de la lecture : les états ne vieillissent pas tant qu'ils ne changent pas
     }
 
     [Fact]
@@ -95,8 +98,8 @@ public class PowerSourceTests
         etats.Set("switch.a", true, T0);
         etats.Set("sensor.a_power", 800.0, T0);
 
-        var echantillon = new EquipmentSumPowerSource(etats,
-            [new MeteredEquipment("switch.a", "sensor.a_power", 1000)]).Read();
+        var echantillon = new EquipmentSumPowerSource(etats, () =>
+            [new MeteredEquipment("switch.a", "sensor.a_power", 1000)], Horloge).Read();
 
         Assert.NotNull(echantillon);
         Assert.Equal(PowerQuality.Active, echantillon.GetValueOrDefault().Quality);
@@ -107,7 +110,7 @@ public class PowerSourceTests
     {
         var etats = new FakeStateReader();
 
-        var source = new EquipmentSumPowerSource(etats, [new MeteredEquipment("switch.a", null, 1000)]);
+        var source = new EquipmentSumPowerSource(etats, () => [new MeteredEquipment("switch.a", null, 1000)], Horloge);
 
         Assert.Null(source.Read());
     }
@@ -118,7 +121,7 @@ public class PowerSourceTests
         var etats = new FakeStateReader();
         etats.Set("switch.a", false, T0);
 
-        var echantillon = new EquipmentSumPowerSource(etats, [new MeteredEquipment("switch.a", null, 1000)]).Read();
+        var echantillon = new EquipmentSumPowerSource(etats, () => [new MeteredEquipment("switch.a", null, 1000)], Horloge).Read();
 
         Assert.NotNull(echantillon);
         Assert.Equal(0, echantillon.GetValueOrDefault().Value);
@@ -167,5 +170,64 @@ public class PowerSourceTests
         horloge.Advance(TimeSpan.FromSeconds(1));
         var avecMajoration = await delesteur.TickAsync(PowerReadings.ToReading(source.Read(), 1.10));  // 4 950 > 4 800
         Assert.Equal(new[] { "cumulus" }, avecMajoration.Shed.ToArray());
+    }
+
+    private static RegisteredEntity Entite(string id, string appareil, EntityKind famille, string? classe = null, double? puissance = null,
+        bool actif = true, bool disparue = false) => new()
+    {
+        EntityId = id, DeviceId = appareil, IntegrationId = "test", UniqueId = id, Kind = famille, DeviceClass = classe,
+        DisplayName = id, NominalPower = puissance, Enabled = actif, Missing = disparue,
+    };
+
+    [Fact]
+    public void La_somme_prend_chaque_switch_declare_et_la_mesure_de_son_appareil()
+    {
+        var equipements = DeclaredEquipment.FromRegistry(
+        [
+            Entite("switch.prise", "prise", EntityKind.Switch, puissance: 1000),
+            Entite("sensor.prise_power", "prise", EntityKind.Sensor, DeviceClasses.Power),
+            Entite("sensor.prise_energy", "prise", EntityKind.Sensor, DeviceClasses.Energy),
+            Entite("switch.radiateur", "rad", EntityKind.Switch, puissance: 1500),
+            Entite("switch.non_declare", "x", EntityKind.Switch),
+            Entite("switch.desactive", "y", EntityKind.Switch, puissance: 500, actif: false),
+            Entite("switch.disparu", "z", EntityKind.Switch, puissance: 500, disparue: true),
+            Entite("sensor.compteur_power", "compteur", EntityKind.Sensor, DeviceClasses.Power, puissance: 9000),
+        ]);
+
+        Assert.Equal(
+            [new MeteredEquipment("switch.prise", "sensor.prise_power", 1000), new MeteredEquipment("switch.radiateur", null, 1500)],
+            equipements.OrderBy(e => e.SwitchEntityId));
+    }
+
+    [Fact]
+    public void Une_puissance_declaree_apres_coup_compte_a_la_lecture_suivante()
+    {
+        var etats = new FakeStateReader();
+        etats.Set("switch.a", true, T0);
+        var entites = new List<RegisteredEntity> { Entite("switch.a", "a", EntityKind.Switch) };
+        var source = new EquipmentSumPowerSource(etats, () => DeclaredEquipment.FromRegistry(entites), Horloge);
+
+        Assert.Null(source.Read());   // rien de déclaré : rien à additionner
+
+        entites[0] = entites[0] with { NominalPower = 1200 };
+        Assert.Equal(1200, source.Read().GetValueOrDefault().Value);
+    }
+
+    [Fact]
+    public void Un_radiateur_allume_depuis_des_heures_compte_toujours_un_hors_ligne_non()
+    {
+        var etats = new FakeStateReader();
+        etats.Set("switch.radiateur", true, T0 - TimeSpan.FromHours(3));
+        etats.Set("switch.hors_ligne", true, T0, disponible: false);
+        var source = new EquipmentSumPowerSource(etats, () =>
+        [
+            new MeteredEquipment("switch.radiateur", null, 1500),
+            new MeteredEquipment("switch.hors_ligne", null, 2000),
+        ], Horloge);
+
+        var e = source.Read().GetValueOrDefault();
+
+        Assert.Equal(1500, e.Value);
+        Assert.Equal(T0, e.MeasuredAt);
     }
 }
