@@ -39,6 +39,12 @@ public sealed partial class ThermostatService(IConfigurationStore store, IEntity
 
     public IReadOnlyList<string> LoadErrors { get; private set; } = [];
 
+    /// <summary>
+    /// Une configuration a changé (enregistrement, mode, consigne, planning, suppression). Levé une fois le verrou
+    /// rendu : la boucle du moteur s'en sert pour recalculer tout de suite au lieu d'attendre son prochain passage.
+    /// </summary>
+    public event Action? Changed;
+
     public IReadOnlyList<ThermostatSettings> List() => _thermostats.Values.ToList();
 
     public ThermostatSettings? Get(string id) => _thermostats.GetValueOrDefault(id);
@@ -114,12 +120,14 @@ public sealed partial class ThermostatService(IConfigurationStore store, IEntity
             await store.DeleteAsync(Collection, id, ct);
             _thermostats.Remove(id);
             await engine.ConfigureAsync(_thermostats.Values.ToList(), ct);
-            return true;
         }
         finally
         {
             _verrou.Release();
         }
+
+        Changed?.Invoke();
+        return true;
     }
 
     /// <summary>Choisit un mode : le planning est désactivé et la consigne ajustée effacée. Null si inconnu.</summary>
@@ -151,22 +159,25 @@ public sealed partial class ThermostatService(IConfigurationStore store, IEntity
     private async Task<ThermostatSettings?> ModifierAsync(
         string id, Func<ThermostatSettings, ThermostatSettings> modification, bool creer, CancellationToken ct)
     {
+        ThermostatSettings nouveau;
         await _verrou.WaitAsync(ct);
         try
         {
             var actuel = _thermostats.GetValueOrDefault(id);
             if (actuel is null && !creer) return null;
 
-            var nouveau = modification(actuel!);
+            nouveau = modification(actuel!);
             await store.SaveAsync(Collection, new ConfigurationDocument(id, JsonSerializer.Serialize(nouveau, Json)), ct);
             _thermostats[id] = nouveau;
             await engine.ConfigureAsync(_thermostats.Values.ToList(), ct);
-            return nouveau;
         }
         finally
         {
             _verrou.Release();
         }
+
+        Changed?.Invoke();
+        return nouveau;
     }
 
     private async Task VerifierEntiteAsync(string entityId, EntityKind attendu, string role, CancellationToken ct)

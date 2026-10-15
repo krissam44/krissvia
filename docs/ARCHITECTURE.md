@@ -202,6 +202,13 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
    14 jours glissants) ; clés Data Protection dans `keys/`, à côté de la base, pour qu'un redémarrage ne
    déconnecte personne — ce dossier se protège comme la base. Une session ouverte vaut la clé d'API sur
    `/api` et `/debug`.
+   **Écran Thermostats** (15/10/2026, page d'accueil `/`) : une carte par thermostat (température, consigne
+   régulée, statut, puissance, motifs de coupure, boutons de mode, ±0,5 °C, planning) et une fiche de
+   configuration dont les listes ne proposent que des entités du registre de la bonne famille. Les boutons passent
+   par `ThermostatService`, comme l'API. Un changement de configuration réveille la boucle du moteur
+   (`ThermostatService.Changed`, levé verrou rendu) : un mode choisi atteint le radiateur tout de suite au lieu
+   d'attendre jusqu'à 10 s. Reste à faire : l'éditeur de planning (en attendant, par l'API), le délestage, les
+   entités.
 6. Un plugin Python d'exemple.
 7. Import des données DomoMud, une seule fois, pour les deux installations (6 kVA et 12 kVA).
 

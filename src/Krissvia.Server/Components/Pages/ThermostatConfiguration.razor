@@ -1,0 +1,135 @@
+@page "/thermostats/nouveau"
+@page "/thermostats/{Id}"
+
+<PageTitle>@Titre · Krissvia</PageTitle>
+
+<MudButton Href="/thermostats" StartIcon="@Icons.Material.Filled.ArrowBack" Variant="Variant.Text" Class="mb-2">Thermostats</MudButton>
+
+@if (_introuvable)
+{
+    <MudAlert Severity="Severity.Info">Aucun thermostat « @Id ».</MudAlert>
+}
+else if (_m is not null)
+{
+    <MudText Typo="Typo.h5" Class="mb-4">@Titre</MudText>
+
+    @if (_erreur is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_erreur</MudAlert>
+    }
+
+    <MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
+        <MudText Typo="Typo.h6" Class="mb-2">Pièce et équipements</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" Value="_m.Name" ValueChanged="NomChange" Label="Nom" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" Value="_m.Id" ValueChanged="IdChange" Label="Identifiant" Disabled="@(!Creation)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              HelperText="@(Creation ? "Minuscules, chiffres, « _ » et « - ». Il ne change plus ensuite : l'API l'utilise." : "Utilisé par l'API, ne change pas.")" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="_m.Sonde" Label="Sonde intérieure" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           HelperText="Capteur de température de la pièce">
+                    @foreach (var e in Options(_sondes, _m.Sonde))
+                    {
+                        <MudSelectItem Value="e.EntityId">@Libelle(e)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-SelectedValues="_m.Radiateurs" MultiSelection="true" Label="Radiateurs"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Interrupteurs pilotés ensemble"
+                           MultiSelectionTextFunc="@(v => string.Join(", ", v.Select(Nom)))">
+                    @foreach (var e in Options(_interrupteurs, _m.Radiateurs.ToArray()))
+                    {
+                        <MudSelectItem Value="e.EntityId">@Libelle(e)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="_m.SondeExterieure" Label="Sonde extérieure (facultative)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           HelperText="Anticipe les besoins quand il fait froid dehors">
+                    <MudSelectItem Value="@Aucune">— aucune —</MudSelectItem>
+                    @foreach (var e in Options(_sondes, _m.SondeExterieure))
+                    {
+                        <MudSelectItem Value="e.EntityId">@Libelle(e)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="_m.Ouverture" Label="Capteur d'ouverture (facultatif)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           HelperText="Fenêtre ouverte : chauffage suspendu">
+                    <MudSelectItem Value="@Aucune">— aucun —</MudSelectItem>
+                    @foreach (var e in Options(_ouvertures, _m.Ouverture))
+                    {
+                        <MudSelectItem Value="e.EntityId">@Libelle(e)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
+        <MudText Typo="Typo.h6" Class="mb-2">Températures des modes</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_m.Confort" Label="Confort (°C)" Step="0.5" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                 HelperText="@($"Confort −1 : {_m.Confort - 1:0.0} °C, Confort −2 : {_m.Confort - 2:0.0} °C")" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_m.Eco" Label="Éco (°C)" Step="0.5" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_m.HorsGel" Label="Hors-gel (°C)" Step="0.5" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
+        <MudText Typo="Typo.h6" Class="mb-2">Protections</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_m.FailsafeMinutes" Label="Sonde muette (min)" Min="0" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                 HelperText="Au-delà, chauffage coupé. 0 : jamais" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_m.OuvertureMinutes" Label="Fenêtre ouverte depuis (min)" Min="0" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_m.FermetureMinutes" Label="Reprise après fermeture (min)" Min="0" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudExpansionPanels Class="mb-4" Elevation="1">
+        <MudExpansionPanel Text="Régulation (TPI) — réglages avancés">
+            <MudGrid>
+                <MudItem xs="6" sm="4"><MudNumericField @bind-Value="_m.Kp" Label="Kp (par °C d'écart)" Step="0.05" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                <MudItem xs="6" sm="4"><MudNumericField @bind-Value="_m.Ki" Label="Ki (extérieur)" Step="0.005" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                <MudItem xs="6" sm="4"><MudNumericField @bind-Value="_m.Kint" Label="Kint (intégrale)" Step="0.005" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                <MudItem xs="6" sm="4"><MudNumericField @bind-Value="_m.IntegraleMax" Label="Borne de l'intégrale (°C·h)" Step="0.5" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                <MudItem xs="6" sm="4"><MudNumericField @bind-Value="_m.Cycle" Label="Cycle (s)" Min="60" Step="60" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                <MudItem xs="6" sm="4"><MudNumericField @bind-Value="_m.MarcheMin" Label="Marche minimale (s)" Min="0" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                <MudItem xs="6" sm="4"><MudNumericField @bind-Value="_m.ArretMin" Label="Arrêt minimal (s)" Min="0" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                <MudItem xs="6" sm="4"><MudNumericField @bind-Value="_m.InertieHaut" Label="Inertie : coupe à consigne + (°C)" Step="0.1" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="0 : désactivé" /></MudItem>
+                <MudItem xs="6" sm="4"><MudNumericField @bind-Value="_m.InertieBas" Label="Inertie : reprend à consigne + (°C)" Step="0.1" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+            </MudGrid>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+
+    @if (!Creation)
+    {
+        <MudAlert Severity="Severity.Normal" Dense="true" Class="mb-4">
+            Mode, consigne ajustée et planning sont conservés tels quels : ils se règlent depuis la carte du thermostat.
+        </MudAlert>
+    }
+
+    <MudStack Row="true" Justify="Justify.SpaceBetween">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="EnregistrerAsync">Enregistrer</MudButton>
+        @if (!Creation)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="SupprimerAsync">Supprimer</MudButton>
+        }
+    </MudStack>
+}

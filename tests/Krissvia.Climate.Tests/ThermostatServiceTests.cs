@@ -231,4 +231,55 @@ public class ThermostatServiceTests
         Assert.Null(b.Moteur.GetSnapshot("salon"));
         Assert.Empty(b.Magasin.Documents);
     }
+
+    [Fact]
+    public async Task Chaque_changement_accepte_est_signale_une_fois()
+    {
+        var b = new Banc();
+        var signaux = 0;
+        b.Service.Changed += () => signaux++;
+
+        await b.Service.SaveAsync(Salon());
+        await b.Service.SetModeAsync("salon", ThermostatMode.Eco);
+        await b.Service.SetTargetAsync("salon", 19);
+        await b.Service.SetScheduleActiveAsync("salon", true);
+        await b.Service.DeleteAsync("salon");
+
+        Assert.Equal(5, signaux);
+    }
+
+    [Fact]
+    public async Task Un_changement_refuse_ou_sans_objet_n_est_pas_signale()
+    {
+        var b = new Banc();
+        await b.Service.SaveAsync(Salon() with { ScheduleActive = false, ManualMode = ThermostatMode.Off });
+        var signaux = 0;
+        b.Service.Changed += () => signaux++;
+
+        await Assert.ThrowsAsync<ThermostatValidationException>(() => b.Service.SetTargetAsync("salon", 19));
+        await Assert.ThrowsAsync<ThermostatValidationException>(() => b.Service.SaveAsync(Salon() with { TemperatureEntityId = "sensor.inexistant" }));
+        Assert.Null(await b.Service.SetModeAsync("inconnu", ThermostatMode.Eco));
+        Assert.False(await b.Service.DeleteAsync("inconnu"));
+
+        Assert.Equal(0, signaux);
+    }
+
+    [Fact]
+    public async Task Le_signal_part_verrou_rendu_et_un_abonne_peut_relire_le_service()
+    {
+        var b = new Banc();
+        ThermostatSettings? vu = null;
+        var dejaAppele = false;
+        // Un abonné qui rappelle le service pendant le signal : verrou encore tenu, ce serait un interblocage.
+        b.Service.Changed += () =>
+        {
+            if (dejaAppele) return;
+            dejaAppele = true;
+            vu = b.Service.SetScheduleActiveAsync("salon", false).GetAwaiter().GetResult();
+        };
+
+        await Task.Run(() => b.Service.SaveAsync(Salon())).WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.NotNull(vu);
+    }
 }
