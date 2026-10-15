@@ -142,7 +142,7 @@ internal static class ExposeMapper
         if (etat?.Property is not { } propriete) return null;
 
         return new InterrupteurBinding(Id(appareil, propriete), x.Endpoint ?? etat.Endpoint, propriete,
-            etat.ValueOn, etat.ValueOff, etat.ValueToggle);
+            etat.ValueOn, etat.ValueOff, etat.ValueToggle, etat.Lisible);
     }
 
     private static EntityBinding? Lumiere(Z2mDevice appareil, Z2mExpose x)
@@ -153,7 +153,7 @@ internal static class ExposeMapper
         var luminosite = x.Features.FirstOrDefault(f => f.Type == "numeric" && f.Name == "brightness" && f.Modifiable);
         var point = x.Endpoint ?? etat.Endpoint;
         return new LumiereBinding(Id(appareil, point is null ? "light" : $"light_{point}"), point, propriete,
-            etat.ValueOn, luminosite?.Property, luminosite?.ValueMax ?? 254);
+            etat.ValueOn, luminosite?.Property, luminosite?.ValueMax ?? 254, etat.Lisible);
     }
 
     private static EntityBinding? Volet(Z2mDevice appareil, Z2mExpose x)

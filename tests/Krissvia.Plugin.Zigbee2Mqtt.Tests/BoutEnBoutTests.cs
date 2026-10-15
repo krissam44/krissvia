@@ -35,6 +35,20 @@ public class BoutEnBoutTests
     }
 
     [Fact]
+    public async Task Un_relais_silencieux_est_interroge_et_son_etat_arrive_dans_le_coeur()
+    {
+        await using var banc = await BancBoutEnBout.DemarrerAsync();
+        banc.Z2m.EtatsReels["Inter cuisine"] = """{"state_l1":"OFF","state_l2":"ON"}""";
+
+        await banc.Z2m.DemarrerAsync();   // ne publie aucun état pour l'interrupteur
+
+        var voie2 = await banc.EntityIdAsync($"{Inter}:state_l2");
+        await BancBoutEnBout.AttendreAsync(() => banc.Etats.Get(voie2) is { Available: true }, "état de la voie 2 obtenu par /get");
+        Assert.True(banc.Etats.Get(voie2)!.Value.GetBoolean());
+        Assert.Contains(banc.Z2m.Publications, p => p.Topic == "zigbee2mqtt/Inter cuisine/get");
+    }
+
+    [Fact]
     public async Task Un_ordre_impossible_echoue_sans_rien_publier()
     {
         await using var banc = await BancBoutEnBout.DemarrerAsync();
@@ -42,7 +56,7 @@ public class BoutEnBoutTests
         var temperature = await banc.EntityIdAsync($"{Sonde}:temperature");
 
         Assert.Equal(CommandOutcome.Failed, await banc.Commandeur.SendAsync(temperature, StandardCommands.TurnOn));
-        Assert.Empty(banc.Z2m.Publications);
+        Assert.DoesNotContain(banc.Z2m.Publications, p => p.Topic.EndsWith("/set", StringComparison.Ordinal));
     }
 
     [Fact]
