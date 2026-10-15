@@ -9,7 +9,7 @@ namespace Krissvia.Persistence.Sqlite;
 /// </summary>
 public sealed class SqliteDatabase(string connectionString)
 {
-    private const int VersionSchema = 3;
+    private const int VersionSchema = 4;
 
     public async Task<SqliteConnection> OpenAsync(CancellationToken ct = default)
     {
@@ -33,6 +33,7 @@ public sealed class SqliteDatabase(string connectionString)
         if (version < 1) await connexion.ExecuteAsync(SchemaV1, transaction: transaction);
         if (version < 2) await connexion.ExecuteAsync(SchemaV2, transaction: transaction);
         if (version < 3) await connexion.ExecuteAsync(SchemaV3, transaction: transaction);
+        if (version < 4) await connexion.ExecuteAsync(SchemaV4, transaction: transaction);
         await connexion.ExecuteAsync($"PRAGMA user_version = {VersionSchema};", transaction: transaction);
         await transaction.CommitAsync(ct);
     }
@@ -92,5 +93,10 @@ public sealed class SqliteDatabase(string connectionString)
             json       TEXT NOT NULL,
             PRIMARY KEY (collection, id)
         );
+        """;
+
+    /// <summary>v4 : puissance déclarée par l'utilisateur pour chaque entité (W), facultative.</summary>
+    private const string SchemaV4 = """
+        ALTER TABLE entities ADD COLUMN nominal_power REAL;
         """;
 }

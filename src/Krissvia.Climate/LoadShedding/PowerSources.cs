@@ -1,3 +1,5 @@
+using Krissvia.Contracts;
+using Krissvia.Core.Registry;
 using Krissvia.Core.States;
 
 namespace Krissvia.Climate.LoadShedding;
@@ -46,34 +48,36 @@ public sealed record MeteredEquipment(string SwitchEntityId, string? PowerEntity
 /// nominale s'il est allumé, sinon zéro.
 /// </summary>
 /// <remarks>
-/// Écart assumé avec DomoMud : si aucun équipement n'a d'état connu, la source est indisponible (null) au lieu de
-/// valoir 0 W, par cohérence avec D6 (une absence de donnée n'est pas une mesure nulle). L'instant de mesure est
-/// celui de l'état le plus ancien utilisé : la somme n'est pas plus fraîche que sa composante la plus périmée.
+/// <list type="bullet">
+/// <item>Écart assumé avec DomoMud : si aucun équipement n'a d'état connu, la source est indisponible (null) au lieu
+/// de valoir 0 W, par cohérence avec D6 (une absence de donnée n'est pas une mesure nulle).</item>
+/// <item>La somme est datée de l'instant de la lecture, pas de son état le plus ancien. Un switch ne publie qu'à
+/// son changement, une prise mesurée qu'à une variation notable : un radiateur allumé depuis trois heures aurait
+/// rendu la somme « périmée » en permanence, et donc inutilisable. La protection vient de la disponibilité : un
+/// plugin mort ou un appareil injoignable rend ses états indisponibles, et ils sont ignorés.</item>
+/// </list>
 /// </remarks>
-public sealed class EquipmentSumPowerSource(IEntityStateReader reader, IReadOnlyList<MeteredEquipment> equipment) : IPowerSource
+/// <param name="equipment">Relue à chaque lecture : une puissance déclarée ou un équipement ajouté compte aussitôt.</param>
+public sealed class EquipmentSumPowerSource(IEntityStateReader reader, Func<IReadOnlyList<MeteredEquipment>> equipment, TimeProvider clock) : IPowerSource
 {
     public PowerSample? Read()
     {
         var total = 0.0;
-        DateTimeOffset? plusAncien = null;
         var estimee = false;
         var connu = false;
 
-        foreach (var e in equipment)
+        foreach (var e in equipment())
         {
-            // Un état inconnu n'est pas « éteint » : l'équipement est ignoré, comme dans DomoMud.
+            // Un état inconnu ou indisponible n'est pas « éteint » : l'équipement est ignoré, comme dans DomoMud.
             if (reader.Get(e.SwitchEntityId) is not { } commutateur || !commutateur.TryGetBool(out var allume)) continue;
 
             connu = true;
-            plusAncien = LePlusAncien(plusAncien, commutateur.MeasuredAt);
-
             if (e.PowerEntityId is { } idMesure
                 && reader.Get(idMesure) is { } mesure
                 && mesure.TryGetNumber(out var watts)
                 && watts > 0)
             {
                 total += watts;
-                plusAncien = LePlusAncien(plusAncien, mesure.MeasuredAt);
             }
             else if (allume)
             {
@@ -82,13 +86,31 @@ public sealed class EquipmentSumPowerSource(IEntityStateReader reader, IReadOnly
             }
         }
 
-        if (!connu || plusAncien is not { } instant) return null;
-
-        return new PowerSample(total, instant, estimee ? PowerQuality.Estimated : PowerQuality.Active);
+        return connu ? new PowerSample(total, clock.GetUtcNow(), estimee ? PowerQuality.Estimated : PowerQuality.Active) : null;
     }
+}
 
-    private static DateTimeOffset LePlusAncien(DateTimeOffset? courant, DateTimeOffset candidat) =>
-        courant is { } c && c < candidat ? c : candidat;
+/// <summary>Les équipements de la somme, tirés du registre.</summary>
+public static class DeclaredEquipment
+{
+    /// <summary>
+    /// Chaque switch actif qui a une puissance déclarée ; sa mesure réelle est celle de son appareil (un capteur de
+    /// puissance en W), s'il en publie une. Comme dans DomoMud : on déclare la puissance d'un équipement une fois, la
+    /// somme suit sans autre réglage.
+    /// </summary>
+    public static IReadOnlyList<MeteredEquipment> FromRegistry(IEnumerable<RegisteredEntity> entites)
+    {
+        var liste = entites.Where(e => e.Enabled && !e.Missing).ToList();
+        var mesures = liste
+            .Where(e => e.Kind == EntityKind.Sensor && e.DeviceClass == DeviceClasses.Power)
+            .GroupBy(e => e.DeviceId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(e => e.EntityId, StringComparer.Ordinal).First().EntityId);
+
+        return liste
+            .Where(e => e.Kind == EntityKind.Switch && e.NominalPower is > 0)
+            .Select(e => new MeteredEquipment(e.EntityId, mesures.GetValueOrDefault(e.DeviceId), e.NominalPower!.Value))
+            .ToList();
+    }
 }
 
 /// <summary>

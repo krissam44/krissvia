@@ -24,7 +24,8 @@ public sealed class EntityRegistry(IEntityRepository repository, Krissvia.Core.E
     private sealed record Snapshot(
         IReadOnlyList<RegisteredDevice> Devices,
         IReadOnlyDictionary<string, RegisteredEntity> Entities,
-        IReadOnlyDictionary<(string, string), RegisteredEntity> ParIdentifiantPlugin)
+        IReadOnlyDictionary<(string, string), RegisteredEntity> ParIdentifiantPlugin,
+        IReadOnlyList<RegisteredEntity> Liste)
     {
         public static Snapshot Creer(IEnumerable<RegisteredDevice> devices, IEnumerable<RegisteredEntity> entities)
         {
@@ -32,7 +33,8 @@ public sealed class EntityRegistry(IEntityRepository repository, Krissvia.Core.E
             return new Snapshot(
                 devices.ToList(),
                 liste.ToDictionary(e => e.EntityId),
-                liste.ToDictionary(e => (e.IntegrationId, e.UniqueId)));
+                liste.ToDictionary(e => (e.IntegrationId, e.UniqueId)),
+                liste.OrderBy(e => e.EntityId, StringComparer.Ordinal).ToList());
         }
     }
 
@@ -55,6 +57,14 @@ public sealed class EntityRegistry(IEntityRepository repository, Krissvia.Core.E
         var s = await InstantaneAsync(ct);
         return s.Entities.Values.OrderBy(e => e.EntityId, StringComparer.Ordinal).ToList();
     }
+
+    public async Task<IReadOnlyList<RegisteredDevice>> ListDevicesAsync(CancellationToken ct = default)
+    {
+        var s = await InstantaneAsync(ct);
+        return s.Devices.OrderBy(d => d.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToList();
+    }
+
+    public IReadOnlyList<RegisteredEntity> Loaded => _instantane?.Liste ?? [];
 
     public Task<string?> ResolveAliasAsync(string alias, CancellationToken ct = default) =>
         repository.ResolveAliasAsync(alias, ct);
@@ -187,6 +197,30 @@ public sealed class EntityRegistry(IEntityRepository repository, Krissvia.Core.E
 
     public Task SetEnabledAsync(string entityId, bool enabled, CancellationToken ct = default) =>
         MettreAJourAsync(entityId, e => e with { Enabled = enabled }, ct);
+
+    public async Task SetRoomAsync(string deviceId, string? room, CancellationToken ct = default)
+    {
+        await _ecriture.WaitAsync(ct);
+        try
+        {
+            var courant = await ChargerSousVerrouAsync(ct);
+            var appareil = courant.Devices.FirstOrDefault(d => d.DeviceId == deviceId)
+                           ?? throw new KeyNotFoundException($"Appareil inconnu : {deviceId}");
+            var mis = appareil with { Room = string.IsNullOrWhiteSpace(room) ? null : room.Trim() };
+            if (mis != appareil) await AppliquerAsync(courant, [mis], [], ct);
+        }
+        finally
+        {
+            _ecriture.Release();
+        }
+    }
+
+    public Task SetNominalPowerAsync(string entityId, double? watts, CancellationToken ct = default)
+    {
+        if (watts is { } w && (double.IsNaN(w) || w < 0))
+            throw new ArgumentOutOfRangeException(nameof(watts), watts, "Une puissance ne peut pas être négative.");
+        return MettreAJourAsync(entityId, e => e with { NominalPower = watts is > 0 ? Math.Round(watts.Value) : null }, ct);
+    }
 
     public async Task AddAliasAsync(string alias, string entityId, CancellationToken ct = default)
     {

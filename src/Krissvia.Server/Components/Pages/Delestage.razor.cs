@@ -77,8 +77,7 @@ public partial class Delestage : IDisposable
     private void AjouterMesure() =>
         _m.Sources.Add(new SourceSaisie { Nom = _m.Sources.Count == 0 ? "Linky" : "Pince" });
 
-    private void AjouterSomme() =>
-        _m.Sources.Add(new SourceSaisie { Nom = "Somme", Somme = true, Equipements = [new EquipementSomme()] });
+    private void AjouterSomme() => _m.Sources.Add(new SourceSaisie { Nom = "Somme", Somme = true });
 
     private void Deplacer(int rang, int sens)
     {
@@ -99,13 +98,23 @@ public partial class Delestage : IDisposable
         if (!d.Enregistre) d.Id = Phrases.Identifiant(nom);
     }
 
+    /// <summary>Sans puissance saisie, celle déclarée pour les switches choisis (page Entités) est reprise.</summary>
+    private void InterrupteursChange(EquipementDelestable d, IEnumerable<string> interrupteurs)
+    {
+        d.Interrupteurs = interrupteurs.ToHashSet();
+        if (d.Nominale <= 0) d.Nominale = PuissanceDeclaree(d.Interrupteurs);
+    }
+
+    private double PuissanceDeclaree(IEnumerable<string> interrupteurs) =>
+        interrupteurs.Sum(id => _entites.FirstOrDefault(e => e.EntityId == id)?.NominalPower ?? 0);
+
     /// <summary>Lier un thermostat reprend ses radiateurs et son nom, si rien n'est encore choisi.</summary>
     private void ThermostatChange(EquipementDelestable d, string thermostatId)
     {
         d.Thermostat = thermostatId;
         if (Thermostats.Get(thermostatId) is not { } t) return;
 
-        if (d.Interrupteurs.Count == 0) d.Interrupteurs = t.SwitchEntityIds.ToHashSet();
+        if (d.Interrupteurs.Count == 0) InterrupteursChange(d, t.SwitchEntityIds);
         if (string.IsNullOrWhiteSpace(d.Nom)) NomEquipementChange(d, t.Name is { Length: > 0 } n ? n : t.Id);
     }
 
@@ -148,13 +157,6 @@ public partial class Delestage : IDisposable
 
     // ── Formulaire ───────────────────────────────────────────────────────────
 
-    private sealed class EquipementSomme
-    {
-        public string Interrupteur { get; set; } = "";
-        public string Mesure { get; set; } = Aucune;
-        public double Nominale { get; set; }
-    }
-
     private sealed class SourceSaisie
     {
         public string Nom { get; set; } = "";
@@ -162,7 +164,6 @@ public partial class Delestage : IDisposable
         public string Entite { get; set; } = "";
         public PowerQuality Qualite { get; set; } = PowerQuality.Apparent;
         public double Majoration { get; set; } = 1.10;
-        public List<EquipementSomme> Equipements { get; init; } = [];
     }
 
     private sealed class EquipementDelestable
@@ -207,12 +208,6 @@ public partial class Delestage : IDisposable
                 Entite = s.PowerEntityId ?? "",
                 Qualite = s.PowerQuality,
                 Majoration = s.ActiveToApparentFactor,
-                Equipements = s.MeteredEquipment.Select(e => new EquipementSomme
-                {
-                    Interrupteur = e.SwitchEntityId,
-                    Mesure = e.PowerEntityId ?? Aucune,
-                    Nominale = e.NominalPower,
-                }).ToList(),
             }).ToList(),
             Equipements = c.Devices.Select(d => new EquipementDelestable
             {
@@ -243,14 +238,6 @@ public partial class Delestage : IDisposable
                 PowerEntityId = s.Somme || string.IsNullOrEmpty(s.Entite) ? null : s.Entite,
                 PowerQuality = s.Somme ? PowerQuality.Apparent : s.Qualite,
                 ActiveToApparentFactor = s.Majoration,
-                MeteredEquipment = s.Somme
-                    ? s.Equipements.Where(e => !string.IsNullOrEmpty(e.Interrupteur)).Select(e => new MeteredEquipmentConfiguration
-                    {
-                        SwitchEntityId = e.Interrupteur,
-                        PowerEntityId = string.IsNullOrEmpty(e.Mesure) ? null : e.Mesure,
-                        NominalPower = e.Nominale,
-                    }).ToList()
-                    : [],
             }).ToList(),
             Devices = Equipements.Select(d => new SheddableDeviceConfiguration
             {

@@ -6,16 +6,11 @@ public enum PowerSourceKind
     /// <summary>Une entité de puissance : Linky (VA) ou pince (W).</summary>
     Entity,
 
-    /// <summary>Somme des équipements suivis : mesure réelle s'ils en publient une, sinon puissance nominale.</summary>
+    /// <summary>
+    /// Somme des équipements allumés dont la puissance est déclarée (page Entités) : mesure réelle de leur appareil
+    /// s'il en publie une, sinon puissance déclarée. Ne voit pas ce qui n'est pas déclaré : source de dernier recours.
+    /// </summary>
     EquipmentSum,
-}
-
-/// <summary>Un équipement entrant dans la somme (source <see cref="PowerSourceKind.EquipmentSum"/>).</summary>
-public sealed record MeteredEquipmentConfiguration
-{
-    public required string SwitchEntityId { get; init; }
-    public string? PowerEntityId { get; init; }
-    public double NominalPower { get; init; }
 }
 
 /// <summary>Une source de puissance du délesteur.</summary>
@@ -32,8 +27,6 @@ public sealed record PowerSourceConfiguration
 
     /// <summary>Majoration d'une mesure en W pour la comparer à des seuils en VA. ≥ 1.</summary>
     public double ActiveToApparentFactor { get; init; } = 1.10;
-
-    public IReadOnlyList<MeteredEquipmentConfiguration> MeteredEquipment { get; init; } = [];
 }
 
 /// <summary>Un équipement délestable, tel qu'enregistré.</summary>

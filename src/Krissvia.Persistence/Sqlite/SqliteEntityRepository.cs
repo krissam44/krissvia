@@ -14,7 +14,8 @@ public sealed class SqliteEntityRepository(SqliteDatabase db) : IEntityRepositor
     private const string EntityColumns =
         "entity_id AS EntityId, device_id AS DeviceId, integration_id AS IntegrationId, unique_id AS UniqueId, " +
         "kind AS Kind, display_name AS DisplayName, device_class AS DeviceClass, unit AS Unit, state_class AS StateClass, " +
-        "commands_json AS CommandsJson, extra_json AS ExtraJson, usage AS Usage, enabled AS Enabled, missing AS Missing";
+        "commands_json AS CommandsJson, extra_json AS ExtraJson, usage AS Usage, enabled AS Enabled, missing AS Missing, " +
+        "nominal_power AS NominalPower";
 
     private const string UpsertDevice = """
         INSERT INTO devices (device_id, integration_id, unique_id, display_name, manufacturer, model, room, extra_json)
@@ -27,14 +28,15 @@ public sealed class SqliteEntityRepository(SqliteDatabase db) : IEntityRepositor
 
     private const string UpsertEntity = """
         INSERT INTO entities (entity_id, device_id, integration_id, unique_id, kind, display_name, device_class, unit,
-                              state_class, commands_json, extra_json, usage, enabled, missing)
+                              state_class, commands_json, extra_json, usage, enabled, missing, nominal_power)
         VALUES (@EntityId, @DeviceId, @IntegrationId, @UniqueId, @Kind, @DisplayName, @DeviceClass, @Unit,
-                @StateClass, @CommandsJson, @ExtraJson, @Usage, @Enabled, @Missing)
+                @StateClass, @CommandsJson, @ExtraJson, @Usage, @Enabled, @Missing, @NominalPower)
         ON CONFLICT(entity_id) DO UPDATE SET
             device_id = excluded.device_id, integration_id = excluded.integration_id, unique_id = excluded.unique_id,
             kind = excluded.kind, display_name = excluded.display_name, device_class = excluded.device_class,
             unit = excluded.unit, state_class = excluded.state_class, commands_json = excluded.commands_json,
             extra_json = excluded.extra_json, usage = excluded.usage, enabled = excluded.enabled,
+            nominal_power = excluded.nominal_power,
             missing = excluded.missing;
         """;
 
@@ -81,6 +83,7 @@ public sealed class SqliteEntityRepository(SqliteDatabase db) : IEntityRepositor
                 e.ExtraJson, e.Usage,
                 Enabled = e.Enabled ? 1 : 0,
                 Missing = e.Missing ? 1 : 0,
+                e.NominalPower,
             }, transaction, cancellationToken: ct));
         }
 
@@ -134,6 +137,7 @@ public sealed class SqliteEntityRepository(SqliteDatabase db) : IEntityRepositor
         public string? Usage { get; set; }
         public long Enabled { get; set; }
         public long Missing { get; set; }
+        public double? NominalPower { get; set; }
     }
 
     private static RegisteredDevice AppareilDepuis(DeviceRow r) => new()
@@ -164,5 +168,6 @@ public sealed class SqliteEntityRepository(SqliteDatabase db) : IEntityRepositor
         Usage = r.Usage,
         Enabled = r.Enabled != 0,
         Missing = r.Missing != 0,
+        NominalPower = r.NominalPower,
     };
 }

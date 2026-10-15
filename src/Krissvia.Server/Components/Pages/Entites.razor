@@ -1,0 +1,115 @@
+@page "/entites"
+@implements IDisposable
+
+<PageTitle>Entités · Krissvia</PageTitle>
+
+<div class="d-flex align-center mb-1">
+    <MudIcon Icon="@Icons.Material.Filled.Devices" Color="Color.Primary" Class="mr-2" />
+    <MudText Typo="Typo.h5">Entités</MudText>
+</div>
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+    Tout ce que les plugins ont déclaré. Le nom, la pièce, la puissance et l'activation vous appartiennent : un plugin ne les écrase jamais.
+</MudText>
+
+@* Filtres : un bouton par catégorie présente, teinté de sa couleur (comme l'écran Équipements de DomoMud). *@
+<MudPaper Class="pa-3 mb-4" Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 10px;" Elevation="0">
+    <div class="d-flex flex-wrap align-center gap-2">
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mr-1">Filtrer :</MudText>
+        <MudButton Size="Size.Small" Variant="@(_categorie is null ? Variant.Filled : Variant.Outlined)" Color="Color.Primary"
+                   OnClick="() => _categorie = null">Toutes (@_entites.Count)</MudButton>
+        @foreach (var c in Categories.Toutes)
+        {
+            var nombre = _entites.Count(e => Categories.De(e) == c);
+            if (nombre == 0) continue;
+            var choisie = _categorie == c;
+            <MudButton Size="Size.Small" Variant="@(choisie ? Variant.Filled : Variant.Outlined)" StartIcon="@c.Icone"
+                       Style="@(choisie ? $"background:{c.Couleur}22;color:{c.Couleur};border-color:{c.Couleur}" : $"color:{c.Couleur};border-color:{c.Couleur}44")"
+                       OnClick="() => _categorie = c">@c.Libelle (@nombre)</MudButton>
+        }
+        <MudSpacer />
+        <MudTextField @bind-Value="_recherche" Placeholder="Rechercher…" Immediate="true" DebounceInterval="200"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined"
+                      Margin="Margin.Dense" Style="max-width: 240px" />
+    </div>
+</MudPaper>
+
+<MudPaper Elevation="3" Style="border-radius: 12px; overflow: hidden;">
+    @* En-têtes figés : le tableau défile sur lui-même plutôt que d'allonger la page. *@
+    <MudTable T="RegisteredEntity" Items="Visibles()" Dense="true" Hover="true" FixedHeader="true" Height="calc(100vh - 320px)"
+              SortLabel="Trier par" Class="table-entites">
+        <HeaderContent>
+            <MudTh><MudTableSortLabel T="RegisteredEntity" SortBy="e => e.DisplayName">Entité</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RegisteredEntity" SortBy="e => e.EntityId">Identifiant</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RegisteredEntity" InitialDirection="SortDirection.Ascending" SortBy="e => Piece(e)">Pièce</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RegisteredEntity" SortBy="e => Categories.De(e).Libelle">Type</MudTableSortLabel></MudTh>
+            <MudTh Style="text-align:center">Alim.</MudTh>
+            <MudTh>Valeur</MudTh>
+            <MudTh><MudTableSortLabel T="RegisteredEntity" SortBy="e => Etats.Get(e.EntityId) == null ? DateTimeOffset.MinValue : Etats.Get(e.EntityId)!.MeasuredAt">Dernière donnée</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RegisteredEntity" SortBy="e => e.Missing ? 2 : e.Enabled ? 0 : 1">Statut</MudTableSortLabel></MudTh>
+            <MudTh Style="text-align:right">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            @{
+                var c = Categories.De(context);
+                var etat = Etats.Get(context.EntityId);
+            }
+            <MudTd Style="@(context.Enabled && !context.Missing ? "" : "opacity:.55")">
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@c.Icone" Style="@($"color:{c.Couleur}")" />
+                    <div>
+                        <div style="font-weight: 500">@context.DisplayName</div>
+                        @if (context.NominalPower is { } w)
+                        {
+                            <div class="mud-text-secondary" style="font-size:.75rem">@w.ToString("#,0", Fr) W déclarés</div>
+                        }
+                    </div>
+                </div>
+            </MudTd>
+            <MudTd><code class="identifiant">@context.EntityId</code></MudTd>
+            <MudTd><span class="mud-text-secondary">@(Piece(context) ?? "—")</span></MudTd>
+            <MudTd>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@($"color:{c.Couleur};border-color:{c.Couleur}44")">@c.Libelle</MudChip>
+            </MudTd>
+            <MudTd Style="text-align:center">@Alimentation(context)</MudTd>
+            <MudTd>@Categories.Valeur(context, etat)</MudTd>
+            <MudTd>@Fraicheur(etat)</MudTd>
+            <MudTd>
+                @if (context.Missing)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">Disparue</MudChip>
+                }
+                else if (!context.Enabled)
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Désactivée</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success">Active</MudChip>
+                }
+            </MudTd>
+            <MudTd Style="text-align:right">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                               OnClick="() => ModifierAsync(context)" aria-label="@($"Modifier {context.DisplayName}")" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <div class="pa-8 mud-text-secondary" style="text-align:center">
+                <MudIcon Icon="@Icons.Material.Filled.DevicesOther" Style="font-size: 3rem" />
+                <div>@(_entites.Count == 0 ? "Aucune entité : activez un plugin dans Services, il déclarera ses appareils." : "Aucune entité ne correspond au filtre.")</div>
+            </div>
+        </NoRecordsContent>
+    </MudTable>
+</MudPaper>
+
+<div class="d-flex flex-wrap gap-6 mt-3 mud-text-secondary" style="font-size:.85rem">
+    <span>Total : <b class="mud-text-primary">@_entites.Count</b></span>
+    <span>Actives : <b style="color: var(--mud-palette-success)">@_entites.Count(e => e.Enabled && !e.Missing)</b></span>
+    <span>Avec données : <b style="color: var(--mud-palette-primary)">@_entites.Count(e => Etats.Get(e.EntityId) is not null)</b></span>
+    <span>Puissance déclarée : <b>@_entites.Count(e => e.NominalPower is > 0)</b> équipement(s)</span>
+</div>
+
+<style>
+    .table-entites td { white-space: nowrap; }
+    .identifiant { font-size: .78rem; color: var(--mud-palette-info); background: var(--mud-palette-background-gray); padding: 2px 6px; border-radius: 4px; }
+    .alim { border: 1px solid; border-radius: 12px; padding: 1px 8px; font-size: .75rem; white-space: nowrap; }
+</style>
