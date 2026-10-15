@@ -35,6 +35,9 @@ public sealed class LoadShedder(ICommandBus commander, ThermostatInhibitor inhib
     private DateTimeOffset? _derniereAction;
     private int _nbDelestesPrecedent;
 
+    /// <summary>Équipements délestés en ce moment (instantané, lisible sans verrou).</summary>
+    public IReadOnlyList<string> CurrentlyShed { get; private set; } = [];
+
     private sealed class DeviceState(DateTimeOffset delesteLe, bool confirme)
     {
         public DateTimeOffset DelesteLe { get; } = delesteLe;
@@ -75,6 +78,7 @@ public sealed class LoadShedder(ICommandBus commander, ThermostatInhibitor inhib
 
             _reglages = settings;
             _equipements = devices.ToList();
+            CurrentlyShed = _etats.Keys.Order(StringComparer.Ordinal).ToList();
         }
         finally
         {
@@ -283,6 +287,7 @@ public sealed class LoadShedder(ICommandBus commander, ThermostatInhibitor inhib
     private LoadSheddingTick Terminer(List<string> delestes, List<string> retablis, bool sourceIndisponible)
     {
         var nombre = _etats.Count;
+        CurrentlyShed = _etats.Keys.Order(StringComparer.Ordinal).ToList();
         var transition = _nbDelestesPrecedent == 0 && nombre > 0 ? ShedTransition.Started
             : _nbDelestesPrecedent > 0 && nombre == 0 ? ShedTransition.Ended
             : ShedTransition.None;

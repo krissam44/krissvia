@@ -31,6 +31,6 @@
     <File Path="docs/CONTRACT-V0.md" />
     <File Path="docs/REGISTRE-ENTITES.md" />
     <File Path="docs/TRANSPORT.md" />
-    <File Path="docs/API-THERMOSTATS.md" />
+    <File Path="docs/API.md" />
   </Folder>
 </Solution>
