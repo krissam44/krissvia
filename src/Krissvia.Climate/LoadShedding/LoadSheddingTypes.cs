@@ -31,6 +31,12 @@ public sealed record LoadSheddingSettings
     /// </summary>
     public TimeSpan SettleDelay { get; init; } = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// Attente de l'état qui confirme une coupure (ARCHITECTURE.md §7.3). Passé ce délai, la coupure n'est pas
+    /// acquise : elle ne compte pas comme économie, l'équipement suivant est délesté, et elle est retentée.
+    /// </summary>
+    public TimeSpan CutVerificationTimeout { get; init; } = TimeSpan.FromSeconds(5);
+
     /// <summary>Seuils déduits de l'abonnement : 6 kVA à 80 % / 70 % donne 4 800 / 4 200 VA.</summary>
     public static LoadSheddingSettings FromSubscription(double kva, double alertPercent, double restorePercent, bool enabled = true)
     {

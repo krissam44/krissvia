@@ -11,14 +11,53 @@ public static class InhibitionReasons
     public const string SondePerdue = "sonde_perdue";
 }
 
-/// <summary>Issue d'une coupure, par switch.</summary>
-public sealed record CutResult(IReadOnlyDictionary<string, CommandOutcome> Outcomes)
+/// <summary>Issue d'une coupure, par switch : ce qu'a répondu le plugin, et ce qu'a constaté le cœur.</summary>
+public sealed record CutResult(IReadOnlyDictionary<string, VerifiedCommandResult> Results)
 {
+    public IReadOnlyDictionary<string, CommandOutcome> Outcomes =>
+        Results.ToDictionary(kv => kv.Key, kv => kv.Value.Outcome, StringComparer.Ordinal);
+
     /// <summary>
-    /// Vrai si au moins un switch a été coupé et qu'aucun n'a échoué. Un thermostat sans switch à couper
-    /// n'est PAS une coupure réussie : il n'économise aucune puissance, le délesteur ne doit pas le compter.
+    /// Vrai si au moins un switch a été coupé et que TOUS le sont : coupure confirmée par l'état de l'entité.
+    /// Un ordre seulement accepté ne suffit pas (ARCHITECTURE.md §7.3). Un thermostat sans switch à couper
+    /// n'est pas une coupure réussie non plus : il n'économise aucune puissance.
     /// </summary>
-    public bool FullyCut => Outcomes.Count > 0 && Outcomes.Values.All(o => o == CommandOutcome.Accepted);
+    public bool FullyCut => Results.Count > 0 && Results.Values.All(Coupures.EstCoupe);
+}
+
+/// <summary>Ce qui fait d'un ordre de coupure une coupure acquise.</summary>
+public static class Coupures
+{
+    /// <summary>Délai d'attente de l'état confirmant une coupure.</summary>
+    public static readonly TimeSpan DelaiDeVerification = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Confirmée par un état publié après l'ordre ; ou acceptée sur une entité dont l'état ne dit rien de la
+    /// marche (rien à vérifier, on ne peut pas faire mieux).
+    /// </summary>
+    public static bool EstCoupe(VerifiedCommandResult r) =>
+        r.Verification == CommandVerification.Confirmed ||
+        (r.Outcome == CommandOutcome.Accepted && r.Verification == CommandVerification.NotApplicable);
+
+    /// <summary>Coupure vérifiée, priorité sécurité. Une exception du bus devient un échec ; l'annulation se propage.</summary>
+    public static async Task<VerifiedCommandResult> CouperAsync(
+        ICommandBus commandes, string entityId, string origine, TimeSpan delai, CancellationToken ct)
+    {
+        try
+        {
+            return await commandes.SendVerifiedAsync(
+                new EntityCommand(entityId, StandardCommands.TurnOff) { Priority = CommandPriority.Safety, Origin = origine },
+                delai, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return new VerifiedCommandResult(CommandOutcome.Failed, CommandVerification.NotSent);
+        }
+    }
 }
 
 /// <summary>
@@ -31,15 +70,18 @@ public sealed record CutResult(IReadOnlyDictionary<string, CommandOutcome> Outco
 /// renvoyer un ordre ON entre les deux ;</item>
 /// <item>la coupure part sans condition, même si le thermostat est déjà inhibé : l'état interne n'est
 /// qu'une croyance, c'est le relais qui consomme ;</item>
-/// <item>un switch n'est considéré coupé qu'après un résultat <see cref="CommandOutcome.Accepted"/> ; les
-/// autres restent « en attente » et sont retentés par <see cref="RetryPendingAsync"/> ;</item>
+/// <item>un switch n'est considéré coupé que lorsque son nouvel état CONFIRME la coupure (§7.3) : un ordre
+/// accepté dont l'effet n'est pas constaté laisse le switch « en attente », retenté par
+/// <see cref="RetryPendingAsync"/> ;</item>
 /// <item>la consigne, le mode et le planning du thermostat ne sont jamais touchés ;</item>
 /// <item>l'état vit en mémoire, il n'est pas persisté : au redémarrage, c'est le module qui décide
 /// (délestage : la mesure) qui re-pose ses inhibitions.</item>
 /// </list>
 /// </summary>
-public sealed class ThermostatInhibitor(IEntityCommander commander)
+public sealed class ThermostatInhibitor(ICommandBus commandes, TimeSpan? delaiDeVerification = null)
 {
+    private readonly TimeSpan _delai = delaiDeVerification ?? Coupures.DelaiDeVerification;
+
     private readonly object _verrou = new();
     private readonly Dictionary<string, Inhibition> _inhibitions = new(StringComparer.Ordinal);
 
@@ -106,16 +148,16 @@ public sealed class ThermostatInhibitor(IEntityCommander commander)
         }
 
         // 2. Puis la coupure, sans condition.
-        var issues = await CutAsync(cibles, ct);
+        var issues = await CutAsync(cibles, reason, ct);
 
         // 3. Seul un ordre accepté solde la coupure d'un switch.
         lock (_verrou)
         {
             if (_inhibitions.TryGetValue(thermostatId, out var inhibition))
             {
-                foreach (var (id, outcome) in issues)
+                foreach (var (id, resultat) in issues)
                 {
-                    if (outcome == CommandOutcome.Accepted) inhibition.PendingSwitches.Remove(id);
+                    if (Coupures.EstCoupe(resultat)) inhibition.PendingSwitches.Remove(id);
                 }
             }
         }
@@ -159,13 +201,13 @@ public sealed class ThermostatInhibitor(IEntityCommander commander)
         if (aRetenter.Count == 0) return 0;
 
         var issues = await Task.WhenAll(aRetenter.Select(async c =>
-            (c.ThermostatId, c.EntityId, Outcome: await SendTurnOffAsync(c.EntityId, ct))));
+            (c.ThermostatId, c.EntityId, Resultat: await Coupures.CouperAsync(commandes, c.EntityId, "inhibition:relance", _delai, ct))));
 
         lock (_verrou)
         {
-            foreach (var (thermostatId, entityId, outcome) in issues)
+            foreach (var (thermostatId, entityId, resultat) in issues)
             {
-                if (outcome == CommandOutcome.Accepted && _inhibitions.TryGetValue(thermostatId, out var inhibition))
+                if (Coupures.EstCoupe(resultat) && _inhibitions.TryGetValue(thermostatId, out var inhibition))
                     inhibition.PendingSwitches.Remove(entityId);
             }
 
@@ -173,30 +215,11 @@ public sealed class ThermostatInhibitor(IEntityCommander commander)
         }
     }
 
-    private async Task<Dictionary<string, CommandOutcome>> CutAsync(IReadOnlyCollection<string> entityIds, CancellationToken ct)
+    private async Task<Dictionary<string, VerifiedCommandResult>> CutAsync(IReadOnlyCollection<string> entityIds, string motif, CancellationToken ct)
     {
-        var envois = entityIds.Select(async id => (Id: id, Outcome: await SendTurnOffAsync(id, ct))).ToList();
+        var envois = entityIds.Select(async id =>
+            (Id: id, Resultat: await Coupures.CouperAsync(commandes, id, $"inhibition:{motif}", _delai, ct))).ToList();
         var issues = await Task.WhenAll(envois);
-        return issues.ToDictionary(i => i.Id, i => i.Outcome, StringComparer.Ordinal);
-    }
-
-    /// <summary>
-    /// Une exception du bus de commandes devient un échec : elle ne doit jamais empêcher de couper les autres
-    /// switches. L'annulation, elle, se propage.
-    /// </summary>
-    private async Task<CommandOutcome> SendTurnOffAsync(string entityId, CancellationToken ct)
-    {
-        try
-        {
-            return await commander.SendAsync(entityId, StandardCommands.TurnOff, CommandPriority.Safety, null, ct);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception)
-        {
-            return CommandOutcome.Failed;
-        }
+        return issues.ToDictionary(i => i.Id, i => i.Resultat, StringComparer.Ordinal);
     }
 }

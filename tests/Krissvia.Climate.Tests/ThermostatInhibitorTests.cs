@@ -5,7 +5,7 @@ using Krissvia.Core.Commands;
 namespace Krissvia.Climate.Tests;
 
 /// <summary>Bus de commandes de test : enregistre les ordres et répond comme on le lui dit.</summary>
-internal sealed class FakeCommander : IEntityCommander
+internal sealed class FakeCommander : FauxBusCommandes
 {
     private readonly object _verrou = new();
 
@@ -16,12 +16,11 @@ internal sealed class FakeCommander : IEntityCommander
     /// <summary>Appelé au moment de l'envoi, avant la réponse.</summary>
     public Action<string>? OnSend { get; set; }
 
-    public Task<CommandOutcome> SendAsync(
-        string entityId, string command, CommandPriority priority, int? ttlSeconds, CancellationToken ct)
+    protected override CommandOutcome Envoyer(string entityId, string command, CommandPriority priority)
     {
         lock (_verrou) Sent.Add((entityId, command, priority));
         OnSend?.Invoke(entityId);
-        return Task.FromResult(Respond(entityId));
+        return Respond(entityId);
     }
 }
 
@@ -99,6 +98,35 @@ public class ThermostatInhibitorTests
         Assert.Equal(CommandOutcome.Failed, result.Outcomes["switch.b"]);
         Assert.Equal(new[] { "switch.b" }, inhibitor.GetPendingSwitches("t1").ToArray());
         Assert.True(inhibitor.IsInhibited("t1"));
+    }
+
+    [Fact]
+    public async Task Un_ordre_accepte_sans_etat_qui_le_confirme_n_est_pas_une_coupure()
+    {
+        // §7.3 : « accepté » dit que le plugin a pris l'ordre, pas que le relais a obéi.
+        var (inhibitor, commander) = Create();
+        commander.Obeit = (id, _) => id != "switch.b";
+
+        var result = await inhibitor.InhibitAsync("t1", ["switch.a", "switch.b"], InhibitionReasons.Delestage);
+
+        Assert.Equal(CommandOutcome.Accepted, result.Outcomes["switch.b"]);
+        Assert.False(result.FullyCut);
+        Assert.Equal(new[] { "switch.b" }, inhibitor.GetPendingSwitches("t1").ToArray());
+    }
+
+    [Fact]
+    public async Task Une_coupure_non_confirmee_est_retentee_jusqu_a_confirmation()
+    {
+        var (inhibitor, commander) = Create();
+        commander.Obeit = (_, _) => false;
+        await inhibitor.InhibitAsync("t1", ["switch.a"], InhibitionReasons.FenetreOuverte);
+
+        Assert.Equal(1, await inhibitor.RetryPendingAsync());
+
+        commander.Obeit = (_, _) => true;
+        Assert.Equal(0, await inhibitor.RetryPendingAsync());
+        Assert.Equal(3, commander.Sent.Count);
+        Assert.All(commander.Verifies, v => Assert.StartsWith("inhibition:", v.Origin));
     }
 
     [Fact]

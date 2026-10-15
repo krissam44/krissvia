@@ -177,7 +177,9 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
 1. ~~Contrat v0.2, `PluginHost` et transport (WebSocket)~~ — fait le 15/10/2026 (`TRANSPORT.md`).
 2. ~~Plugin Zigbee2MQTT interne, avec un simulateur pour les tests~~ — fait le 15/10/2026, reste à valider sur un vrai réseau.
 3. ~~Cœur : magasin d'états, bus d'événements, bus de commandes~~ — fait le 15/10/2026. Reste à faire
-   passer les coupures du délesteur et des inhibitions par `SendVerifiedAsync` (§7, règles 2 et 3).
+   passer les coupures du délesteur et des inhibitions par `SendVerifiedAsync` (§7, règles 2 et 3) — fait
+   le 15/10/2026 : une coupure ne compte (économie, inhibition soldée) qu'une fois confirmée par l'état,
+   délai `CutVerificationTimeout` (5 s) ; le délesteur coupe par vagues parallèles.
 4. Port des moteurs, chacun précédé de ses tests de caractérisation : Climate, Délestage, Présence,
    Alarme, Automatismes.
 5. API publique et premier frontend avec les widgets de base.
