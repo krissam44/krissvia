@@ -8,6 +8,7 @@ using Krissvia.Contracts;
 using Krissvia.Core.Configuration;
 using Krissvia.Core.Commands;
 using Krissvia.Core.Events;
+using Krissvia.Core.Live;
 using Krissvia.Core.Registry;
 using Krissvia.Core.States;
 using Krissvia.Persistence.Sqlite;
@@ -46,6 +47,7 @@ builder.Services.AddSingleton<IEntityStateRepository, SqliteEntityStateRepositor
 builder.Services.AddSingleton<EntityStateStore>();
 builder.Services.AddSingleton<IEntityStateReader>(sp => sp.GetRequiredService<EntityStateStore>());
 builder.Services.AddSingleton<IEntityStateWriter>(sp => sp.GetRequiredService<EntityStateStore>());
+builder.Services.AddSingleton<LiveFeed>();   // flux en direct de /api/live
 
 builder.Services.AddSingleton(builder.Configuration.GetSection("PluginHost").Get<PluginHostOptions>() ?? new PluginHostOptions());
 builder.Services.AddSingleton<PluginHub>();
@@ -132,6 +134,7 @@ var api = app.MapGroup("/api").AddEndpointFilter<ApiKeyFilter>();
 api.MapThermostatApi();
 api.MapLoadSheddingApi();
 api.MapDeviceScheduleApi();
+api.MapEntityApi();
 
 // Point d'entrée des plugins : voir docs/TRANSPORT.md.
 app.Map("/plugins", async (HttpContext contexte, PluginHub hub) =>

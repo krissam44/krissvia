@@ -143,3 +143,39 @@ créneaux que les thermostats (un créneau de nuit finit le lendemain matin).
 - Avec le délestage : une programmation ne rallume jamais un équipement délesté, et le rétablissement remet l'état
   qu'elle veut à ce moment-là — un chauffe-eau dont le créneau s'est terminé pendant le délestage reste éteint.
 
+
+## Entités et flux en direct
+
+Ce dont un tableau de bord ou un widget a besoin (WIDGETS.md §8) : les entités, leur dernier état, les ordres.
+
+| Méthode | Route | Corps | Effet |
+|---|---|---|---|
+| GET | `/api/entities` | | Toutes les entités : registre, pièce, dernier état |
+| GET | `/api/entities/{id}` | | Une entité ; **404** si inconnue |
+| POST | `/api/entities/{id}/commands` | `{"command": "turn_on", "args": {…}, "source": "widget:jauge-cuve"}` | Ordre **vérifié** : `{"outcome": "accepted", "verification": "confirmed"}` |
+| GET (WebSocket) | `/api/live` | | Flux en direct ; `?entities=a,b` restreint aux entités nommées |
+
+```json
+{
+  "entity_id": "switch.cave_chauffe_eau", "name": "Chauffe-eau", "kind": "switch",
+  "commands": ["turn_on", "turn_off"], "room": "Cave",
+  "enabled": true, "missing": false, "integration_id": "zigbee2mqtt",
+  "state": { "value": true, "available": true, "measured_at": "2026-10-16T07:08:38+00:00" }
+}
+```
+
+- Les champs vides (`room`, `unit`, `device_class`…) sont omis, sauf `state`, qui vaut **null** si l'entité n'a jamais publié : ce n'est pas zéro. `available: false` : plugin arrêté ou
+  appareil injoignable, la valeur est la dernière connue.
+- Un ordre est refusé (**400**) si l'entité ne l'a pas déclaré. `outcome` : `accepted`, `failed`, `unreachable` ;
+  `verification` : `confirmed` (l'état a suivi), `not_confirmed` (accepté, mais rien constaté dans les 10 s),
+  `not_applicable` (bascule, luminosité…), `not_sent`. Un widget n'affiche pas « allumé » parce qu'il a cliqué : il
+  attend l'état, qui arrive par le flux. `source` (minuscules, chiffres, `:_.-`) signe l'ordre au journal :
+  `api:widget:jauge-cuve`.
+- Une entité désactivée refuse les ordres (sauf ceux de sécurité du cœur).
+
+**Flux** (`/api/live`, WebSocket) : à la connexion, `{"type": "entities", "entities": […]}` ; puis
+`{"type": "states", "states": {"switch.cave_chauffe_eau": {…état…}}}` à chaque changement, et de nouveau
+`entities` quand le registre change (entité ajoutée, renommée, désactivée). Les changements sont regroupés : un
+client lent reçoit l'état le plus récent, une seule fois, jamais une file de retard. Le client n'envoie rien. Une
+connexion venue d'une page d'un autre site (en-tête `Origin` différent) est refusée (**403**) : sinon cette page
+ouvrirait le flux avec le cookie de session.
