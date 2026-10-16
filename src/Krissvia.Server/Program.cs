@@ -53,7 +53,10 @@ builder.Services.AddSingleton(builder.Configuration.GetSection("PluginHost").Get
 builder.Services.AddSingleton<PluginHub>();
 
 // Bus de commandes : passage unique de tous les ordres ; le PluginHost n'en est que le transport.
-builder.Services.AddSingleton<ICommandDispatcher, PluginCommander>();
+builder.Services.AddSingleton<PluginCommander>();
+// Les ordres vont au module du cœur qui porte l'entité (thermostats…), sinon au plugin.
+builder.Services.AddSingleton(sp => new CoreCommandRouter(sp.GetRequiredService<PluginCommander>()));
+builder.Services.AddSingleton<ICommandDispatcher>(sp => sp.GetRequiredService<CoreCommandRouter>());
 builder.Services.AddSingleton<CommandBus>();
 builder.Services.AddSingleton<ICommandBus>(sp => sp.GetRequiredService<CommandBus>());
 builder.Services.AddSingleton<IEntityCommander>(sp => sp.GetRequiredService<CommandBus>());
@@ -63,6 +66,7 @@ builder.Services.AddSingleton<IConfigurationStore, SqliteConfigurationStore>();
 builder.Services.AddSingleton(sp => new ThermostatInhibitor(sp.GetRequiredService<ICommandBus>()));
 builder.Services.AddSingleton<ThermostatEngine>();
 builder.Services.AddSingleton<ThermostatService>();
+builder.Services.AddSingleton<ThermostatEntities>();   // les thermostats en entités climate
 builder.Services.AddSingleton<DesiredSwitchStates>();
 builder.Services.AddSingleton<LoadShedder>();
 builder.Services.AddSingleton<LoadSheddingService>();

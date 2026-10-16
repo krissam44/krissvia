@@ -150,6 +150,26 @@ public sealed partial class ThermostatService(IConfigurationStore store, IEntity
     }
 
     /// <summary>
+    /// Ajuste la consigne d'un pas (+0,5, −0,5…) à partir de celle qui est réellement suivie : la consigne ajustée,
+    /// sinon celle que le moteur régule (planning compris), sinon celle du mode. Calculé ici, sous le verrou : deux
+    /// « + » rapprochés font +1, alors qu'un écran qui envoie une valeur absolue repart d'une valeur périmée.
+    /// Bornée à <see cref="MinTarget"/>–<see cref="MaxTarget"/>. Null si inconnu.
+    /// </summary>
+    public Task<ThermostatSettings?> AdjustTargetAsync(string id, double delta, CancellationToken ct = default)
+    {
+        if (double.IsNaN(delta) || double.IsInfinity(delta) || Math.Abs(delta) > MaxTarget - MinTarget)
+            throw new ThermostatValidationException("pas de consigne invalide.");
+
+        return ModifierAsync(id, t =>
+        {
+            if (t.ManualMode == ThermostatMode.Off && !t.ScheduleActive)
+                throw new ThermostatValidationException("thermostat arrêté (mode off) : choisir d'abord un mode, puis ajuster la consigne.");
+            var actuelle = t.TargetOverride ?? engine.GetSnapshot(id)?.Target ?? t.TargetFor(t.ManualMode);
+            return t with { TargetOverride = Math.Round(Math.Clamp(actuelle + delta, MinTarget, MaxTarget), 1) };
+        }, creer: false, ct);
+    }
+
+    /// <summary>
     /// Remplace le planning, sans toucher au reste : ni au mode, ni à son activation, ni à la consigne ajustée. Un
     /// enregistrement complet depuis un écran ouvert depuis dix minutes écraserait un mode choisi entre-temps.
     /// Null si inconnu.

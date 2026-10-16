@@ -14,6 +14,12 @@ public enum EntityKind
     Light,
     Cover,
     Event,
+
+    /// <summary>
+    /// Thermostat. Publié par le cœur (module Climate), pas par un plugin : état composite (ambiante, consigne, mode,
+    /// statut…), modes disponibles dans <c>extra</c>.
+    /// </summary>
+    Climate,
 }
 
 public enum StateClass
@@ -149,4 +155,9 @@ public static class StandardCommands
     public const string Close = "close";
     public const string Stop = "stop";
     public const string SetPosition = "set_position";
+
+    // climate : args {"mode": "comfort"} ; {"temperature": 19.5} (null : consigne du mode) ; {"delta": 0.5}
+    public const string SetMode = "set_mode";
+    public const string SetTarget = "set_target";
+    public const string AdjustTarget = "adjust_target";
 }

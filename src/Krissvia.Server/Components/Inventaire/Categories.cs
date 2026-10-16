@@ -21,16 +21,18 @@ internal static class Categories
     public static readonly Categorie Puissance = new("puissance", "Puissance / énergie", Icons.Material.Filled.Bolt, "#ffb300");
     public static readonly Categorie Batterie = new("batterie", "Batterie", Icons.Material.Filled.BatteryStd, "#8d6e63");
     public static readonly Categorie Evenement = new("evenement", "Bouton / événement", Icons.Material.Filled.RadioButtonChecked, "#ce93d8");
+    public static readonly Categorie Thermostat = new("thermostat", "Thermostat", Icons.Material.Filled.DeviceThermostat, "#ef5350");
     public static readonly Categorie Autre = new("autre", "Autre mesure", Icons.Material.Filled.Sensors, "#78909c");
 
     /// <summary>L'ordre des pastilles de filtre.</summary>
-    public static readonly Categorie[] Toutes = [Temperature, Humidite, Interrupteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Autre];
+    public static readonly Categorie[] Toutes = [Thermostat, Temperature, Humidite, Interrupteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Autre];
 
     public static Categorie De(RegisteredEntity e) => e.Kind switch
     {
         EntityKind.Switch => Interrupteur,
         EntityKind.Light => Lumiere,
         EntityKind.Event => Evenement,
+        EntityKind.Climate => Thermostat,
         EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Occupancy => Mouvement,
         EntityKind.BinarySensor => Ouverture,
         _ => e.DeviceClass switch
@@ -61,9 +63,19 @@ internal static class Categories
             };
         if (etat.TryGetNumber(out var n))
             return n.ToString(Math.Abs(n) >= 100 ? "#,0" : "0.##", CultureInfo.GetCultureInfo("fr-FR")) + (e.Unit is { Length: > 0 } u ? $" {u}" : "");
+        if (e.Kind == EntityKind.Climate && v.ValueKind == JsonValueKind.Object)
+            return string.Join(" · ", new[] { Nombre(v, "temperature", " °C"), Texte(v, "status_label") }.Where(x => x is not null));
         if (v.ValueKind == JsonValueKind.Object && v.TryGetProperty("on", out var on) && on.ValueKind is JsonValueKind.True or JsonValueKind.False)
             return on.GetBoolean() ? "Allumée" : "Éteinte";
         if (v.ValueKind == JsonValueKind.String) return v.GetString() ?? "";
         return v.ToString();
     }
+
+    private static string? Nombre(JsonElement objet, string propriete, string unite) =>
+        objet.TryGetProperty(propriete, out var p) && p.ValueKind == JsonValueKind.Number
+            ? p.GetDouble().ToString("0.0", CultureInfo.GetCultureInfo("fr-FR")) + unite
+            : null;
+
+    private static string? Texte(JsonElement objet, string propriete) =>
+        objet.TryGetProperty(propriete, out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
 }

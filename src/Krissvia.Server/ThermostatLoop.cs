@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using Krissvia.Climate.Thermostats;
+using Krissvia.Core.Commands;
 
 namespace Krissvia.Server;
 
@@ -12,6 +13,8 @@ namespace Krissvia.Server;
 internal sealed partial class ThermostatLoop(
     ThermostatService thermostats,
     ThermostatEngine engine,
+    ThermostatEntities entites,
+    CoreCommandRouter routeur,
     TimeProvider clock,
     ILogger<ThermostatLoop> logger) : BackgroundService
 {
@@ -28,6 +31,7 @@ internal sealed partial class ThermostatLoop(
         foreach (var erreur in thermostats.LoadErrors) ConfigurationIllisible(logger, erreur);
         Demarrage(logger, thermostats.List().Count);
         thermostats.Changed += Reveiller;
+        routeur.Register(ThermostatEntities.IntegrationId, entites);
         await base.StartAsync(cancellationToken);
     }
 
@@ -51,6 +55,7 @@ internal sealed partial class ThermostatLoop(
                 try
                 {
                     await engine.TickAsync(stoppingToken);
+                    await entites.PublishAsync(stoppingToken);   // l'état que voient l'API, le flux et les widgets
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {

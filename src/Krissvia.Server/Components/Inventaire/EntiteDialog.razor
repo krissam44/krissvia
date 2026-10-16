@@ -15,13 +15,14 @@
                 }
                 <MudGrid Spacing="2">
                     <MudItem xs="12">
-                        <MudTextField @bind-Value="_nom" Label="Nom affiché" Variant="Variant.Outlined"
+                        <MudTextField @bind-Value="_nom" Label="Nom affiché" Variant="Variant.Outlined" ReadOnly="@DuCoeur"
+                                      HelperText="@(DuCoeur ? "Publiée par Krissvia : le nom se change dans la configuration du thermostat" : null)"
                                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Label" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
                         <MudTextField Value="@Categories.De(Entite).Libelle" Label="Type" ReadOnly="true" Variant="Variant.Outlined"
                                       Adornment="Adornment.Start" AdornmentIcon="@Categories.De(Entite).Icone"
-                                      AdornmentColor="Color.Inherit" HelperText="Déclaré par le plugin" />
+                                      AdornmentColor="Color.Inherit" HelperText="@(DuCoeur ? "Publié par Krissvia" : "Déclaré par le plugin")" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
                         <MudTextField @bind-Value="_piece" Label="Pièce / emplacement" Variant="Variant.Outlined"
@@ -52,7 +53,7 @@
                         {
                             <tr><td>Commandes</td><td>@string.Join(", ", Entite.Commands)</td></tr>
                         }
-                        <tr><td>Plugin</td><td>@Entite.IntegrationId</td></tr>
+                        <tr><td>@(DuCoeur ? "Module" : "Plugin")</td><td>@Entite.IntegrationId</td></tr>
                         <tr><td>Appareil</td><td>@Appareil?.DisplayName</td></tr>
                         @if (Appareil?.Manufacturer is not null || Appareil?.Model is not null)
                         {

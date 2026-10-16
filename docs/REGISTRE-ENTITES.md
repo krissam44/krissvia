@@ -34,6 +34,19 @@ Chaque module qui référence des entités implémente `IEntityReferenceSource` 
 `EntityIntegrityChecker` en tire la liste des problèmes : `Unknown` (n'existe pas), `Missing` (le plugin ne la
 déclare plus), `Disabled` (désactivée par l'utilisateur). C'est le même contrôle pour tous les modules.
 
+## Entités du cœur
+
+Un module du cœur peut publier ses propres entités, comme un plugin : les thermostats sont des entités `climate`
+de l'intégration `coeur.thermostats` (16/10/2026). Mêmes règles que pour un plugin (déclaration complète,
+entité absente marquée manquante, champs de l'utilisateur conservés), avec deux différences :
+
+- le **nom** est celui du thermostat, fixé par sa configuration ;
+- les **ordres** ne partent vers aucun plugin : `CoreCommandRouter` les remet au module, après les contrôles
+  et avant le journal du bus de commandes, comme tout ordre.
+
+Les intégrations du cœur commencent par `coeur.` ; le point étant interdit dans l'identifiant d'un plugin, aucun
+plugin ne peut publier sous ce nom ni effacer ces entités par un `declare`.
+
 ## Alias
 
 Un alias associe un ancien identifiant à une entité (ex. `domomud:topic:zigbee2mqtt/Prise salon`). Il sert à

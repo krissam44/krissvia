@@ -152,7 +152,7 @@ Ce dont un tableau de bord ou un widget a besoin (WIDGETS.md §8) : les entités
 |---|---|---|---|
 | GET | `/api/entities` | | Toutes les entités : registre, pièce, dernier état |
 | GET | `/api/entities/{id}` | | Une entité ; **404** si inconnue |
-| POST | `/api/entities/{id}/commands` | `{"command": "turn_on", "args": {…}, "source": "widget:jauge-cuve"}` | Ordre **vérifié** : `{"outcome": "accepted", "verification": "confirmed"}` |
+| POST | `/api/entities/{id}/commands` | `{"command": "turn_on", "args": {…}, "source": "widget:jauge-cuve"}` | Ordre **vérifié** : `{"outcome": "accepted", "verification": "confirmed"}`, et `detail` en cas d'échec |
 | GET (WebSocket) | `/api/live` | | Flux en direct ; `?entities=a,b` restreint aux entités nommées |
 
 ```json
@@ -172,6 +172,17 @@ Ce dont un tableau de bord ou un widget a besoin (WIDGETS.md §8) : les entités
   attend l'état, qui arrive par le flux. `source` (minuscules, chiffres, `:_.-`) signe l'ordre au journal :
   `api:widget:jauge-cuve`.
 - Une entité désactivée refuse les ordres (sauf ceux de sécurité du cœur).
+
+**Thermostats** : chaque thermostat est aussi l'entité `climate.{nom}` (intégration `coeur.thermostats`).
+`extra` porte `modes` (`[{"id": "comfort", "label": "Confort"}, …]`, à afficher tels quels), `min_target`,
+`max_target`, `target_step` et `radiators` ; l'état est un objet : `temperature`, `humidity` (si l'appareil de la
+sonde en mesure une), `outdoor_temperature`, `target`, `target_adjusted`, `mode`, `schedule_active`, `heating`,
+`status` et `status_label` (« Chauffe », « Inertie », « Délesté »…, calculé par le cœur : à afficher tel quel).
+Ordres : `set_mode` `{"mode": "eco"}` (suspend le planning), `set_target` `{"temperature": 19.5}` ou `null`, et
+`adjust_target` `{"delta": 0.5}`, appliqué par le serveur à la consigne réellement suivie — deux « + » rapides
+font +1 °C, là où deux `set_target` calculés par l'écran repartiraient de la même valeur. Ces ordres n'ont pas
+d'état à vérifier (`not_applicable`) : le nouvel état arrive par le flux. Un refus porte son motif dans `detail`
+(« thermostat arrêté (mode off)… »).
 
 **Flux** (`/api/live`, WebSocket) : à la connexion, `{"type": "entities", "entities": […]}` ; puis
 `{"type": "states", "states": {"switch.cave_chauffe_eau": {…état…}}}` à chaque changement, et de nouveau
