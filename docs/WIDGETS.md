@@ -149,6 +149,9 @@ mesure (deux slots), thermostat (slot `thermostat`), batterie. Courbe et histori
 
 ## 8. Ce qu'il faut côté serveur (préalable)
 
+> Fait le 16/10/2026 : entités, ordres vérifiés et flux en direct (voir API.md, « Entités et flux en direct »).
+> Reste `GET /api/widgets`, avec le tableau de bord.
+
 - `GET /api/entities` et `/api/entities/{id}` : registre + dernier état.
 - `POST /api/entities/{id}/commands` : ordre vérifié, signé `widget:{id}`.
 - **Flux en direct** : WebSocket `/api/live` (ou SSE) qui pousse chaque changement d'état et du registre, filtrable
@@ -165,9 +168,15 @@ l'API. La restriction de §5 est une **discipline**, pas une barrière. Donc :
 - l'écran du catalogue montre l'origine de chaque widget (standard, dossier local, plugin X) ;
 - pas de chargement depuis une URL extérieure : `script` est un chemin relatif au dossier du widget.
 
-## 10. Questions ouvertes
+## 10. Décisions (16/10/2026)
 
-1. Le slot `thermostat` : objet de module dédié, ou les thermostats deviennent-ils des entités (`climate`)
-   publiées par le cœur ? La seconde voie unifierait tout, mais crée des entités qui ne viennent d'aucun plugin.
-2. Taille de grille : colonnes fixes (12) ou cartes à taille libre comme dans DomoMud ?
-3. Version 1 de `kv.history` dès le tableau de bord, ou après ?
+1. **Les thermostats deviennent des entités `climate`, publiées par le cœur.** Un seul chemin pour tout (API, flux,
+   widgets, scénarios, historique) ; même modèle ensuite pour l'alarme, la présence, le délesteur. Le descripteur
+   porte la liste des modes (le widget les dessine depuis les données, jamais en dur), les bornes et le pas de la
+   consigne, le nombre de radiateurs ; l'état porte ambiante, humidité et extérieure si connues, consigne, mode,
+   planning actif, chauffe et le **statut calculé par le cœur**. Ordres : `set_mode`, `set_target` (valeur exacte)
+   et `adjust_target` (pas relatif, calculé côté serveur : pas de double « + » sur une valeur périmée). Les modes
+   restent ceux de Krissvia : Arrêt, Hors-gel, Éco, Confort −2, Confort −1, Confort.
+2. **Grille responsive**, comme Gladys, Home Assistant et DomoMud : le nombre de colonnes suit la largeur de
+   l'écran, une carte occupe `size.cols` × `size.rows` cellules (ramenée à la largeur disponible sur téléphone).
+3. `kv.history` : encore ouverte — version 1 du tableau de bord, ou après ?
