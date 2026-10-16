@@ -187,6 +187,21 @@ public class SuperviseurTests
     }
 
     [Fact]
+    public async Task Activer_ou_desactiver_previent_le_menu_mais_pas_un_refus()
+    {
+        var (s, _, _, banc) = await MonterAsync();
+        await using var _ = banc;
+        var annonces = 0;
+        s.EnabledChanged += () => annonces++;
+
+        await s.SetEnabledAsync("shelly", true);
+        await s.SetEnabledAsync("shelly", false);
+        Assert.NotNull(await s.SetEnabledAsync("absent", true));
+
+        Assert.Equal(2, annonces);
+    }
+
+    [Fact]
     public async Task Un_plugin_deja_connecte_depuis_ailleurs_n_est_pas_lance()
     {
         var banc = await BancPlugins.CreerAsync();

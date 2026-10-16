@@ -1,33 +1,59 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 
-<MudThemeProvider />
+<MudThemeProvider Theme="Theme" IsDarkMode="_sombre" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
 <MudLayout>
     <MudAppBar Elevation="1" Dense="true">
-        <MudText Typo="Typo.h6">Krissvia</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="BasculerMenu"
+                       aria-label="Afficher ou réduire le menu" />
+        @* Sur un téléphone, le fil d'Ariane se réduit à la page : la marque ne tiendrait pas avec les boutons. *@
+        <MudText Typo="Typo.h6" Class="ml-2 d-none d-sm-flex">Krissvia</MudText>
+        @if (PageCourante is { } courante)
+        {
+            <span class="fil-separateur d-none d-sm-inline">/</span>
+            <MudText Typo="Typo.h6" Class="fil-page text-truncate ml-2 ml-sm-0">@courante.Label</MudText>
+        }
         <MudSpacer />
-        <MudButton Href="/thermostats" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Thermostat">Thermostats</MudButton>
-        <MudButton Href="/programmations" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Schedule">Programmations</MudButton>
-        <MudButton Href="/delestage" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Bolt">Délestage</MudButton>
-        <MudButton Href="/entites" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Devices">Entités</MudButton>
-        <MudButton Href="/parametres/services" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Extension">Services</MudButton>
-        <MudButton Href="/parametres/comptes" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.ManageAccounts">Comptes</MudButton>
+
+        <MudTooltip Text="@(_sombre ? "Mode clair" : "Mode sombre")">
+            <MudIconButton Icon="@(_sombre ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)" Color="Color.Inherit"
+                           OnClick="BasculerThemeAsync" aria-label="@(_sombre ? "Passer en mode clair" : "Passer en mode sombre")" />
+        </MudTooltip>
+
+        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" aria-label="Paramètres"
+                 AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+            <MudMenuItem Icon="@Icons.Material.Filled.Extension" Href="/parametres/services">Gérer les services</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" Href="/parametres/comptes">Comptes</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.Menu" OnClick="PersonnaliserMenuAsync">Personnaliser le menu</MudMenuItem>
+        </MudMenu>
+
         <AuthorizeView>
             <Authorized>
                 <form method="post" action="/deconnexion" class="ml-2">
                     <AntiforgeryToken />
                     <MudButton ButtonType="ButtonType.Submit" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Logout"
-                               title="Se déconnecter">@context.User.Identity?.Name</MudButton>
+                               title="Se déconnecter"><span class="d-none d-sm-inline">@context.User.Identity?.Name</span></MudButton>
                 </form>
             </Authorized>
         </AuthorizeView>
     </MudAppBar>
+
+    <MudDrawer @bind-Open="_menuOuvert" Variant="DrawerVariant.Mini" ClipMode="DrawerClipMode.Always" Breakpoint="Breakpoint.Sm" Elevation="1" Width="200px">
+        <NavMenu />
+    </MudDrawer>
+
     <MudMainContent Class="pt-16 px-4 pb-8">
         <MudContainer MaxWidth="MaxWidth.Large">
             @Body
         </MudContainer>
     </MudMainContent>
 </MudLayout>
+
+<style>
+    .fil-separateur { margin: 0 8px; font-size: 1.4rem; line-height: 1; opacity: .45; }
+    .fil-page { font-weight: 300; opacity: .75; min-width: 0; }
+</style>

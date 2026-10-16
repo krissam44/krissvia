@@ -1,0 +1,12 @@
+@implements IDisposable
+
+@* Menu latéral : ordre et masquage choisis dans « Personnaliser le menu » (menu ⋮ de la barre du haut). *@
+<MudNavMenu>
+    @foreach (var entree in _entrees)
+    {
+        <MudTooltip @key="entree.Key" Text="@entree.Label" Placement="Placement.Right" Arrow="true">
+            <MudNavLink Href="@entree.Href" Icon="@entree.Icon"
+                        Match="@(entree.Exact ? NavLinkMatch.All : NavLinkMatch.Prefix)">@entree.Label</MudNavLink>
+        </MudTooltip>
+    }
+</MudNavMenu>
