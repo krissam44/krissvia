@@ -1,0 +1,43 @@
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">
+            Réordonnez avec les flèches, masquez les entrées inutiles. Seuls les services activés ont une entrée : celle
+            d'un service désactivé retrouvera sa place s'il est réactivé.
+        </MudText>
+
+        <div class="menu-reglages">
+            @for (var i = 0; i < _entrees.Count; i++)
+            {
+                var index = i;
+                var entree = _entrees[i];
+                <div @key="entree.Key" class="menu-reglage @(_visibles[entree.Key] ? "" : "masquee")">
+                    <div class="menu-fleches">
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Disabled="@(index == 0)"
+                                       OnClick="() => Deplacer(index, -1)" aria-label="@($"Monter {entree.Label}")" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Disabled="@(index == _entrees.Count - 1)"
+                                       OnClick="() => Deplacer(index, +1)" aria-label="@($"Descendre {entree.Label}")" />
+                    </div>
+                    <MudIcon Icon="@entree.Icon" Class="mud-text-secondary" />
+                    <MudText Typo="Typo.body1" Class="flex-grow-1">@entree.Label</MudText>
+                    <MudSwitch T="bool" @bind-Value="_visibles[entree.Key]" Color="Color.Success"
+                               Label="@(_visibles[entree.Key] ? "Visible" : "Masqué")" />
+                </div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton StartIcon="@Icons.Material.Filled.RestartAlt" OnClick="Reinitialiser">Réinitialiser</MudButton>
+        <MudSpacer />
+        <MudButton OnClick="() => Dialogue.Cancel()">Annuler</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="EnregistrerAsync">Enregistrer</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .menu-reglages { max-height: 60vh; overflow-y: auto; }
+    .menu-reglage { display: flex; align-items: center; gap: 8px; padding: 4px 6px; margin-bottom: 6px; border-radius: 8px;
+                    border: 1px solid var(--mud-palette-lines-default); }
+    .menu-reglage.masquee { opacity: .55; }
+    .menu-fleches { display: flex; flex-direction: column; }
+    .menu-fleches .mud-icon-button { padding: 1px; }
+</style>

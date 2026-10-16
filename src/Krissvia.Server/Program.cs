@@ -14,6 +14,7 @@ using Krissvia.Persistence.Sqlite;
 using Krissvia.PluginHost;
 using Krissvia.PluginHost.Services;
 using Krissvia.Server.Components;
+using Krissvia.Server.Components.Layout;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using MudBlazor.Services;
@@ -86,6 +87,10 @@ builder.Services.AddHostedService<PluginSupervisorLifetime>();
 // Comptes de l'interface : le premier se crée avec le jeton d'installation écrit dans le journal.
 builder.Services.AddSingleton<AccountService>();
 builder.Services.AddHostedService<AccountsLifetime>();
+
+// Menu latéral personnalisable et préférences d'affichage par compte.
+builder.Services.AddSingleton<MenuService>();
+builder.Services.AddSingleton<PreferencesService>();
 
 // Clés de chiffrement des cookies, conservées pour qu'un redémarrage ne déconnecte personne.
 builder.Services.AddDataProtection()

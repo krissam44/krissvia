@@ -142,8 +142,20 @@ public sealed partial class PluginSupervisor(
         }
     }
 
+    /// <summary>
+    /// Un plugin vient d'être activé ou désactivé (le menu latéral montre ou cache son entrée). Levé hors du verrou.
+    /// </summary>
+    public event Action? EnabledChanged;
+
     /// <summary>Active ou désactive un plugin. Renvoie la raison d'un refus, ou null.</summary>
     public async Task<string?> SetEnabledAsync(string id, bool actif, CancellationToken ct = default)
+    {
+        var refus = await BasculerAsync(id, actif, ct);
+        if (refus is null) EnabledChanged?.Invoke();
+        return refus;
+    }
+
+    private async Task<string?> BasculerAsync(string id, bool actif, CancellationToken ct)
     {
         await _verrou.WaitAsync(ct);
         try
