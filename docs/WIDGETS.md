@@ -170,7 +170,7 @@ l'API. La restriction de §5 est une **discipline**, pas une barrière. Donc :
 
 ## 10. Décisions (16/10/2026)
 
-1. **Les thermostats deviennent des entités `climate`, publiées par le cœur.** Un seul chemin pour tout (API, flux,
+1. **Les thermostats deviennent des entités `climate`, publiées par le cœur** (fait le 16/10/2026, voir API.md). Un seul chemin pour tout (API, flux,
    widgets, scénarios, historique) ; même modèle ensuite pour l'alarme, la présence, le délesteur. Le descripteur
    porte la liste des modes (le widget les dessine depuis les données, jamais en dur), les bornes et le pas de la
    consigne, le nombre de radiateurs ; l'état porte ambiante, humidité et extérieure si connues, consigne, mode,

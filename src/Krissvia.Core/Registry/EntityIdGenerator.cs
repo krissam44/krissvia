@@ -27,6 +27,7 @@ public static class EntityIdGenerator
         EntityKind.Light => "light",
         EntityKind.Cover => "cover",
         EntityKind.Event => "event",
+        EntityKind.Climate => "climate",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 

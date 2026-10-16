@@ -1,4 +1,5 @@
 using Krissvia.Contracts;
+using Krissvia.Core.Commands;
 using Krissvia.Core.Registry;
 
 namespace Krissvia.Server.Components.Inventaire;
@@ -16,6 +17,9 @@ public partial class EntiteDialog
 
     [Inject] private IEntityRegistry Registre { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    /// <summary>Entité publiée par un module du cœur (thermostat) : son nom vient de la configuration du module.</summary>
+    private bool DuCoeur => CoreIntegrations.IsCore(Entite.IntegrationId);
 
     private string _nom = "";
     private string? _piece;
@@ -39,7 +43,7 @@ public partial class EntiteDialog
             return;
         }
 
-        if (_nom.Trim() != Entite.DisplayName) await Registre.RenameAsync(Entite.EntityId, _nom);
+        if (!DuCoeur && _nom.Trim() != Entite.DisplayName) await Registre.RenameAsync(Entite.EntityId, _nom);
         if (Appareil is not null && (_piece?.Trim() ?? "") != (Appareil.Room ?? "")) await Registre.SetRoomAsync(Appareil.DeviceId, _piece);
         if (Entite.Kind == EntityKind.Switch && _puissance != (Entite.NominalPower ?? 0))
             await Registre.SetNominalPowerAsync(Entite.EntityId, _puissance > 0 ? _puissance : null);

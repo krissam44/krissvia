@@ -49,12 +49,9 @@ public partial class Thermostats : IDisposable
     private Task ModeAsync(ThermostatSettings t, ThermostatMode mode) =>
         ExecuterAsync(() => Service.SetModeAsync(t.Id, mode));
 
-    private Task AjusterAsync(ThermostatSettings t, double pas)
-    {
-        var actuel = Service.Get(t.Id) ?? t;
-        var cible = Math.Clamp(Consigne(actuel, Moteur.GetSnapshot(t.Id)) + pas, ThermostatService.MinTarget, ThermostatService.MaxTarget);
-        return ExecuterAsync(() => Service.SetTargetAsync(t.Id, cible));
-    }
+    // Le pas est appliqué par le service, sous son verrou, à la consigne réellement suivie : le même chemin que
+    // l'ordre adjust_target d'un widget.
+    private Task AjusterAsync(ThermostatSettings t, double pas) => ExecuterAsync(() => Service.AdjustTargetAsync(t.Id, pas));
 
     private Task RetablirAsync(ThermostatSettings t) => ExecuterAsync(() => Service.SetTargetAsync(t.Id, null));
 

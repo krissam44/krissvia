@@ -31,6 +31,7 @@ internal sealed record EntityView(
     bool Enabled,
     bool Missing,
     string IntegrationId,
+    JsonElement? Extra,
     // Écrit même à null : « jamais reçu » doit se lire, pas se deviner à une absence (WIDGETS.md §4).
     [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] EntityStateView? State);
 
@@ -78,7 +79,7 @@ internal static partial class EntityApi
                 Origin = corps.Source is { } s && SourceValide().IsMatch(s) ? $"api:{s}" : "api",
             };
             var resultat = await bus.SendVerifiedAsync(ordre, ct: ct);
-            return Json(new { outcome = resultat.Outcome, verification = resultat.Verification });
+            return Json(new { outcome = resultat.Outcome, verification = resultat.Verification, detail = resultat.Detail });
         });
 
         api.Map("/live", LiveAsync);
@@ -155,6 +156,7 @@ internal static partial class EntityApi
                 .Select(e => new EntityView(
                     e.EntityId, e.DisplayName, e.Kind, e.DeviceClass, e.Unit, e.Commands,
                     pieces.GetValueOrDefault(e.DeviceId), e.Usage, e.Enabled, e.Missing, e.IntegrationId,
+                    e.ExtraJson is { Length: > 0 } extra ? JsonSerializer.Deserialize<JsonElement>(extra) : null,
                     EntityStateView.From(etats.Get(e.EntityId)))),
         ];
     }

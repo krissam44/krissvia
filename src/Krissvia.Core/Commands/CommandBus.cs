@@ -51,7 +51,8 @@ public enum CommandVerification
     NotConfirmed,
 }
 
-public sealed record VerifiedCommandResult(CommandOutcome Outcome, CommandVerification Verification)
+/// <param name="Detail">Motif d'un refus ou d'un échec, lisible tel quel (« thermostat arrêté… »).</param>
+public sealed record VerifiedCommandResult(CommandOutcome Outcome, CommandVerification Verification, string? Detail = null)
 {
     /// <summary>Vrai seulement si l'effet est constaté. C'est la seule réussite d'un ordre de sécurité.</summary>
     public bool Confirmed => Verification == CommandVerification.Confirmed;
@@ -235,7 +236,7 @@ public sealed class CommandBus : ICommandBus, IDisposable
         }
 
         _events.Publish(new CommandCompleted(trace));
-        return new VerifiedCommandResult(issue, verification);
+        return new VerifiedCommandResult(issue, verification, detail);
     }
 
     public void Dispose() => _abonnement.Dispose();
