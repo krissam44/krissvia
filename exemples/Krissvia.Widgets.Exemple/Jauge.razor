@@ -1,0 +1,51 @@
+@attribute [KrissviaWidget("jauge", "Jauge (Blazor)", Description = "Une mesure sur une jauge circulaire, entre un minimum et un maximum.",
+    Rows = 2, Settings = """{ "type": "object", "properties": { "min": { "type": "number", "title": "Minimum", "default": 0 }, "max": { "type": "number", "title": "Maximum", "default": 100 } } }""")]
+@attribute [WidgetSlot("mesure", Kinds = ["sensor"], Required = true)]
+
+@* Exemple de widget Blazor : il ne connaît que son contexte, et MudBlazor, qui suit le thème de Krissvia. *@
+<div class="jauge">
+    <div class="titre">@(Entite?.Name ?? "—")</div>
+    @if (Etat is null)
+    {
+        <div class="absent">Jamais reçu</div>
+    }
+    else if (!Etat.Available)
+    {
+        <div class="absent">Indisponible</div>
+    }
+    else if (Etat.Number is { } valeur)
+    {
+        <MudProgressCircular Value="@Pourcentage(valeur)" Size="Size.Large" StrokeWidth="5" Style="width: 96px; height: 96px" Color="Color.Primary" Class="cercle">
+            <ChildContent>
+                <div class="valeur">@valeur.ToString("0.#")<span class="unite">@Entite?.Unit</span></div>
+            </ChildContent>
+        </MudProgressCircular>
+        <div class="bornes">@Min.ToString("0.#") — @Max.ToString("0.#")</div>
+    }
+    else
+    {
+        <div class="absent">Pas un nombre</div>
+    }
+</div>
+
+<style>
+    .jauge { height: 100%; padding: 12px 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; box-sizing: border-box; }
+    .jauge .titre { align-self: stretch; font-size: .82rem; color: var(--mud-palette-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .jauge .cercle { margin: auto 0; }
+    .jauge .valeur { font-size: .95rem; font-weight: 500; }
+    .jauge .unite { font-size: .8rem; margin-left: 2px; color: var(--mud-palette-text-secondary); }
+    .jauge .bornes { font-size: .72rem; color: var(--mud-palette-text-secondary); }
+    .jauge .absent { margin: auto; font-style: italic; color: var(--mud-palette-text-secondary); }
+</style>
+
+@code {
+    [Parameter] public WidgetContext Context { get; set; } = default!;
+
+    private WidgetEntity? Entite => Context.Entity("mesure");
+    private WidgetState? Etat => Context.State("mesure");
+    private double Min => Context.Setting("min", 0);
+    private double Max => Context.Setting("max", 100);
+
+    private double Pourcentage(double valeur) =>
+        Max <= Min ? 0 : Math.Clamp((valeur - Min) / (Max - Min) * 100, 0, 100);
+}

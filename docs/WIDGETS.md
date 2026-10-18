@@ -36,16 +36,38 @@ N'importe quelle technologie qui produit un *custom element* convient (JS natif,
 `widgets/` est celui de l'installation ; un plugin peut aussi livrer les siens dans `widgets/` à côté de son
 `plugin.json`.
 
-### 2.2 Blazor
+### 2.2 Blazor (fait le 18/10/2026)
 
-Un composant Razor dans une bibliothèque compilée avec Krissvia (« Krissvia.Widgets.Perso »), déclarée dans la
-configuration (`Widgets:Assemblies`). Le composant porte un attribut `[KrissviaWidget("jauge-cuve")]`, reçoit un
-`[Parameter] WidgetContext Context` (mêmes données que §4) et est rendu par le tableau de bord sans autre code.
-Le manifeste est le même, avec `"blazor": "Krissvia.Widgets.Perso.JaugeCuve"` à la place de `script`/`element`.
+Un composant Razor dans une bibliothèque .NET qui ne référence que `Krissvia.Widgets.Blazor` (et, si besoin,
+MudBlazor, déjà dans Krissvia). Le manifeste s'écrit en attributs :
 
-Confort : on reste en C# et MudBlazor. Limite : il faut recompiler Krissvia pour l'ajouter, et il ne sera pas
-réutilisable hors du serveur Blazor — pour une PWA ou une appli mobile, Blazor sait exporter un composant en
-Web Component, ce qui rejoint §2.1.
+```razor
+@attribute [KrissviaWidget("jauge", "Jauge", Description = "…", Rows = 2,
+    Settings = """{ "type": "object", "properties": { "max": { "type": "number", "default": 100 } } }""")]
+@attribute [WidgetSlot("mesure", Kinds = ["sensor"], Required = true)]
+
+<MudProgressCircular Value="@(Context.State("mesure")?.Number ?? 0)" />
+
+@code {
+    [Parameter] public WidgetContext Context { get; set; } = default!;
+}
+```
+
+- `WidgetContext` porte les mêmes données qu'un Web Component (§4) : `Entities`, `States` (null = jamais reçu),
+  `Settings`, et `CommandAsync(slot, commande, args)` — un ordre vérifié, limité aux entités des slots, signé
+  `widget:{id}`. Un nouveau contexte arrive à chaque changement d'état : le composant se redessine seul.
+- **Installation** : déposer la .dll à la racine du dossier `widgets` de l'installation (ou la nommer dans
+  `Widgets:Assemblies`), puis **redémarrer** — un assemblage .NET ne se décharge pas, contrairement à un Web
+  Component qui se prend à chaud.
+- Rendu dans la page, côté serveur, dans une barrière d'erreur : une exception affiche un bandeau sur la carte, le
+  reste du tableau de bord continue. Le thème MudBlazor (clair ou sombre) s'applique de lui-même.
+- Pas d'isolation CSS (`.razor.css`) ni de fichiers statiques : les styles vont dans un `<style>` du composant,
+  avec des classes préfixées.
+- **Confiance** : c'est du code qui s'exécute sur le serveur, comme un plugin ; seul l'administrateur dépose une
+  bibliothèque (§9).
+- Limite : un widget Blazor ne s'affiche que dans l'interface Blazor de Krissvia. Pour une PWA ou une appli,
+  écrire un Web Component (§2.1).
+- Exemple complet : `exemples/Krissvia.Widgets.Exemple` (une jauge et un interrupteur).
 
 ## 3. Le manifeste `widget.json`
 
@@ -196,7 +218,7 @@ laisse rien ; replier une section hors édition s'enregistre aussitôt.
   n'est écrit avant « Enregistrer » — DomoMud générait ses sections tout seul au premier affichage.
 - Widgets standards : `valeur`, `temperature`, `interrupteur`, `ouverture`, `puissance`, `thermostat`.
 - Widgets locaux : dossier `widgets` à côté de la base (ou `Widgets:Directory`), publié sous `/widgets/local`.
-- Pas encore : widgets Blazor (§2.2), widgets livrés par un plugin.
+- Pas encore : widgets livrés par un plugin.
 
 ## 12. Widget par entité (18/10/2026)
 

@@ -195,7 +195,7 @@ ouvrirait le flux avec le cookie de session.
 
 | Méthode | Route | Corps | Effet |
 |---|---|---|---|
-| GET | `/api/widgets` | | Catalogue : `widgets` (manifeste, `script_url`, `origin` = `standard` ou `local`) et `errors` (widgets écartés, avec leur raison) |
+| GET | `/api/widgets` | | Catalogue : `widgets` (manifeste, `script_url`, `origin` = `standard`, `local` ou `blazor`, et `blazor` = nom du composant pour un widget Blazor) et `errors` (widgets écartés, avec leur raison) |
 | GET | `/api/dashboards` | | Les pages, dans l'ordre (une page `principal` vide si rien n'est enregistré) |
 | GET | `/api/dashboards/{id}` | | Une page ; **404** si inconnue |
 | PUT | `/api/dashboards/{id}` | une page (voir ci-dessous) | Crée ou remplace ; l'identifiant vient de l'URL |

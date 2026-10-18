@@ -6,6 +6,7 @@
     <ProjectReference Include="..\Krissvia.Climate\Krissvia.Climate.csproj" />
     <ProjectReference Include="..\Krissvia.Persistence\Krissvia.Persistence.csproj" />
     <ProjectReference Include="..\Krissvia.PluginHost\Krissvia.PluginHost.csproj" />
+    <ProjectReference Include="..\Krissvia.Widgets.Blazor\Krissvia.Widgets.Blazor.csproj" />
   </ItemGroup>
 
   <ItemGroup>

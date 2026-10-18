@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!--
+    Ce que référence un widget Blazor (WIDGETS.md §2.2) : l'attribut qui le déclare et le contexte qu'il reçoit.
+    Rien d'autre de Krissvia : un widget ne parle qu'au contexte, comme un Web Component ne parle qu'à l'hôte kv.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Krissvia.Widgets</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

@@ -30,6 +30,12 @@ public sealed record WidgetManifest
     public string? Version { get; init; }
     public string Element { get; init; } = "";
     public string Script { get; init; } = "";
+
+    /// <summary>
+    /// Widget Blazor : le nom complet du composant, à la place de <see cref="Element"/> et <see cref="Script"/>
+    /// (WIDGETS.md §2.2). Rendu par le serveur, dans la page, au lieu d'un élément créé dans le navigateur.
+    /// </summary>
+    public string? Blazor { get; init; }
     public IReadOnlyList<WidgetSlot> Slots { get; init; } = [];
     public WidgetSize Size { get; init; } = new();
     public JsonElement? Settings { get; init; }
@@ -37,9 +43,12 @@ public sealed record WidgetManifest
 
 /// <summary>Un widget du catalogue : son manifeste, d'où il vient et l'adresse de son script.</summary>
 /// <param name="Origin"><c>standard</c> (livré avec Krissvia) ou <c>local</c> (dossier de l'installation).</param>
+/// <param name="ScriptUrl">Vide pour un widget Blazor.</param>
 public sealed record CatalogWidget(WidgetManifest Manifest, string Origin, string ScriptUrl)
 {
     public bool IsStandard => Origin == WidgetCatalog.Standard;
+
+    public bool IsBlazor => Manifest.Blazor is not null;
 }
 
 /// <summary>Le catalogue, et ce qui n'a pas pu y entrer : un widget illisible se signale, il ne fait rien tomber.</summary>
@@ -87,6 +96,9 @@ public static partial class WidgetCatalog
 {
     public const string Standard = "standard";
     public const string Local = "local";
+
+    /// <summary>Origine des widgets Blazor, déclarés dans les bibliothèques de <c>Widgets:Assemblies</c>.</summary>
+    public const string Blazor = "blazor";
     public const int ContractVersion = 1;
     /// <summary>Largeur maximale : 6 colonnes, toute la largeur d'un grand écran (« pleine largeur » de DomoMud).</summary>
     public const int MaxCols = 6;
@@ -102,7 +114,8 @@ public static partial class WidgetCatalog
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower) },
     };
 
-    public static WidgetCatalogSnapshot Load(IEnumerable<WidgetSource> sources)
+    /// <param name="components">Les manifestes des widgets Blazor, tirés des attributs de leurs composants.</param>
+    public static WidgetCatalogSnapshot Load(IEnumerable<WidgetSource> sources, IEnumerable<WidgetManifest>? components = null)
     {
         var widgets = new List<CatalogWidget>();
         var erreurs = new List<string>();
@@ -142,21 +155,41 @@ public static partial class WidgetCatalog
             }
         }
 
+        foreach (var composant in components ?? [])
+        {
+            if (Validate(composant, null) is { } refus)
+                erreurs.Add($"{Blazor}/{composant.Blazor} : {refus}");
+            else if (widgets.Any(w => w.Manifest.Id == composant.Id))
+                erreurs.Add($"{Blazor}/{composant.Blazor} : l'identifiant « {composant.Id} » est déjà pris");
+            else
+                widgets.Add(new CatalogWidget(composant, Blazor, ""));
+        }
+
         return new WidgetCatalogSnapshot(widgets, erreurs);
     }
 
     /// <summary>La raison d'un refus, ou null.</summary>
-    public static string? Validate(WidgetManifest m, IWidgetFolder dossier)
+    /// <param name="dossier">Le dossier d'un Web Component ; null pour un widget Blazor, qui n'a pas de script.</param>
+    public static string? Validate(WidgetManifest m, IWidgetFolder? dossier)
     {
         if (m.Contract != ContractVersion) return $"contrat {m.Contract} non pris en charge (attendu : {ContractVersion})";
         if (!Identifiant().IsMatch(m.Id)) return "id : minuscules, chiffres et « - », 64 caractères au plus";
         if (m.Name.Length == 0) return "name manquant";
-        if (!Element().IsMatch(m.Element)) return "element : doit commencer par « kv- » (minuscules, chiffres, « - »)";
 
-        // Pas de chargement extérieur : le script est un fichier du dossier du widget (WIDGETS.md §9).
-        if (!Script().IsMatch(m.Script) || m.Script.Split('/').Contains(".."))
-            return "script : chemin relatif au dossier du widget, en .js";
-        if (!dossier.Exists(m.Script)) return $"script « {m.Script} » introuvable";
+        if (dossier is null)
+        {
+            if (string.IsNullOrWhiteSpace(m.Blazor)) return "blazor : nom du composant manquant";
+        }
+        else
+        {
+            if (m.Blazor is not null) return "blazor : un widget Blazor se déclare par un attribut, pas dans un dossier";
+            if (!Element().IsMatch(m.Element)) return "element : doit commencer par « kv- » (minuscules, chiffres, « - »)";
+
+            // Pas de chargement extérieur : le script est un fichier du dossier du widget (WIDGETS.md §9).
+            if (!Script().IsMatch(m.Script) || m.Script.Split('/').Contains(".."))
+                return "script : chemin relatif au dossier du widget, en .js";
+            if (!dossier.Exists(m.Script)) return $"script « {m.Script} » introuvable";
+        }
 
         if (m.Slots.Count == 0) return "au moins un slot";
         if (m.Slots.Any(s => !Identifiant().IsMatch(s.Name))) return "nom de slot : minuscules, chiffres et « - »";

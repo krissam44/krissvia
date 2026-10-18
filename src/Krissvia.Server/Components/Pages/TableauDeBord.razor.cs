@@ -1,5 +1,9 @@
+using System.Text.Json;
+using Krissvia.Core.Commands;
 using Krissvia.Core.Registry;
+using Krissvia.Core.States;
 using Krissvia.Core.Widgets;
+using Krissvia.Widgets;
 using Krissvia.Server.Components.Widgets;
 using Microsoft.JSInterop;
 
@@ -27,6 +31,8 @@ public partial class TableauDeBord
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
     [Inject] private Krissvia.Core.Live.LiveFeed Flux { get; set; } = default!;
+    [Inject] private IEntityStateReader Etats { get; set; } = default!;
+    [Inject] private ICommandBus Commandes { get; set; } = default!;
 
     private List<Dashboard> _pages = [new() { Id = DashboardService.MainId }];
     private IReadOnlyList<Dashboard> _avantEdition = [];
@@ -40,6 +46,7 @@ public partial class TableauDeBord
     private IJSObjectReference? _module;
     private string? _erreurNavigateur;
     private IReadOnlyList<RegisteredEntity> _entites = [];
+    private Dictionary<string, string?> _pieces = new(StringComparer.Ordinal);
     private SuiviEnDirect? _suivi;
 
     // Largeurs du menu de taille (DomoMud) : null = celle du widget, 6 = toute la largeur d'un grand écran.
@@ -55,22 +62,24 @@ public partial class TableauDeBord
         Tableaux.Changed += SurChangement;
 
         // Le widget d'une entité changé dans l'écran Entités change ses cartes automatiques : on relit le registre.
+        // Les widgets Blazor sont rendus ici, côté serveur : un changement d'état les redessine (les Web Components,
+        // eux, reçoivent les états par leur propre flux dans le navigateur).
         _suivi = new SuiviEnDirect(Flux, async registre =>
         {
-            if (!registre) return;
-            _entites = await Registre.ListAsync();
+            if (registre) await RelireRegistreAsync();
+            if (!registre && !AfficheDuBlazor) return;
             await InvokeAsync(() =>
             {
-                _aAppliquer = true;
+                if (registre) _aAppliquer = true;
                 StateHasChanged();
             });
-        }, TimeSpan.FromMinutes(10));
+        }, TimeSpan.FromMinutes(1));
     }
 
     private async Task ChargerAsync()
     {
         _pages = [.. await Tableaux.ListAsync()];
-        _entites = await Registre.ListAsync();
+        await RelireRegistreAsync();
         _pageId = _pages.Any(p => p.Id == (PageId ?? _pageId)) ? PageId ?? _pageId : _pages[0].Id;
         _aAppliquer = true;
     }
@@ -90,8 +99,10 @@ public partial class TableauDeBord
             if (_module is not null && _aAppliquer)
             {
                 _aAppliquer = false;
+                // Seulement les Web Components : les widgets Blazor sont rendus par la page elle-même.
                 await _module.InvokeVoidAsync("appliquer", Page.Sections.Where(s => !s.Collapsed).SelectMany(s => s.Cards)
                     .Select(Resoudre)
+                    .Where(r => r.Widget?.IsBlazor != true)
                     .Select(r => new { id = r.Card.Id, widget = r.WidgetId, entities = r.Entities, settings = r.Card.Settings }));
             }
         }
@@ -106,6 +117,58 @@ public partial class TableauDeBord
     private static Dictionary<string, object?> PourJs(object vue) =>
         System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object?>>(
             System.Text.Json.JsonSerializer.Serialize(vue, Krissvia.Climate.Thermostats.ThermostatService.Json))!;
+
+    private async Task RelireRegistreAsync()
+    {
+        _entites = await Registre.ListAsync();
+        _pieces = (await Registre.ListDevicesAsync()).ToDictionary(d => d.DeviceId, d => d.Room, StringComparer.Ordinal);
+    }
+
+    private bool AfficheDuBlazor =>
+        Page.Sections.Where(s => !s.Collapsed).SelectMany(s => s.Cards).Any(c => Resoudre(c).Widget?.IsBlazor == true);
+
+    /// <summary>Le composant d'un widget Blazor, ou null pour un Web Component.</summary>
+    private Type? Composant(ResolvedCard carte) => carte.Widget is { IsBlazor: true } w ? Widgets.Component(w.Manifest.Id) : null;
+
+    /// <summary>
+    /// Ce que reçoit un widget Blazor : ses entités et leur dernier état, ses options, et l'envoi d'ordres limité à
+    /// ses slots, vérifié et signé <c>widget:{id}</c> — les mêmes règles qu'un Web Component (WIDGETS.md §4-5).
+    /// </summary>
+    private WidgetContext Contexte(ResolvedCard carte)
+    {
+        var entites = new Dictionary<string, WidgetEntity>(StringComparer.Ordinal);
+        var etats = new Dictionary<string, WidgetState?>(StringComparer.Ordinal);
+        foreach (var (slot, id) in carte.Entities)
+        {
+            var e = _entites.FirstOrDefault(x => x.EntityId == id);
+            entites[slot] = e is null
+                ? new WidgetEntity(id, id, "", null, null, [], null, null)
+                : new WidgetEntity(e.EntityId, e.DisplayName, JsonNamingPolicy.SnakeCaseLower.ConvertName(e.Kind.ToString()), e.DeviceClass, e.Unit,
+                    e.Commands, _pieces.GetValueOrDefault(e.DeviceId),
+                    e.ExtraJson is { Length: > 0 } extra ? JsonSerializer.Deserialize<JsonElement>(extra) : null);
+            etats[slot] = Etats.Get(id) is { } etat ? new WidgetState(etat.Value, etat.Available, etat.MeasuredAt) : null;
+        }
+
+        var reglages = carte.Card.Settings ?? JsonSerializer.SerializeToElement(new { });
+        var widget = carte.WidgetId;
+        return new WidgetContext(entites, etats, reglages, async (slot, commande, args) =>
+        {
+            if (!carte.Entities.TryGetValue(slot, out var id))
+                return new WidgetCommandResult("refused", "not_sent", $"slot « {slot} » non lié");
+            if (_entites.FirstOrDefault(x => x.EntityId == id) is not { } entite || !entite.Commands.Contains(commande, StringComparer.Ordinal))
+                return new WidgetCommandResult("refused", "not_sent", $"« {id} » n'accepte pas « {commande} »");
+
+            var resultat = await Commandes.SendVerifiedAsync(new EntityCommand(id, commande)
+            {
+                Args = args is null ? null : JsonSerializer.SerializeToElement(args),
+                Origin = $"widget:{widget}",
+            });
+            return new WidgetCommandResult(
+                JsonNamingPolicy.SnakeCaseLower.ConvertName(resultat.Outcome.ToString()),
+                JsonNamingPolicy.SnakeCaseLower.ConvertName(resultat.Verification.ToString()),
+                resultat.Detail);
+        });
+    }
 
     /// <summary>Le widget de la carte : le sien, sinon celui de son entité, sinon le plus précis (WIDGETS.md §6).</summary>
     private ResolvedCard Resoudre(DashboardCard carte) => WidgetResolver.Resolve(carte, _entites, _catalogue);
@@ -203,7 +266,7 @@ public partial class TableauDeBord
     private async Task ProposerAsync()
     {
         var radiateurs = Thermostats.List().SelectMany(t => t.SwitchEntityIds).ToHashSet(StringComparer.Ordinal);
-        _entites = await Registre.ListAsync();
+        await RelireRegistreAsync();
         var sections = DashboardProposal.Propose(_entites, _catalogue, radiateurs);
         if (sections.Count == 0)
         {

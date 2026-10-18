@@ -128,7 +128,11 @@
                         var index = i;
                         var carte = sec.Cards[i];
                         var (cols, rows) = Taille(carte);
-                        <div @key="carte.Id" class="kv-carte c@(cols) r@(rows)" data-carte="@carte.Id" draggable="@(_edition ? "true" : "false")"
+                        var resolue = Resoudre(carte);
+                        var composant = Composant(resolue);
+                        @* La clé change avec le widget : passer d'un Web Component à un widget Blazor recrée la carte, au lieu de
+                           laisser l'élément du JS à côté du rendu de Blazor. *@
+                        <div @key="(carte.Id, resolue.WidgetId)" class="kv-carte c@(cols) r@(rows)" data-carte="@carte.Id" draggable="@(_edition ? "true" : "false")"
                              @ondragstart="() => _glissee = (sec.Id, carte.Id)"
                              @ondrop="() => Deposer(sec.Id, carte.Id)" @ondrop:stopPropagation="true">
                             @if (_edition)
@@ -151,7 +155,24 @@
                                                    OnClick="() => SupprimerCarte(sec.Id, carte.Id)" aria-label="Retirer la carte" />
                                 </div>
                             }
-                            <div class="kv-carte-corps"></div>
+                            @if (composant is not null)
+                            {
+                                <div class="kv-carte-blazor">
+                                    @* Un widget Blazor qui échoue ne casse ni le tableau de bord ni le circuit (WIDGETS.md §1). *@
+                                    <ErrorBoundary>
+                                        <ChildContent>
+                                            <DynamicComponent Type="composant" Parameters="@(new Dictionary<string, object?> { ["Context"] = Contexte(resolue) })" />
+                                        </ChildContent>
+                                        <ErrorContent Context="erreur">
+                                            <div class="kv-carte-erreur" title="@erreur.Message">Widget « @resolue.Widget?.Manifest.Name » : @erreur.Message</div>
+                                        </ErrorContent>
+                                    </ErrorBoundary>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="kv-carte-corps"></div>
+                            }
                         </div>
                     }
                     @if (_edition)
@@ -214,6 +235,7 @@
                 background: var(--mud-palette-surface); border: 1px solid var(--mud-palette-lines-default); }
     .kv-carte-corps { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     .kv-carte-corps > :last-child { flex: 1; min-height: 0; }
+    .kv-carte-blazor { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
     .kv-carte-erreur { font-size: .72rem; padding: 4px 10px; background: var(--mud-palette-warning); color: #fff;
                        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
