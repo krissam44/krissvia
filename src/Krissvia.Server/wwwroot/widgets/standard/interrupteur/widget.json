@@ -1,0 +1,11 @@
+{
+  "contract": 1,
+  "id": "interrupteur",
+  "name": "Interrupteur",
+  "description": "Allume et éteint une prise, un relais ou une lumière ; l'état affiché est celui que l'appareil confirme.",
+  "version": "1.0.0",
+  "element": "kv-interrupteur",
+  "script": "interrupteur.js",
+  "slots": [ { "name": "interrupteur", "kinds": ["switch", "light"], "required": true } ],
+  "size": { "cols": 1, "rows": 1 }
+}

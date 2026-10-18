@@ -1,0 +1,11 @@
+{
+  "contract": 1,
+  "id": "thermostat",
+  "name": "Thermostat",
+  "description": "Ambiante, consigne réglable, modes et statut, dans l'esprit des cartes de DomoMud.",
+  "version": "1.0.0",
+  "element": "kv-thermostat",
+  "script": "thermostat.js",
+  "slots": [ { "name": "thermostat", "kinds": ["climate"], "required": true } ],
+  "size": { "cols": 2, "rows": 2 }
+}

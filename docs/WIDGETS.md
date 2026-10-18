@@ -150,7 +150,7 @@ mesure (deux slots), thermostat (slot `thermostat`), batterie. Courbe et histori
 ## 8. Ce qu'il faut côté serveur (préalable)
 
 > Fait le 16/10/2026 : entités, ordres vérifiés et flux en direct (voir API.md, « Entités et flux en direct »).
-> Reste `GET /api/widgets`, avec le tableau de bord.
+> Fait le 18/10/2026 : `GET /api/widgets` et les pages du tableau de bord (`/api/dashboards`).
 
 - `GET /api/entities` et `/api/entities/{id}` : registre + dernier état.
 - `POST /api/entities/{id}/commands` : ordre vérifié, signé `widget:{id}`.
@@ -179,4 +179,22 @@ l'API. La restriction de §5 est une **discipline**, pas une barrière. Donc :
    restent ceux de Krissvia : Arrêt, Hors-gel, Éco, Confort −2, Confort −1, Confort.
 2. **Grille responsive**, comme Gladys, Home Assistant et DomoMud : le nombre de colonnes suit la largeur de
    l'écran, une carte occupe `size.cols` × `size.rows` cellules (ramenée à la largeur disponible sur téléphone).
-3. `kv.history` : encore ouverte — version 1 du tableau de bord, ou après ?
+3. `kv.history` (courbes, historique) : **plus tard**, pas dans la version 1 du tableau de bord.
+
+## 11. Tableau de bord, version 1 (18/10/2026)
+
+Organisation reprise de DomoMud : des **pages** (« Confort », « Technique »…), des **sections** repliables, et dans
+chaque section une grille de cartes. Mode édition sur une copie : « Enregistrer » écrit tout, « Annuler » ne
+laisse rien ; replier une section hors édition s'enregistre aussitôt.
+
+- Grille : 2 colonnes sur téléphone, 4 sur tablette, 6 sur grand écran ; largeur d'une carte de 1 à 6 (6 = pleine
+  largeur, ramenée à l'écran), hauteur de 1 à 4.
+- Cartes : glisser-déposer, y compris d'une section à l'autre ; flèches ◀ ▶ pour le téléphone ; menu de taille.
+- **Proposer** (mode édition) : ajoute une section par famille (thermostats, températures, interrupteurs et
+  lumières, capteurs, énergie), chaque entité avec son meilleur widget ; les slots secondaires prennent les entités
+  du même appareil (l'humidité d'une sonde) ; les radiateurs pilotés par un thermostat ne sont pas proposés. Rien
+  n'est écrit avant « Enregistrer » — DomoMud générait ses sections tout seul au premier affichage.
+- Widgets standards : `valeur`, `temperature`, `interrupteur`, `ouverture`, `puissance`, `thermostat`.
+- Widgets locaux : dossier `widgets` à côté de la base (ou `Widgets:Directory`), publié sous `/widgets/local`.
+- Pas encore : widgets Blazor (§2.2), choix du widget par entité dans l'écran Entités (§6, point 2), widgets
+  livrés par un plugin.

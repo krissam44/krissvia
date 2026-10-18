@@ -1,0 +1,233 @@
+@page "/"
+@page "/tableau-de-bord"
+@page "/tableau-de-bord/{PageId}"
+@implements IAsyncDisposable
+
+<PageTitle>Tableau de bord · Krissvia</PageTitle>
+
+<div class="d-flex align-center flex-wrap gap-2 mb-4">
+    <MudText Typo="Typo.h5" Class="mr-2">Tableau de bord</MudText>
+
+    @* Les pages : visibles dès qu'il y en a plusieurs, ou pour les gérer (DomoMud). *@
+    @if (_edition || _pages.Count > 1)
+    {
+        @foreach (var pg in _pages)
+        {
+            var active = pg.Id == Page.Id;
+            @if (_edition && active && _renommage)
+            {
+                <MudTextField T="string" Value="pg.Name" ValueChanged="RenommerPage" Immediate="true" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Style="max-width: 180px" AutoFocus="true" OnBlur="() => _renommage = false"
+                              aria-label="Nom de la page" />
+            }
+            else
+            {
+                <MudButton Size="Size.Small" Variant="@(active ? Variant.Filled : Variant.Outlined)" Color="@(active ? Color.Primary : Color.Default)"
+                           OnClick="() => ChoisirPage(pg.Id)">@pg.Name</MudButton>
+            }
+        }
+        @if (_edition)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small" OnClick="() => DeplacerPage(-1)"
+                           Disabled="@(_pages[0].Id == Page.Id)" aria-label="Avancer la page" />
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" OnClick="() => DeplacerPage(1)"
+                           Disabled="@(_pages[^1].Id == Page.Id)" aria-label="Reculer la page" />
+            <MudIconButton Icon="@Icons.Material.Filled.EditNote" Size="Size.Small" OnClick="() => _renommage = true" aria-label="Renommer la page" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="SupprimerPage"
+                           Disabled="@(_pages.Count <= 1)" aria-label="Supprimer la page" />
+            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AjouterPage">Page</MudButton>
+        }
+    }
+
+    <MudSpacer />
+    @if (_edition)
+    {
+        <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.AutoAwesome" OnClick="ProposerAsync"
+                   title="Ajoute à cette page une section par famille d'entités, chacune avec son widget">Proposer</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Save" OnClick="EnregistrerAsync">Enregistrer</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="Annuler">Annuler</MudButton>
+    }
+    else
+    {
+        <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Edit" OnClick="Modifier">Modifier</MudButton>
+    }
+</div>
+
+@if (_erreurNavigateur is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">Le tableau de bord n'a pas pu démarrer dans le navigateur : @_erreurNavigateur</MudAlert>
+}
+
+@if (_edition)
+{
+    @foreach (var erreur in _catalogue.Errors)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">Widget écarté : @erreur</MudAlert>
+    }
+}
+
+@if (Page.Sections.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">
+        @if (_edition)
+        {
+            <span>Page vide. « Proposer » la remplit d'après vos entités (une section par famille), ou « Ajouter une section » pour la composer vous-même.</span>
+        }
+        else
+        {
+            <span>Page vide : « Modifier », puis « Proposer » ou « Ajouter une section ».</span>
+        }
+    </MudAlert>
+}
+
+@* La classe de la racine appartient au JS (kv-hors-ligne) : celle du mode édition va sur un élément intérieur, sinon
+   chaque rendu de Blazor l'effacerait. *@
+<div class="kv-tableau" @ref="_racine">
+    <div class="kv-bandeau-hors-ligne">Connexion au serveur perdue : les valeurs ne sont plus à jour. Reconnexion…</div>
+    <div class="@(_edition ? "kv-edition" : "")">
+
+    @for (var s = 0; s < Page.Sections.Count; s++)
+    {
+        var sec = Page.Sections[s];
+        var premiere = s == 0;
+        var derniere = s == Page.Sections.Count - 1;
+        <section @key="sec.Id" class="kv-section">
+            <div class="kv-section-entete">
+                @if (_edition)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Disabled="premiere"
+                                   OnClick="() => DeplacerSection(sec.Id, -1)" aria-label="Monter la section" />
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Disabled="derniere"
+                                   OnClick="() => DeplacerSection(sec.Id, 1)" aria-label="Descendre la section" />
+                }
+                <MudIconButton Icon="@(sec.Collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)" Size="Size.Small"
+                               OnClick="() => BasculerSectionAsync(sec.Id)" aria-label="@(sec.Collapsed ? "Déplier la section" : "Replier la section")" />
+                @if (_edition)
+                {
+                    <MudTextField T="string" Value="sec.Title" ValueChanged="t => RenommerSection(sec.Id, t)" Immediate="true"
+                                  Variant="Variant.Text" Margin="Margin.Dense" Class="kv-section-titre-saisie" aria-label="Titre de la section" />
+                }
+                else
+                {
+                    <span class="kv-section-titre">@sec.Title</span>
+                }
+                <span class="kv-section-filet"></span>
+                <span class="kv-section-compte">@sec.Cards.Count carte(s)</span>
+                @if (_edition)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="() => SupprimerSection(sec.Id)" aria-label="Supprimer la section et ses cartes" />
+                }
+            </div>
+
+            @if (!sec.Collapsed)
+            {
+                <div class="kv-grille" @ondragover:preventDefault="true" @ondrop="() => Deposer(sec.Id, null)">
+                    @for (var i = 0; i < sec.Cards.Count; i++)
+                    {
+                        var index = i;
+                        var carte = sec.Cards[i];
+                        var (cols, rows) = Taille(carte);
+                        <div @key="carte.Id" class="kv-carte c@(cols) r@(rows)" data-carte="@carte.Id" draggable="@(_edition ? "true" : "false")"
+                             @ondragstart="() => _glissee = (sec.Id, carte.Id)"
+                             @ondrop="() => Deposer(sec.Id, carte.Id)" @ondrop:stopPropagation="true">
+                            @if (_edition)
+                            {
+                                <div class="kv-carte-outils">
+                                    <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small" Disabled="@(index == 0)"
+                                                   OnClick="() => DeplacerCarte(sec.Id, index, -1)" aria-label="Avancer la carte" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Disabled="@(index == sec.Cards.Count - 1)"
+                                                   OnClick="() => DeplacerCarte(sec.Id, index, 1)" aria-label="Reculer la carte" />
+                                    <MudMenu Icon="@Icons.Material.Filled.AspectRatio" Size="Size.Small" Dense="true" aria-label="Largeur de la carte">
+                                        @foreach (var (largeur, libelle) in Largeurs)
+                                        {
+                                            <MudMenuItem OnClick="() => Redimensionner(sec.Id, carte.Id, largeur)"
+                                                         Icon="@(carte.Cols == largeur ? Icons.Material.Filled.Check : null)">@libelle</MudMenuItem>
+                                        }
+                                    </MudMenu>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
+                                                   OnClick="() => ModifierCarteAsync(sec.Id, carte)" aria-label="Régler la carte" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                                   OnClick="() => SupprimerCarte(sec.Id, carte.Id)" aria-label="Retirer la carte" />
+                                </div>
+                            }
+                            <div class="kv-carte-corps"></div>
+                        </div>
+                    }
+                    @if (_edition)
+                    {
+                        <button type="button" class="kv-ajout c2 r1" @onclick="() => AjouterCarteAsync(sec.Id)">
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" /> Ajouter une carte
+                        </button>
+                    }
+                </div>
+            }
+        </section>
+    }
+
+    @if (_edition)
+    {
+        <button type="button" class="kv-ajout-section" @onclick="AjouterSection">
+            <MudIcon Icon="@Icons.Material.Filled.AddBox" Size="Size.Small" /> Ajouter une section
+        </button>
+    }
+    </div>
+</div>
+
+<style>
+    /* Variables du contrat (WIDGETS.md §4), tirées du thème : elles suivent le mode clair ou sombre. */
+    .kv-tableau {
+        --kv-primary: var(--mud-palette-primary);
+        --kv-text: var(--mud-palette-text-primary);
+        --kv-text-secondary: var(--mud-palette-text-secondary);
+        --kv-surface: var(--mud-palette-surface);
+        --kv-success: var(--mud-palette-success);
+        --kv-warning: var(--mud-palette-warning);
+        --kv-error: var(--mud-palette-error);
+    }
+
+    .kv-section { margin-bottom: 20px; }
+    .kv-section-entete { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; min-height: 36px; }
+    .kv-section-titre { font-size: 1.15rem; font-weight: 500; white-space: nowrap; }
+    .kv-section-titre-saisie { flex: 0 1 260px; }
+    .kv-section-filet { flex: 1; height: 1px; background: var(--mud-palette-lines-default); margin: 0 8px; }
+    .kv-section-compte { font-size: .75rem; color: var(--mud-palette-text-secondary); white-space: nowrap; }
+
+    /* Grille responsive : 2 colonnes sur téléphone, 4 sur tablette, 6 sur grand écran ; une carte plus large que
+       l'écran est ramenée à sa largeur. */
+    .kv-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 118px; grid-auto-flow: dense; gap: 12px; }
+    @@media (min-width: 600px) { .kv-grille { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    @@media (min-width: 1280px) { .kv-grille { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+    .kv-grille .c1 { grid-column: span 1; }
+    .kv-grille .c2, .kv-grille .c3, .kv-grille .c4, .kv-grille .c5, .kv-grille .c6 { grid-column: span 2; }
+    @@media (min-width: 600px) {
+        .kv-grille .c3 { grid-column: span 3; }
+        .kv-grille .c4, .kv-grille .c5, .kv-grille .c6 { grid-column: span 4; }
+    }
+    @@media (min-width: 1280px) {
+        .kv-grille .c5 { grid-column: span 5; }
+        .kv-grille .c6 { grid-column: span 6; }
+    }
+    .kv-grille .r1 { grid-row: span 1; } .kv-grille .r2 { grid-row: span 2; } .kv-grille .r3 { grid-row: span 3; } .kv-grille .r4 { grid-row: span 4; }
+
+    .kv-carte { position: relative; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px;
+                background: var(--mud-palette-surface); border: 1px solid var(--mud-palette-lines-default); }
+    .kv-carte-corps { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .kv-carte-corps > :last-child { flex: 1; min-height: 0; }
+    .kv-carte-erreur { font-size: .72rem; padding: 4px 10px; background: var(--mud-palette-warning); color: #fff;
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .kv-edition .kv-carte { outline: 2px dashed var(--mud-palette-lines-inputs); outline-offset: -2px; cursor: grab; }
+    .kv-carte-outils { position: absolute; top: 2px; right: 2px; z-index: 2; display: flex; align-items: center; border-radius: 16px;
+                       background: var(--mud-palette-surface); box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+    .kv-ajout, .kv-ajout-section { display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+                                   border: 2px dashed var(--mud-palette-lines-inputs); border-radius: 12px; background: transparent;
+                                   color: var(--mud-palette-text-secondary); font: inherit; font-size: .85rem; }
+    .kv-ajout:hover, .kv-ajout-section:hover { border-color: var(--mud-palette-primary); color: var(--mud-palette-primary); }
+    .kv-ajout-section { width: 100%; padding: 12px; margin-top: 4px; font-weight: 500; letter-spacing: .03em; text-transform: uppercase; }
+
+    .kv-bandeau-hors-ligne { display: none; margin-bottom: 12px; padding: 8px 12px; border-radius: 8px;
+                             background: var(--mud-palette-warning); color: #fff; font-size: .85rem; }
+    .kv-tableau.kv-hors-ligne .kv-bandeau-hors-ligne { display: block; }
+    .kv-tableau.kv-hors-ligne .kv-carte-corps { opacity: .5; }
+</style>

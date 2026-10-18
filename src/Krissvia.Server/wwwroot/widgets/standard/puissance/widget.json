@@ -1,0 +1,19 @@
+{
+  "contract": 1,
+  "id": "puissance",
+  "name": "Puissance",
+  "description": "Puissance, énergie, tension ou courant ; en rouge au-dessus d'un seuil.",
+  "version": "1.0.0",
+  "element": "kv-puissance",
+  "script": "puissance.js",
+  "slots": [
+    { "name": "mesure", "kinds": ["sensor"], "device_classes": ["power", "apparent_power", "energy", "voltage", "current"], "required": true }
+  ],
+  "size": { "cols": 1, "rows": 1 },
+  "settings": {
+    "type": "object",
+    "properties": {
+      "seuil": { "type": "number", "title": "Seuil d'alerte (0 = aucun)", "default": 0, "minimum": 0 }
+    }
+  }
+}
