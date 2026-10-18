@@ -1,0 +1,14 @@
+{
+  "contract": 1,
+  "id": "temperature",
+  "name": "Température",
+  "description": "Température d'une sonde, avec son humidité si on la lie.",
+  "version": "1.0.0",
+  "element": "kv-temperature",
+  "script": "temperature.js",
+  "slots": [
+    { "name": "temperature", "kinds": ["sensor"], "device_classes": ["temperature"], "required": true },
+    { "name": "humidite", "kinds": ["sensor"], "device_classes": ["humidity"], "required": false }
+  ],
+  "size": { "cols": 1, "rows": 1 }
+}

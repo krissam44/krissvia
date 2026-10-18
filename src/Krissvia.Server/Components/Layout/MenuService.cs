@@ -26,6 +26,7 @@ public sealed class MenuService
     /// <summary>Les pages, dans l'ordre par défaut.</summary>
     public static readonly IReadOnlyList<MenuEntry> Pages =
     [
+        new("tableau", "Tableau de bord", "/", Icons.Material.Filled.Dashboard, Exact: true),
         new("thermostats", "Thermostats", "/thermostats", Icons.Material.Filled.Thermostat),
         new("programmations", "Programmations", "/programmations", Icons.Material.Filled.Schedule),
         new("delestage", "Délestage", "/delestage", Icons.Material.Filled.Bolt),

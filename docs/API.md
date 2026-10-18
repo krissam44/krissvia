@@ -190,3 +190,27 @@ d'état à vérifier (`not_applicable`) : le nouvel état arrive par le flux. Un
 client lent reçoit l'état le plus récent, une seule fois, jamais une file de retard. Le client n'envoie rien. Une
 connexion venue d'une page d'un autre site (en-tête `Origin` différent) est refusée (**403**) : sinon cette page
 ouvrirait le flux avec le cookie de session.
+
+## Widgets et tableau de bord
+
+| Méthode | Route | Corps | Effet |
+|---|---|---|---|
+| GET | `/api/widgets` | | Catalogue : `widgets` (manifeste, `script_url`, `origin` = `standard` ou `local`) et `errors` (widgets écartés, avec leur raison) |
+| GET | `/api/dashboards` | | Les pages, dans l'ordre (une page `principal` vide si rien n'est enregistré) |
+| GET | `/api/dashboards/{id}` | | Une page ; **404** si inconnue |
+| PUT | `/api/dashboards/{id}` | une page (voir ci-dessous) | Crée ou remplace ; l'identifiant vient de l'URL |
+| DELETE | `/api/dashboards/{id}` | | Supprime ; jamais la dernière page (**400**) |
+
+```json
+{
+  "name": "Confort", "order": 0,
+  "sections": [
+    { "id": "thermo", "title": "Thermostats", "collapsed": false,
+      "cards": [ { "id": "a1", "widget": "thermostat", "entities": { "thermostat": "climate.salon" }, "cols": 4 } ] }
+  ]
+}
+```
+
+Identifiant de page : minuscules, chiffres et `-`. Une carte est unique dans sa page (pas seulement dans sa
+section). `cols` (1 à 6) et `rows` (1 à 4) sont facultatifs : sans eux, la taille du manifeste. Un widget ou une
+entité disparus ne bloquent pas l'enregistrement : la carte affiche le widget « valeur » et un bandeau.

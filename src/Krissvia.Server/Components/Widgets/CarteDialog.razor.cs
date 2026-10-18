@@ -1,0 +1,125 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Krissvia.Core.Registry;
+using Krissvia.Core.Widgets;
+
+namespace Krissvia.Server.Components.Widgets;
+
+/// <summary>
+/// Ajout ou réglage d'une carte : on choisit d'abord l'entité, puis un widget parmi ceux qui l'acceptent — le plus
+/// précis est proposé d'office (WIDGETS.md §6) —, ses autres slots, sa taille et ses options.
+/// </summary>
+public partial class CarteDialog
+{
+    [CascadingParameter] private IMudDialogInstance Dialogue { get; set; } = default!;
+    [Parameter] public WidgetCatalogSnapshot Catalogue { get; set; } = new([], []);
+    [Parameter] public IReadOnlyList<RegisteredEntity> Entites { get; set; } = [];
+    [Parameter] public DashboardCard? Carte { get; set; }
+
+    private RegisteredEntity? _principale;
+    private IReadOnlyList<CatalogWidget> _compatibles = [];
+    private string? _widget;
+    private readonly Dictionary<string, string?> _liens = new(StringComparer.Ordinal);
+    private int _cols = 1;
+    private int _rows = 1;
+    private SettingField? _schema;
+    private JsonObject? _reglages;
+    private string? _erreur;
+
+    // Une liste et non une boucle for : le contenu d'un élément de liste est rendu plus tard, et capturerait le
+    // compteur de boucle à sa dernière valeur.
+    private static readonly int[] Largeurs = [.. Enumerable.Range(1, WidgetCatalog.MaxCols)];
+    private static readonly int[] Hauteurs = [.. Enumerable.Range(1, WidgetCatalog.MaxRows)];
+
+    private CatalogWidget? Widget => _widget is null ? null : Catalogue.Find(_widget);
+
+    protected override void OnInitialized()
+    {
+        if (Carte is null) return;
+
+        var widget = Catalogue.Find(Carte.Widget);
+        var principalId = widget is null ? Carte.Entities.Values.FirstOrDefault() : Carte.Entities.GetValueOrDefault(widget.Manifest.Slots[0].Name);
+        _principale = Entites.FirstOrDefault(e => e.EntityId == principalId);
+        if (_principale is null) return;
+
+        _compatibles = WidgetCatalog.CompatibleWith(Catalogue, _principale);
+        Appliquer(widget?.Manifest.Id ?? _compatibles.FirstOrDefault()?.Manifest.Id, Carte);
+    }
+
+    private Task<IEnumerable<RegisteredEntity>> ChercherAsync(string? texte, CancellationToken ct) =>
+        Task.FromResult<IEnumerable<RegisteredEntity>>(Entites
+            .Where(e => string.IsNullOrWhiteSpace(texte)
+                        || e.DisplayName.Contains(texte, StringComparison.CurrentCultureIgnoreCase)
+                        || e.EntityId.Contains(texte, StringComparison.OrdinalIgnoreCase))
+            .Where(e => WidgetCatalog.CompatibleWith(Catalogue, e).Count > 0)
+            .OrderBy(e => e.DisplayName, StringComparer.CurrentCultureIgnoreCase));
+
+    private void ChoisirEntite(RegisteredEntity? entite)
+    {
+        _principale = entite;
+        _compatibles = entite is null ? [] : WidgetCatalog.CompatibleWith(Catalogue, entite);
+        Appliquer(_compatibles.FirstOrDefault()?.Manifest.Id, null);
+    }
+
+    private void ChoisirWidget(string? id) => Appliquer(id, null);
+
+    /// <summary>Choisit un widget : taille par défaut, slots secondaires repris s'ils conviennent encore, options.</summary>
+    private void Appliquer(string? widgetId, DashboardCard? existante)
+    {
+        _widget = widgetId;
+        _erreur = null;
+        if (Widget is not { } widget)
+        {
+            _schema = null;
+            _reglages = null;
+            return;
+        }
+
+        var anciens = new Dictionary<string, string?>(_liens);
+        _liens.Clear();
+        foreach (var slot in widget.Manifest.Slots.Skip(1))
+        {
+            var lien = existante?.Entities.GetValueOrDefault(slot.Name) ?? anciens.GetValueOrDefault(slot.Name);
+            _liens[slot.Name] = Entites.FirstOrDefault(e => e.EntityId == lien) is { } e && WidgetCatalog.Score(slot, e) >= 0 ? lien : null;
+        }
+
+        _cols = existante?.Cols ?? widget.Manifest.Size.Cols;
+        _rows = existante?.Rows ?? widget.Manifest.Size.Rows;
+        _schema = SettingsSchema.Parse(widget.Manifest.Settings);
+        _reglages = _schema is null ? null
+            : SettingsSchema.Complete(_schema, existante?.Settings is { } s ? JsonNode.Parse(s.GetRawText()) as JsonObject : null);
+    }
+
+    private void Valider()
+    {
+        if (_principale is null || Widget is not { } widget) return;
+
+        var manquant = widget.Manifest.Slots.Skip(1).FirstOrDefault(s => s.Required && _liens.GetValueOrDefault(s.Name) is null);
+        if (manquant is not null)
+        {
+            _erreur = $"Choisissez l'entité « {manquant.Name} ».";
+            return;
+        }
+
+        if (_schema is not null && _reglages is not null && SettingsSchema.Validate(_schema, _reglages) is { Count: > 0 } erreurs)
+        {
+            _erreur = string.Join(" ", erreurs);
+            return;
+        }
+
+        var liens = new Dictionary<string, string>(StringComparer.Ordinal) { [widget.Manifest.Slots[0].Name] = _principale.EntityId };
+        foreach (var (slot, entite) in _liens)
+            if (entite is not null) liens[slot] = entite;
+
+        Dialogue.Close(DialogResult.Ok(new DashboardCard
+        {
+            Id = Carte?.Id ?? Guid.NewGuid().ToString("N")[..12],
+            Widget = widget.Manifest.Id,
+            Entities = liens,
+            Settings = _reglages is null ? null : JsonSerializer.SerializeToElement(_reglages),
+            // La taille du manifeste n'est pas recopiée : si le widget change de taille par défaut, la carte suit.
+            Cols = _cols == widget.Manifest.Size.Cols ? null : _cols,
+            Rows = _rows == widget.Manifest.Size.Rows ? null : _rows,
+        }));
+    }
+}

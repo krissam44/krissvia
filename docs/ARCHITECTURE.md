@@ -238,6 +238,10 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
    **Somme des équipements automatique** : chaque switch actif allumé dont la puissance est déclarée, ou la mesure
    de son appareil. Elle est datée de la lecture : un switch ne publie qu'à son changement, l'âge de son état ne dit
    rien ; c'est la disponibilité (plugin mort, appareil injoignable) qui écarte une composante.
+   **Tableau de bord** (18/10/2026, page d'accueil `/` ; Thermostats passe sous `/thermostats`) : pages, sections
+   et grille de widgets en Web Components, sur le modèle de DomoMud — voir WIDGETS.md §11. Les thermostats y sont
+   des entités `climate` publiées par le cœur ; les widgets ne parlent qu'à l'API publique (`/api/live`, ordres
+   vérifiés).
 6. Un plugin Python d'exemple.
 7. Import des données DomoMud, une seule fois, pour les deux installations (6 kVA et 12 kVA).
 

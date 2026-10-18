@@ -9,6 +9,7 @@ using Krissvia.Core.Configuration;
 using Krissvia.Core.Commands;
 using Krissvia.Core.Events;
 using Krissvia.Core.Live;
+using Krissvia.Core.Widgets;
 using Krissvia.Core.Registry;
 using Krissvia.Core.States;
 using Krissvia.Persistence.Sqlite;
@@ -18,6 +19,7 @@ using Krissvia.Server.Components;
 using Krissvia.Server.Components.Layout;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
 using Krissvia.Server;
 
@@ -30,6 +32,13 @@ var cheminBase = Path.GetFullPath(builder.Configuration["Database:Path"] ?? "kri
 Directory.CreateDirectory(Path.GetDirectoryName(cheminBase)!);
 
 builder.Services.AddSingleton(TimeProvider.System);
+
+// Widgets de l'installation : un sous-dossier par widget (WIDGETS.md §2.1), à côté de la base par défaut.
+var dossierWidgets = Path.GetFullPath(builder.Configuration["Widgets:Directory"] ?? Path.Combine(Path.GetDirectoryName(cheminBase)!, "widgets"),
+    builder.Environment.ContentRootPath);
+Directory.CreateDirectory(dossierWidgets);
+builder.Services.AddSingleton(sp => new WidgetCatalogService(sp.GetRequiredService<IWebHostEnvironment>().WebRootFileProvider, dossierWidgets));
+builder.Services.AddSingleton<DashboardService>();
 
 // Bus d'événements : tout ce qui change dans le cœur y passe (états, registre, plugins, ordres).
 builder.Services.AddSingleton(sp =>
@@ -130,6 +139,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 app.MapStaticAssets();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(dossierWidgets),
+    RequestPath = WidgetCatalogService.LocalUrl,
+    // Revalidé à chaque chargement : un widget modifié dans le dossier doit se voir sans vider le cache.
+    OnPrepareResponse = c => c.Context.Response.Headers.CacheControl = "no-cache",
+});
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode().RequireAuthorization();
 app.MapAuthentification();
 
@@ -139,6 +155,7 @@ api.MapThermostatApi();
 api.MapLoadSheddingApi();
 api.MapDeviceScheduleApi();
 api.MapEntityApi();
+api.MapWidgetApi();
 
 // Point d'entrée des plugins : voir docs/TRANSPORT.md.
 app.Map("/plugins", async (HttpContext contexte, PluginHub hub) =>
