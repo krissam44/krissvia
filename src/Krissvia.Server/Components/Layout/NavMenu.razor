@@ -4,9 +4,24 @@
 <MudNavMenu>
     @foreach (var entree in _entrees)
     {
-        <MudTooltip @key="entree.Key" Text="@entree.Label" Placement="Placement.Right" Arrow="true">
-            <MudNavLink Href="@entree.Href" Icon="@entree.Icon"
-                        Match="@(entree.Exact ? NavLinkMatch.All : NavLinkMatch.Prefix)">@entree.Label</MudNavLink>
-        </MudTooltip>
+        @if (entree.Key == MenuService.ServicesKey)
+        {
+            @* Les plugins, chacun vers sa configuration, avec la pastille de son statut. *@
+            <MudNavGroup @key="entree.Key" Title="@entree.Label" Icon="@entree.Icon" @bind-Expanded="_servicesDeplies">
+                <MudNavLink Href="@entree.Href" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ViewList">Tous les services</MudNavLink>
+                @foreach (var plugin in _plugins)
+                {
+                    <MudNavLink @key="plugin.Id" Href="@($"/parametres/services/{plugin.Id}")" Match="NavLinkMatch.All"
+                                Icon="@Icons.Material.Filled.Circle" IconColor="@Statuts.Couleur(plugin.Status)">@plugin.Name</MudNavLink>
+                }
+            </MudNavGroup>
+        }
+        else
+        {
+            <MudTooltip @key="entree.Key" Text="@entree.Label" Placement="Placement.Right" Arrow="true">
+                <MudNavLink Href="@entree.Href" Icon="@entree.Icon"
+                            Match="@(entree.Exact ? NavLinkMatch.All : NavLinkMatch.Prefix)">@entree.Label</MudNavLink>
+            </MudTooltip>
+        }
     }
 </MudNavMenu>

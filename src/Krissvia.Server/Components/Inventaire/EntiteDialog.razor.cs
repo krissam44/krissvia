@@ -27,6 +27,11 @@ public partial class EntiteDialog
     private const string Automatique = "";
 
     private string _widget = Automatique;
+
+    /// <summary>Valeur de la liste pour un interrupteur sans usage particulier.</summary>
+    private const string SansUsage = "";
+
+    private string _usage = SansUsage;
     private IReadOnlyList<CatalogWidget> _compatibles = [];
     private string LibelleAutomatique { get; set; } = "Automatique";
 
@@ -42,6 +47,7 @@ public partial class EntiteDialog
         _piece = Appareil?.Room;
         _puissance = Entite.NominalPower ?? 0;
         _active = Entite.Enabled;
+        _usage = Entite.Usage ?? SansUsage;
 
         // Seuls les widgets qui acceptent cette entité ; un choix devenu impossible (widget retiré) revient à
         // l'automatique plutôt que d'afficher une valeur absente de la liste.
@@ -65,6 +71,8 @@ public partial class EntiteDialog
         if (Entite.Kind == EntityKind.Switch && _puissance != (Entite.NominalPower ?? 0))
             await Registre.SetNominalPowerAsync(Entite.EntityId, _puissance > 0 ? _puissance : null);
         if (_active != Entite.Enabled) await Registre.SetEnabledAsync(Entite.EntityId, _active);
+        if (Entite.Kind == EntityKind.Switch && (_usage == SansUsage ? null : _usage) != Entite.Usage)
+            await Registre.SetUsageAsync(Entite.EntityId, _usage == SansUsage ? null : _usage);
         if ((_widget == Automatique ? null : _widget) != Entite.Widget) await Registre.SetWidgetAsync(Entite.EntityId, _widget);
 
         Snackbar.Add($"« {_nom.Trim()} » enregistrée.", Severity.Success);

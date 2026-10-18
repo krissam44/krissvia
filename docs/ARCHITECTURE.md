@@ -168,11 +168,11 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
 - **Widgets en Web Components**, associés par règles : `kind` + `device_class` + usage choisissent le widget
   par défaut ; un plugin peut en livrer ; l'utilisateur peut en changer.
 - Disposition : JSON en base validé par JSON Schema, éditée visuellement ; une vue YAML en import/export.
-- **Menu latéral** (16/10/2026, sur le modèle de DomoMud) : les pages de Krissvia puis une entrée par service
-  activé (sa fiche), désignées par des clés stables (`thermostats`, `service:{id}`…). Ordre et masquage se règlent
-  dans « Personnaliser le menu » (menu ⋮) et valent pour tous les comptes (collection `menu`). Seules les entrées
-  disponibles se réordonnent : celle d'un service désactivé disparaît mais garde sa place, une page nouvelle
-  arrive en fin de menu, visible (`MenuLayout`, testé). Le mode sombre est une préférence du compte (collection
+- **Menu latéral** (16/10/2026, sur le modèle de DomoMud) : les pages de Krissvia, désignées par des clés stables
+  (`thermostats`, `services`…). Ordre et masquage se règlent dans « Personnaliser le menu » (menu ⋮) et valent pour
+  tous les comptes (collection `menu`) ; une page nouvelle arrive en fin de menu, visible (`MenuLayout`, testé).
+  Depuis le 19/10/2026, l'entrée « Services » se déplie en liste des plugins installés, chacun vers sa page de
+  configuration avec la pastille de son statut — une entrée de premier niveau par plugin encombrait le menu. Le mode sombre est une préférence du compte (collection
   `preferences`).
 - Blazor reste possible pour les écrans d'administration.
 - Modèle de confiance des widgets : code de confiance installé par l'administrateur.

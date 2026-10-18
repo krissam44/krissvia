@@ -407,6 +407,22 @@ public class DashboardProposalTests
     }
 
     [Fact]
+    public void Un_interrupteur_declare_radiateur_a_sa_propre_section()
+    {
+        RegisteredEntity[] entites =
+        [
+            E("switch.prise", EntityKind.Switch, appareil: "1"),
+            E("switch.radiateur", EntityKind.Switch, appareil: "2") with { Usage = EntityUsages.Radiator },
+        ];
+
+        var sections = DashboardProposal.Propose(entites, Catalogue);
+
+        Assert.Equal(["Radiateurs", "Interrupteurs et lumières"], sections.Select(s => s.Title));
+        Assert.Equal("switch.radiateur", sections[0].Cards.Single().Entity);
+        Assert.Equal("switch.prise", sections[1].Cards.Single().Entity);
+    }
+
+    [Fact]
     public void Un_radiateur_pilote_par_un_thermostat_n_est_pas_propose()
     {
         var sections = DashboardProposal.Propose(

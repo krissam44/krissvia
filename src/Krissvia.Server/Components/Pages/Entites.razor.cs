@@ -22,6 +22,16 @@ public partial class Entites : IDisposable
     private IReadOnlyList<RegisteredEntity> _entites = [];
     private Dictionary<string, RegisteredDevice> _appareils = [];
     private Categorie? _categorie;
+
+    /// <summary>Valeur de la liste pour « toutes les catégories ».</summary>
+    private const string Toutes = "";
+
+    private void ChoisirCategorie(string? cle) => _categorie = Categories.Toutes.FirstOrDefault(c => c.Cle == cle);
+
+    private string LibelleFiltre(string? cle) =>
+        Categories.Toutes.FirstOrDefault(c => c.Cle == cle) is { } c
+            ? $"{c.Libelle} ({_entites.Count(e => Categories.De(e) == c)})"
+            : $"Toutes ({_entites.Count})";
     private string? _recherche;
     private Timer? _minuterie;
 

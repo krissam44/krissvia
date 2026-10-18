@@ -34,6 +34,14 @@ Chaque module qui référence des entités implémente `IEntityReferenceSource` 
 `EntityIntegrityChecker` en tire la liste des problèmes : `Unknown` (n'existe pas), `Missing` (le plugin ne la
 déclare plus), `Disabled` (désactivée par l'utilisateur). C'est le même contrôle pour tous les modules.
 
+## Usage
+
+Champ de l'utilisateur : à quoi sert l'entité, quand le plugin ne peut pas le savoir. Un plugin voit un relais ou
+une prise ; l'utilisateur sait qu'il alimente un radiateur. Seul usage défini aujourd'hui : `radiateur`, pour un
+interrupteur (`EntityUsages`), choisi dans le champ « Type » de l'écran Entités. Il donne la catégorie
+« Radiateur » (icône et couleur propres), place l'interrupteur en tête des radiateurs proposés à un thermostat, et
+lui donne sa section dans « Proposer ». Les widgets peuvent cibler un usage (`usages` d'un slot, WIDGETS.md §3).
+
 ## Widget
 
 Champ de l'utilisateur (schéma v5, colonne `widget`) : le widget des cartes « automatiques » du tableau de bord

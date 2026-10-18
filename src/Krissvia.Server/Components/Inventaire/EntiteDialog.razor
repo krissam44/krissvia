@@ -20,9 +20,26 @@
                                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Label" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
-                        <MudTextField Value="@Categories.De(Entite).Libelle" Label="Type" ReadOnly="true" Variant="Variant.Outlined"
-                                      Adornment="Adornment.Start" AdornmentIcon="@Categories.De(Entite).Icone"
-                                      AdornmentColor="Color.Inherit" HelperText="@(DuCoeur ? "Publié par Krissvia" : "Déclaré par le plugin")" />
+                        @if (Entite.Kind == EntityKind.Switch)
+                        {
+                            @* Le plugin voit un relais ; l'utilisateur sait ce qu'il alimente. *@
+                            @* Pas d'icône de champ : la valeur choisie affiche déjà la sienne, en couleur. *@
+                            <MudSelect T="string" @bind-Value="_usage" Label="Type" Variant="Variant.Outlined"
+                                       HelperText="Ce que commande cet interrupteur">
+                                <MudSelectItem Value="@SansUsage">
+                                    <div class="d-flex align-center gap-2"><MudIcon Icon="@Categories.Interrupteur.Icone" Size="Size.Small" Style="@($"color:{Categories.Interrupteur.Couleur}")" />Interrupteur</div>
+                                </MudSelectItem>
+                                <MudSelectItem Value="@EntityUsages.Radiator">
+                                    <div class="d-flex align-center gap-2"><MudIcon Icon="@Categories.Radiateur.Icone" Size="Size.Small" Style="@($"color:{Categories.Radiateur.Couleur}")" />Radiateur</div>
+                                </MudSelectItem>
+                            </MudSelect>
+                        }
+                        else
+                        {
+                            <MudTextField Value="@Categories.De(Entite).Libelle" Label="Type" ReadOnly="true" Variant="Variant.Outlined"
+                                          Adornment="Adornment.Start" AdornmentIcon="@Categories.De(Entite).Icone"
+                                          AdornmentColor="Color.Inherit" HelperText="@(DuCoeur ? "Publié par Krissvia" : "Déclaré par le plugin")" />
+                        }
                     </MudItem>
                     <MudItem xs="12" sm="6">
                         <MudTextField @bind-Value="_piece" Label="Pièce / emplacement" Variant="Variant.Outlined"
