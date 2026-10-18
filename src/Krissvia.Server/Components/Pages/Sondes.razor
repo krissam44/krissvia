@@ -1,0 +1,137 @@
+@page "/sondes"
+@implements IDisposable
+
+<PageTitle>Sondes · Krissvia</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">Sondes de température</MudText>
+
+<div class="titre-bloc">
+    <MudIcon Icon="@Icons.Material.Filled.Workspaces" Size="Size.Small" />
+    <span>MOYENNES PAR PIÈCE</span>
+</div>
+
+@if (_vue.Rooms.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-6">
+        Aucune pièce : indiquez la pièce de vos sondes dans l'écran <MudLink Href="/entites">Entités</MudLink>, les moyennes se calculent seules.
+    </MudAlert>
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-6">
+        @foreach (var piece in _vue.Rooms)
+        {
+            var couleur = piece.Average is { } m ? Echelle.Couleur(m) : Echelle.Eteinte;
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudPaper Elevation="2" Class="carte-sonde" Style="@($"border-top-color: {couleur}")">
+                    <MudText Typo="Typo.body1" Class="font-weight-bold">@piece.Room</MudText>
+                    @if (piece.Average is { } moyenne)
+                    {
+                        <div class="valeur" style="color: @couleur">
+                            <MudIcon Icon="@Icons.Material.Filled.Thermostat" />
+                            @Echelle.Nombre(moyenne)<span class="unite">°C</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="valeur absente">Aucune sonde à jour</div>
+                    }
+                    <MudDivider Class="my-2" />
+                    <div class="d-flex justify-space-between align-center">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@piece.Active/@piece.Total @(piece.Total > 1 ? "sondes à jour" : "sonde à jour")</MudText>
+                        @if (piece.Unreliable > 0)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="ma-0">@piece.Unreliable écartée(s)</MudChip>
+                        }
+                    </div>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+<div class="titre-bloc">
+    <MudIcon Icon="@Icons.Material.Filled.DeviceThermostat" Size="Size.Small" />
+    <span>SONDES</span>
+</div>
+
+@if (_vue.Sensors.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">
+        Aucune sonde de température : activez un plugin dans <MudLink Href="/parametres/services">Services</MudLink>.
+    </MudAlert>
+}
+else
+{
+    <MudGrid Spacing="3">
+        @foreach (var sonde in _vue.Sensors)
+        {
+            var douteuse = sonde.Health != SensorHealth.Ok;
+            var couleur = !douteuse && sonde.Temperature is { } t ? Echelle.Couleur(t) : Echelle.Eteinte;
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudPaper Elevation="2" Class="@($"carte-sonde {(douteuse ? "douteuse" : "")}")" Style="@($"border-top-color: {couleur}")">
+                    <div class="d-flex justify-space-between align-start">
+                        <MudText Typo="Typo.body1" Class="font-weight-bold nom" Style="@($"color: {couleur}")" title="@sonde.Entity.DisplayName">@sonde.Entity.DisplayName</MudText>
+                        @if (sonde.Battery is { } pile)
+                        {
+                            <span class="pile" style="color: @Echelle.CouleurPile(pile)" title="Batterie">
+                                <MudIcon Icon="@Echelle.IconePile(pile)" Size="Size.Small" />@Echelle.Nombre(pile, 0) %
+                            </span>
+                        }
+                    </div>
+                    <div class="d-flex justify-space-between align-center ligne-piece">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            @if (sonde.Room is { } piece)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Room" Style="font-size: .9rem; vertical-align: middle" />
+                                @piece
+                            }
+                        </MudText>
+                        @switch (sonde.Health)
+                        {
+                            case SensorHealth.Offline:
+                                <MudChip T="string" Size="Size.Small" Color="Color.Error" Class="ma-0">Hors ligne</MudChip>
+                                break;
+                            case SensorHealth.Stale:
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="ma-0">Muette +60 min</MudChip>
+                                break;
+                            case SensorHealth.NeverReceived:
+                                <MudChip T="string" Size="Size.Small" Class="ma-0">Jamais reçue</MudChip>
+                                break;
+                        }
+                    </div>
+                    <div class="valeur" style="color: @couleur">
+                        <MudIcon Icon="@Icons.Material.Filled.Thermostat" />
+                        @(sonde.Temperature is { } temperature ? Echelle.Nombre(temperature) : "—")<span class="unite">°C</span>
+                    </div>
+                    <MudDivider Class="my-2" />
+                    @if (sonde.Humidity is { } humidite)
+                    {
+                        <div class="d-flex justify-space-between align-center">
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                                <MudIcon Icon="@Icons.Material.Filled.WaterDrop" Color="Color.Info" Style="font-size: 1rem; vertical-align: middle" /> Humidité
+                            </MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Info" Class="font-weight-bold">@Echelle.Nombre(humidite) %</MudText>
+                        </div>
+                        <MudProgressLinear Value="@humidite" Max="100" Color="Color.Info" Rounded="true" Size="Size.Small" Class="my-2" />
+                    }
+                    <MudText Typo="Typo.caption" Class="@(douteuse ? "mud-warning-text d-block text-right" : "mud-text-secondary d-block text-right")">
+                        @(sonde.MeasuredAt is { } a ? a.ToLocalTime().ToString("dd/MM HH:mm:ss") : "")
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+<style>
+    .titre-bloc { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; color: var(--mud-palette-text-secondary); letter-spacing: .05em; font-weight: 500; }
+    .carte-sonde { padding: 12px 14px; border-top: 3px solid; border-radius: 8px; height: 100%; }
+    .carte-sonde.douteuse { opacity: .6; }
+    .carte-sonde .nom { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .carte-sonde .valeur { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 8px 0 4px; font-size: 2.2rem; font-weight: 700; line-height: 1; }
+    .carte-sonde .valeur.absente { font-size: .95rem; font-weight: 400; font-style: italic; color: var(--mud-palette-text-secondary); min-height: 2.2rem; }
+    .carte-sonde .unite { font-size: 1rem; font-weight: 300; margin-left: 2px; }
+    .carte-sonde .pile { display: flex; align-items: center; gap: 2px; font-size: .75rem; white-space: nowrap; }
+    .carte-sonde .ligne-piece { min-height: 24px; }
+</style>

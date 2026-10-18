@@ -1,0 +1,98 @@
+@page "/actionneurs"
+@implements IDisposable
+
+<PageTitle>Actionneurs · Krissvia</PageTitle>
+
+<div class="d-flex align-center flex-wrap gap-2 mb-4">
+    <MudText Typo="Typo.h5">Actionneurs</MudText>
+    <MudSpacer />
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">@Allumes allumé(s) / @Total équipement(s)</MudText>
+</div>
+
+@if (_pieces.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">
+        Aucun interrupteur ni lumière : activez un plugin dans <MudLink Href="/parametres/services">Services</MudLink>.
+    </MudAlert>
+}
+else
+{
+    <MudGrid Spacing="4">
+        @foreach (var piece in _pieces)
+        {
+            <MudItem xs="12" md="6">
+                <div class="titre-piece">
+                    <MudIcon Icon="@Icons.Material.Filled.Room" Size="Size.Small" />
+                    <span>@((piece.Room ?? "Sans pièce").ToUpperInvariant())</span>
+                    <span class="filet"></span>
+                </div>
+                <div class="tuiles">
+                    @foreach (var a in piece.Actuators)
+                    {
+                        var enAttente = _enAttente.Contains(a.Entity.EntityId);
+                        <button type="button" @key="a.Entity.EntityId"
+                                class="@($"tuile {(a.On == true ? "allumee" : "")} {(a.Controllable ? "" : "inerte")}")"
+                                disabled="@(!a.Controllable || enAttente)" title="@Infobulle(a)"
+                                @onclick="() => BasculerAsync(a)">
+                            @if (enAttente)
+                            {
+                                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icone(a)" Class="icone" />
+                            }
+                            <span class="nom">@a.Entity.DisplayName</span>
+                            <span class="etat">@(a.Available ? a.On switch { true => "ON", false => "OFF", null => "—" } : "injoignable")</span>
+                            @if (a.DrivenBy is { } thermostat)
+                            {
+                                <span class="marque">Thermostat @thermostat</span>
+                            }
+                            else if (a.Shed)
+                            {
+                                <span class="marque delestee">Délesté</span>
+                            }
+                            else if (a.ScheduledBy is { } programmation)
+                            {
+                                <span class="marque">@programmation</span>
+                            }
+                        </button>
+                    }
+                </div>
+            </MudItem>
+        }
+    </MudGrid>
+
+    <MudPaper Elevation="1" Class="d-flex align-center flex-wrap gap-3 pa-3 mt-6 rounded-lg">
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Tout :</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Filled.WbSunny" Size="Size.Small"
+                   Disabled="@(_toutEnCours || ActuatorOverview.Bulk(_pieces, true).Count == 0)" OnClick="() => ToutAsync(true)">Allumer</MudButton>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.DarkMode" Size="Size.Small"
+                   Disabled="@(_toutEnCours || ActuatorOverview.Bulk(_pieces, false).Count == 0)" OnClick="() => ToutAsync(false)">Éteindre</MudButton>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+            Jamais les radiateurs d'un thermostat ; « allumer » laisse aussi les équipements délestés.
+        </MudText>
+    </MudPaper>
+}
+
+<style>
+    .titre-piece { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; color: var(--mud-palette-text-secondary);
+                   letter-spacing: .05em; font-weight: 500; }
+    .titre-piece .filet { flex: 1; height: 1px; background: var(--mud-palette-lines-default); margin-left: 8px; }
+    .tuiles { display: flex; flex-wrap: wrap; gap: 12px; }
+    .tuile { width: 124px; min-height: 124px; padding: 10px 8px; border-radius: 12px; display: flex; flex-direction: column;
+             align-items: center; justify-content: center; gap: 4px; cursor: pointer; font: inherit;
+             background: var(--mud-palette-surface); color: var(--mud-palette-text-primary);
+             border: 1px solid var(--mud-palette-lines-default); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .tuile:hover:not([disabled]) { border-color: var(--mud-palette-warning); }
+    .tuile .icone { font-size: 2rem; color: var(--mud-palette-text-secondary); }
+    .tuile .nom { font-size: .8rem; text-align: center; line-height: 1.2; }
+    .tuile .etat { font-size: .72rem; font-weight: 600; letter-spacing: .05em; color: var(--mud-palette-text-secondary); }
+    .tuile .marque { font-size: .65rem; padding: 1px 6px; border-radius: 8px; background: var(--mud-palette-action-default-hover);
+                     color: var(--mud-palette-text-secondary); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tuile .marque.delestee { background: var(--mud-palette-error); color: #fff; }
+    .tuile.allumee { border-color: var(--mud-palette-warning); background: color-mix(in srgb, var(--mud-palette-warning) 10%, var(--mud-palette-surface)); }
+    .tuile.allumee .icone, .tuile.allumee .etat { color: var(--mud-palette-warning); }
+    .tuile.inerte { cursor: default; opacity: .55; }
+    .tuile[disabled] { cursor: default; }
+</style>
