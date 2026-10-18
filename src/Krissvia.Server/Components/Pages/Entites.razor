@@ -11,21 +11,32 @@
     Tout ce que les plugins ont déclaré, et les thermostats, que Krissvia publie lui-même. Le nom, la pièce, la puissance et l'activation vous appartiennent : un plugin ne les écrase jamais (le nom d'un thermostat se change dans sa configuration).
 </MudText>
 
-@* Filtres : un bouton par catégorie présente, teinté de sa couleur (comme l'écran Équipements de DomoMud). *@
+@* Filtre : une liste des catégories présentes, chacune avec son icône et sa couleur (celles des boutons de
+   DomoMud) — une liste tient sur une ligne même quand les types se multiplient. *@
 <MudPaper Class="pa-3 mb-4" Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 10px;" Elevation="0">
     <div class="d-flex flex-wrap align-center gap-2">
-        <MudText Typo="Typo.body2" Class="mud-text-secondary mr-1">Filtrer :</MudText>
-        <MudButton Size="Size.Small" Variant="@(_categorie is null ? Variant.Filled : Variant.Outlined)" Color="Color.Primary"
-                   OnClick="() => _categorie = null">Toutes (@_entites.Count)</MudButton>
-        @foreach (var c in Categories.Toutes)
-        {
-            var nombre = _entites.Count(e => Categories.De(e) == c);
-            if (nombre == 0) continue;
-            var choisie = _categorie == c;
-            <MudButton Size="Size.Small" Variant="@(choisie ? Variant.Filled : Variant.Outlined)" StartIcon="@c.Icone"
-                       Style="@(choisie ? $"background:{c.Couleur}22;color:{c.Couleur};border-color:{c.Couleur}" : $"color:{c.Couleur};border-color:{c.Couleur}44")"
-                       OnClick="() => _categorie = c">@c.Libelle (@nombre)</MudButton>
-        }
+        <div class="filtre-type" style="@($"--couleur-filtre: {_categorie?.Couleur ?? "var(--mud-palette-primary)"}")">
+            <MudSelect T="string" Value="@(_categorie?.Cle ?? Toutes)" ValueChanged="ChoisirCategorie" Label="Type"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true"
+                       Adornment="Adornment.Start" AdornmentIcon="@(_categorie?.Icone ?? Icons.Material.Filled.FilterList)"
+                       ToStringFunc="@LibelleFiltre">
+                <MudSelectItem Value="@Toutes">
+                    <div class="d-flex align-center gap-2"><MudIcon Icon="@Icons.Material.Filled.FilterList" Size="Size.Small" Color="Color.Primary" />Toutes <span class="mud-text-secondary">(@_entites.Count)</span></div>
+                </MudSelectItem>
+                @foreach (var c in Categories.Toutes)
+                {
+                    var nombre = _entites.Count(e => Categories.De(e) == c);
+                    if (nombre == 0) continue;
+                    <MudSelectItem Value="@c.Cle">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@c.Icone" Size="Size.Small" Style="@($"color:{c.Couleur}")" />
+                            <span style="@($"color:{c.Couleur}")">@c.Libelle</span>
+                            <span class="mud-text-secondary">(@nombre)</span>
+                        </div>
+                    </MudSelectItem>
+                }
+            </MudSelect>
+        </div>
         <MudSpacer />
         <MudTextField @bind-Value="_recherche" Placeholder="Rechercher…" Immediate="true" DebounceInterval="200"
                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined"
@@ -109,6 +120,8 @@
 </div>
 
 <style>
+    .filtre-type { min-width: 240px; }
+    .filtre-type .mud-input-adornment-start .mud-icon-root, .filtre-type .mud-input-root { color: var(--couleur-filtre) !important; }
     .table-entites td { white-space: nowrap; }
     .identifiant { font-size: .78rem; color: var(--mud-palette-info); background: var(--mud-palette-background-gray); padding: 2px 6px; border-radius: 4px; }
     .alim { border: 1px solid; border-radius: 12px; padding: 1px 8px; font-size: .75rem; white-space: nowrap; }

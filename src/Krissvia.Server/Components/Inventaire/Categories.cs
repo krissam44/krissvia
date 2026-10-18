@@ -22,13 +22,15 @@ internal static class Categories
     public static readonly Categorie Batterie = new("batterie", "Batterie", Icons.Material.Filled.BatteryStd, "#8d6e63");
     public static readonly Categorie Evenement = new("evenement", "Bouton / événement", Icons.Material.Filled.RadioButtonChecked, "#ce93d8");
     public static readonly Categorie Thermostat = new("thermostat", "Thermostat", Icons.Material.Filled.DeviceThermostat, "#ef5350");
+    public static readonly Categorie Radiateur = new("radiateur", "Radiateur", Icons.Material.Filled.Whatshot, "#ff7043");
     public static readonly Categorie Autre = new("autre", "Autre mesure", Icons.Material.Filled.Sensors, "#78909c");
 
     /// <summary>L'ordre des pastilles de filtre.</summary>
-    public static readonly Categorie[] Toutes = [Thermostat, Temperature, Humidite, Interrupteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Autre];
+    public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Autre];
 
     public static Categorie De(RegisteredEntity e) => e.Kind switch
     {
+        EntityKind.Switch when e.Usage == EntityUsages.Radiator => Radiateur,
         EntityKind.Switch => Interrupteur,
         EntityKind.Light => Lumiere,
         EntityKind.Event => Evenement,

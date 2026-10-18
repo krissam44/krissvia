@@ -33,7 +33,7 @@ else if (_m is not null && _planning is not null)
                     </MudItem>
                     <MudItem xs="12" md="6">
                         <MudSelect T="string" @bind-SelectedValues="_m.Radiateurs" MultiSelection="true" Label="Radiateurs"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Interrupteurs pilotés ensemble (plusieurs radiateurs possibles)"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Interrupteurs pilotés ensemble ; ceux déclarés « Radiateur » dans Entités viennent en tête"
                                    MultiSelectionTextFunc="@(v => string.Join(", ", v.Select(Nom)))">
                             @foreach (var e in Options(_interrupteurs, _m.Radiateurs.ToArray()))
                             {

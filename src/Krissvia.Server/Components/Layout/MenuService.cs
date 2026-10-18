@@ -11,12 +11,12 @@ public sealed record MenuEntry(string Key, string Label, string Href, string Ico
 }
 
 /// <summary>
-/// Menu latéral : les pages de Krissvia, puis une entrée par service activé (sa fiche), rangées et masquées selon la
-/// personnalisation, commune à tous les comptes (document <c>disposition</c> de la collection <c>menu</c>).
+/// Menu latéral : les pages de Krissvia, rangées et masquées selon la personnalisation, commune à tous les comptes
+/// (document <c>disposition</c> de la collection <c>menu</c>). L'entrée « Services » se déplie en liste des plugins.
 /// </summary>
 /// <remarks>
 /// La logique de rangement est dans <see cref="MenuLayout"/> (testée) ; ce service ne fait que fournir le catalogue
-/// et persister. Un service désactivé fait disparaître son entrée, qui retrouve sa place à la réactivation.
+/// et persister.
 /// </remarks>
 public sealed class MenuService
 {
@@ -54,14 +54,18 @@ public sealed class MenuService
     /// <summary>Personnalisation enregistrée, ou service activé/désactivé. Levé hors du verrou.</summary>
     public event Action? Changed;
 
-    /// <summary>Les entrées disponibles, dans l'ordre du catalogue : les pages, puis les services activés.</summary>
-    public IReadOnlyList<MenuEntry> Available() =>
-    [
-        .. Pages,
-        .. _supervisor.Snapshots()
-            .Where(s => s.Enabled && s.Installed)
-            .Select(s => new MenuEntry($"service:{s.Id}", s.Name, $"/parametres/services/{s.Id}", Icons.Material.Filled.Extension)),
-    ];
+    /// <summary>Les entrées disponibles, dans l'ordre du catalogue.</summary>
+    public IReadOnlyList<MenuEntry> Available() => Pages;
+
+    /// <summary>
+    /// Les plugins installés, actifs ou non : le groupe « Services » du menu les liste, chacun menant à sa page de
+    /// configuration. Un plugin par entrée de premier niveau encombrait le menu à mesure qu'on en ajoute.
+    /// </summary>
+    public IReadOnlyList<ServiceSnapshot> Plugins() =>
+        [.. _supervisor.Snapshots().Where(s => s.Installed).OrderBy(s => s.Name, StringComparer.CurrentCultureIgnoreCase)];
+
+    /// <summary>La clé de l'entrée qui se déplie en liste des plugins.</summary>
+    public const string ServicesKey = "services";
 
     /// <summary>Toutes les entrées disponibles, masquées comprises, dans l'ordre choisi : pour la personnalisation.</summary>
     public async Task<IReadOnlyList<MenuEntry>> GetEntriesAsync(CancellationToken ct = default)

@@ -42,7 +42,8 @@ public partial class ThermostatConfiguration
         _entites = await Registre.ListAsync();
         var actives = _entites.Where(e => e.Enabled && !e.Missing).OrderBy(e => e.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToList();
         _sondes = actives.Where(e => e.Kind == EntityKind.Sensor && e.DeviceClass == DeviceClasses.Temperature).ToList();
-        _interrupteurs = actives.Where(e => e.Kind == EntityKind.Switch).ToList();
+        // Les interrupteurs déclarés « Radiateur » dans l'écran Entités viennent en tête.
+        _interrupteurs = [.. actives.Where(e => e.Kind == EntityKind.Switch).OrderByDescending(EntityUsages.IsRadiator)];
         _ouvertures = actives.Where(e => e.Kind == EntityKind.BinarySensor).ToList();
 
         // Le lien « planning » de la carte ouvre directement l'onglet Planning.

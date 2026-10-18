@@ -127,7 +127,7 @@ public partial class Actionneurs : IDisposable
         });
 
     private static string Icone(Actuator a) =>
-        a.DrivenBy is not null ? Icons.Material.Filled.Whatshot
+        a.DrivenBy is not null || EntityUsages.IsRadiator(a.Entity) ? Icons.Material.Filled.Whatshot
         : a.Entity.Kind == EntityKind.Light ? (a.On == true ? Icons.Material.Filled.Lightbulb : Icons.Material.Outlined.Lightbulb)
         : a.On == true ? Icons.Material.Filled.ToggleOn : Icons.Material.Filled.ToggleOff;
 
