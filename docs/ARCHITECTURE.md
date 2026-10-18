@@ -242,6 +242,12 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
    et grille de widgets en Web Components, sur le modèle de DomoMud — voir WIDGETS.md §11. Les thermostats y sont
    des entités `climate` publiées par le cœur ; les widgets ne parlent qu'à l'API publique (`/api/live`, ordres
    vérifiés).
+   **Écrans Sondes et Actionneurs** (18/10/2026, repris de DomoMud) : moyennes par pièce calculées d'après la
+   pièce des appareils (plus de groupes à créer), sondes muettes depuis 60 min ou hors ligne écartées des
+   moyennes, une seule échelle de couleurs ; actionneurs par pièce, ordres vérifiés (pas d'état optimiste),
+   radiateurs de thermostat non commandables d'ici et exclus de « tout allumer / éteindre », confirmation avant
+   de rallumer un équipement délesté, bilan réel des ordres groupés (`Krissvia.Core.Overview`). Les écrans se
+   rafraîchissent par le flux en direct (`LiveFeed`) et chaque minute.
 6. Un plugin Python d'exemple.
 7. Import des données DomoMud, une seule fois, pour les deux installations (6 kVA et 12 kVA).
 

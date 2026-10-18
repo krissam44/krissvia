@@ -28,6 +28,8 @@ public sealed class MenuService
     [
         new("tableau", "Tableau de bord", "/", Icons.Material.Filled.Dashboard, Exact: true),
         new("thermostats", "Thermostats", "/thermostats", Icons.Material.Filled.Thermostat),
+        new("sondes", "Sondes", "/sondes", Icons.Material.Filled.DeviceThermostat),
+        new("actionneurs", "Actionneurs", "/actionneurs", Icons.Material.Filled.Lightbulb),
         new("programmations", "Programmations", "/programmations", Icons.Material.Filled.Schedule),
         new("delestage", "Délestage", "/delestage", Icons.Material.Filled.Bolt),
         new("entites", "Entités", "/entites", Icons.Material.Filled.Devices),
