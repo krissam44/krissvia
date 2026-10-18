@@ -1,6 +1,7 @@
 using Krissvia.Contracts;
 using Krissvia.Core.Commands;
 using Krissvia.Core.Registry;
+using Krissvia.Core.Widgets;
 
 namespace Krissvia.Server.Components.Inventaire;
 
@@ -17,9 +18,17 @@ public partial class EntiteDialog
 
     [Inject] private IEntityRegistry Registre { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private WidgetCatalogService Widgets { get; set; } = default!;
 
     /// <summary>Entité publiée par un module du cœur (thermostat) : son nom vient de la configuration du module.</summary>
     private bool DuCoeur => CoreIntegrations.IsCore(Entite.IntegrationId);
+
+    /// <summary>Valeur de la liste pour « le plus précis, choisi automatiquement ».</summary>
+    private const string Automatique = "";
+
+    private string _widget = Automatique;
+    private IReadOnlyList<CatalogWidget> _compatibles = [];
+    private string LibelleAutomatique { get; set; } = "Automatique";
 
     private string _nom = "";
     private string? _piece;
@@ -33,6 +42,14 @@ public partial class EntiteDialog
         _piece = Appareil?.Room;
         _puissance = Entite.NominalPower ?? 0;
         _active = Entite.Enabled;
+
+        // Seuls les widgets qui acceptent cette entité ; un choix devenu impossible (widget retiré) revient à
+        // l'automatique plutôt que d'afficher une valeur absente de la liste.
+        var catalogue = Widgets.Load();
+        _compatibles = WidgetCatalog.CompatibleWith(catalogue, Entite);
+        var meilleur = _compatibles.FirstOrDefault();
+        LibelleAutomatique = meilleur is null ? "Automatique" : $"Automatique — {meilleur.Manifest.Name}";
+        _widget = Entite.Widget is { } choix && _compatibles.Any(w => w.Manifest.Id == choix) ? choix : Automatique;
     }
 
     private async Task EnregistrerAsync()
@@ -48,6 +65,7 @@ public partial class EntiteDialog
         if (Entite.Kind == EntityKind.Switch && _puissance != (Entite.NominalPower ?? 0))
             await Registre.SetNominalPowerAsync(Entite.EntityId, _puissance > 0 ? _puissance : null);
         if (_active != Entite.Enabled) await Registre.SetEnabledAsync(Entite.EntityId, _active);
+        if ((_widget == Automatique ? null : _widget) != Entite.Widget) await Registre.SetWidgetAsync(Entite.EntityId, _widget);
 
         Snackbar.Add($"« {_nom.Trim()} » enregistrée.", Severity.Success);
         MudDialog.Close(DialogResult.Ok(true));

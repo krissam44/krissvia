@@ -26,6 +26,7 @@ public partial class TableauDeBord
     [Inject] private IDialogService Dialogues { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private Krissvia.Core.Live.LiveFeed Flux { get; set; } = default!;
 
     private List<Dashboard> _pages = [new() { Id = DashboardService.MainId }];
     private IReadOnlyList<Dashboard> _avantEdition = [];
@@ -38,6 +39,8 @@ public partial class TableauDeBord
     private ElementReference _racine;
     private IJSObjectReference? _module;
     private string? _erreurNavigateur;
+    private IReadOnlyList<RegisteredEntity> _entites = [];
+    private SuiviEnDirect? _suivi;
 
     // Largeurs du menu de taille (DomoMud) : null = celle du widget, 6 = toute la largeur d'un grand écran.
     private static readonly (int? Cols, string Libelle)[] Largeurs =
@@ -50,11 +53,24 @@ public partial class TableauDeBord
         _catalogue = Widgets.Load();
         await ChargerAsync();
         Tableaux.Changed += SurChangement;
+
+        // Le widget d'une entité changé dans l'écran Entités change ses cartes automatiques : on relit le registre.
+        _suivi = new SuiviEnDirect(Flux, async registre =>
+        {
+            if (!registre) return;
+            _entites = await Registre.ListAsync();
+            await InvokeAsync(() =>
+            {
+                _aAppliquer = true;
+                StateHasChanged();
+            });
+        }, TimeSpan.FromMinutes(10));
     }
 
     private async Task ChargerAsync()
     {
         _pages = [.. await Tableaux.ListAsync()];
+        _entites = await Registre.ListAsync();
         _pageId = _pages.Any(p => p.Id == (PageId ?? _pageId)) ? PageId ?? _pageId : _pages[0].Id;
         _aAppliquer = true;
     }
@@ -75,7 +91,8 @@ public partial class TableauDeBord
             {
                 _aAppliquer = false;
                 await _module.InvokeVoidAsync("appliquer", Page.Sections.Where(s => !s.Collapsed).SelectMany(s => s.Cards)
-                    .Select(c => new { id = c.Id, widget = c.Widget, entities = c.Entities, settings = c.Settings }));
+                    .Select(Resoudre)
+                    .Select(r => new { id = r.Card.Id, widget = r.WidgetId, entities = r.Entities, settings = r.Card.Settings }));
             }
         }
         catch (JSException ex)
@@ -90,9 +107,12 @@ public partial class TableauDeBord
         System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object?>>(
             System.Text.Json.JsonSerializer.Serialize(vue, Krissvia.Climate.Thermostats.ThermostatService.Json))!;
 
+    /// <summary>Le widget de la carte : le sien, sinon celui de son entité, sinon le plus précis (WIDGETS.md §6).</summary>
+    private ResolvedCard Resoudre(DashboardCard carte) => WidgetResolver.Resolve(carte, _entites, _catalogue);
+
     private (int Cols, int Rows) Taille(DashboardCard carte)
     {
-        var defaut = _catalogue.Find(carte.Widget)?.Manifest.Size ?? new WidgetSize();
+        var defaut = Resoudre(carte).Widget?.Manifest.Size ?? new WidgetSize();
         return (carte.Cols ?? defaut.Cols, carte.Rows ?? defaut.Rows);
     }
 
@@ -183,7 +203,8 @@ public partial class TableauDeBord
     private async Task ProposerAsync()
     {
         var radiateurs = Thermostats.List().SelectMany(t => t.SwitchEntityIds).ToHashSet(StringComparer.Ordinal);
-        var sections = DashboardProposal.Propose(await Registre.ListAsync(), _catalogue, radiateurs);
+        _entites = await Registre.ListAsync();
+        var sections = DashboardProposal.Propose(_entites, _catalogue, radiateurs);
         if (sections.Count == 0)
         {
             Snackbar.Add("Aucune entité à proposer : activez d'abord un plugin.", Severity.Info);
@@ -323,6 +344,7 @@ public partial class TableauDeBord
     public async ValueTask DisposeAsync()
     {
         Tableaux.Changed -= SurChangement;
+        _suivi?.Dispose();
         if (_module is null) return;
         try
         {

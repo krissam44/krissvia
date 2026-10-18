@@ -14,7 +14,8 @@
         @if (_principale is not null)
         {
             <MudSelect T="string" Label="Widget" Value="_widget" ValueChanged="ChoisirWidget" Variant="Variant.Outlined" Class="mt-4"
-                       HelperText="@(Widget?.Manifest.Description ?? "")">
+                       HelperText="@(EstAuto ? "La carte suit le widget de l'entité : le changer dans l'écran Entités changera cette carte." : Widget?.Manifest.Description ?? "")">
+                <MudSelectItem Value="@Auto">@LibelleAuto</MudSelectItem>
                 @foreach (var w in _compatibles)
                 {
                     <MudSelectItem Value="@w.Manifest.Id">@w.Manifest.Name@(w.IsStandard ? "" : $" — {w.Origin}")</MudSelectItem>
@@ -24,7 +25,13 @@
 
         @if (Widget is { } widget)
         {
-            @foreach (var slot in widget.Manifest.Slots.Skip(1))
+            @if (EstAuto && LiensAuto.Count > 1)
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mt-2">
+                    Lié automatiquement : @string.Join(", ", LiensAuto.Skip(1).Select(l => $"{l.Key} → {l.Value}"))
+                </MudText>
+            }
+            @foreach (var slot in EstAuto ? Enumerable.Empty<WidgetSlot>() : widget.Manifest.Slots.Skip(1))
             {
                 <MudSelect T="string" Label="@Phrases.Majuscule(slot.Name)" @bind-Value="_liens[slot.Name]" Variant="Variant.Outlined" Class="mt-4"
                            Clearable="@(!slot.Required)" HelperText="@(slot.Required ? "Obligatoire" : "Facultatif")">
