@@ -47,7 +47,8 @@
     </MudDrawer>
 
     <MudMainContent Class="pt-16 px-4 pb-8">
-        <MudContainer MaxWidth="MaxWidth.Large">
+        @* Pleine largeur, comme DomoMud : le tableau de bord et les grilles de cartes profitent de tout l'écran. *@
+        <MudContainer MaxWidth="MaxWidth.False" Gutters="false">
             @Body
         </MudContainer>
     </MudMainContent>
