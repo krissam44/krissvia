@@ -19,10 +19,12 @@ public class ProjectReferenceRulesTests
         // Kit des plugins C# : ne voit que le contrat, comme un plugin Python.
         ["Krissvia.Sdk"] = ["Krissvia.Contracts"],
         ["Krissvia.Sdk.Mqtt"] = [],
+        // Ce que référence un widget Blazor : rien d'autre de Krissvia (WIDGETS.md §2.2).
+        ["Krissvia.Widgets.Blazor"] = [],
         ["Krissvia.Server"] =
         [
             "Krissvia.Contracts", "Krissvia.Core", "Krissvia.Climate",
-            "Krissvia.Persistence", "Krissvia.PluginHost"
+            "Krissvia.Persistence", "Krissvia.PluginHost", "Krissvia.Widgets.Blazor"
         ],
         ["Krissvia.Plugin.Zigbee2Mqtt"] = ["Krissvia.Contracts", "Krissvia.Sdk", "Krissvia.Sdk.Mqtt"],
         ["Krissvia.Plugin.Shelly"] = ["Krissvia.Contracts", "Krissvia.Sdk"],

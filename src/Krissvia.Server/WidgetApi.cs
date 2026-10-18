@@ -13,19 +13,26 @@ namespace Krissvia.Server;
 /// Les standards sont lus à travers les fichiers statiques du serveur et non sur le disque : en développement, ils
 /// restent dans le projet au lieu d'être copiés à côté de l'exécutable.
 /// </remarks>
-internal sealed class WidgetCatalogService(IFileProvider webRoot, string localDirectory)
+internal sealed class WidgetCatalogService(IFileProvider webRoot, string localDirectory, BlazorWidgets blazor)
 {
     public const string StandardPath = "widgets/standard";
     public const string LocalUrl = "/widgets/local";
 
     public string LocalDirectory => localDirectory;
 
-    public WidgetCatalogSnapshot Load() => WidgetCatalog.Load(
-    [
-        new WidgetSource(WidgetCatalog.Standard, "/" + StandardPath,
-            [.. webRoot.GetDirectoryContents(StandardPath).Where(f => f.IsDirectory).Select(f => new DossierStatique(webRoot, $"{StandardPath}/{f.Name}", f.Name))]),
-        WidgetSource.FromDirectory(localDirectory, WidgetCatalog.Local, LocalUrl),
-    ]);
+    public WidgetCatalogSnapshot Load()
+    {
+        var catalogue = WidgetCatalog.Load(
+        [
+            new WidgetSource(WidgetCatalog.Standard, "/" + StandardPath,
+                [.. webRoot.GetDirectoryContents(StandardPath).Where(f => f.IsDirectory).Select(f => new DossierStatique(webRoot, $"{StandardPath}/{f.Name}", f.Name))]),
+            WidgetSource.FromDirectory(localDirectory, WidgetCatalog.Local, LocalUrl),
+        ], blazor.Manifests);
+        return catalogue with { Errors = [.. blazor.Errors, .. catalogue.Errors] };
+    }
+
+    /// <summary>Le composant d'un widget Blazor du catalogue.</summary>
+    public Type? Component(string widgetId) => blazor.Component(widgetId);
 
     private sealed class DossierStatique(IFileProvider fichiers, string chemin, string nom) : IWidgetFolder
     {
@@ -105,6 +112,7 @@ internal static class WidgetApi
         w.Manifest.Version,
         w.Manifest.Element,
         ScriptUrl = w.ScriptUrl,
+        w.Manifest.Blazor,
         w.Manifest.Slots,
         w.Manifest.Size,
         w.Manifest.Settings,

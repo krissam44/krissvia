@@ -79,6 +79,51 @@ public sealed class WidgetCatalogTests : IDisposable
         Assert.Contains(raison, Assert.Single(catalogue.Errors));
     }
 
+    private static WidgetManifest Composant(string id, string? type = "Perso.Jauge") => new()
+    {
+        Contract = 1, Id = id, Name = id, Blazor = type,
+        Slots = [new WidgetSlot { Name = "mesure", Kinds = [EntityKind.Sensor], Required = true }],
+    };
+
+    [Fact]
+    public void Un_widget_Blazor_entre_au_catalogue_sans_script()
+    {
+        Deposer(Locaux, "a", Manifeste("a"));
+
+        var catalogue = WidgetCatalog.Load(
+            [WidgetSource.FromDirectory(Locaux, WidgetCatalog.Local, "/widgets/local")], [Composant("jauge")]);
+
+        var jauge = catalogue.Find("jauge")!;
+        Assert.True(jauge.IsBlazor);
+        Assert.Equal(WidgetCatalog.Blazor, jauge.Origin);
+        Assert.Equal("", jauge.ScriptUrl);
+        Assert.False(catalogue.Find("a")!.IsBlazor);
+        Assert.Empty(catalogue.Errors);
+    }
+
+    [Fact]
+    public void Un_widget_Blazor_ne_prend_pas_l_identifiant_d_un_autre_ni_ne_se_passe_de_composant()
+    {
+        Deposer(Standards, "valeur", Manifeste("valeur"));
+
+        var catalogue = WidgetCatalog.Load(
+            [WidgetSource.FromDirectory(Standards, WidgetCatalog.Standard, "/widgets/standard")],
+            [Composant("valeur"), Composant("sans-type", type: " "), Composant("Majuscules")]);
+
+        Assert.Equal(WidgetCatalog.Standard, Assert.Single(catalogue.Widgets).Origin);
+        Assert.Equal(3, catalogue.Errors.Count);
+        Assert.Contains(catalogue.Errors, e => e.Contains("déjà pris"));
+        Assert.Contains(catalogue.Errors, e => e.Contains("nom du composant"));
+    }
+
+    [Fact]
+    public void Un_widget_json_ne_peut_pas_se_declarer_Blazor()
+    {
+        Deposer(Locaux, "a", """{ "contract": 1, "id": "a", "name": "A", "element": "kv-a", "script": "w.js", "blazor": "X.Y", "slots": [{ "name": "e", "required": true }] }""");
+
+        Assert.Contains("attribut", Assert.Single(Charger().Errors));
+    }
+
     [Fact]
     public void Un_script_absent_est_signale()
     {

@@ -1,0 +1,50 @@
+@attribute [KrissviaWidget("bascule", "Bascule (Blazor)", Description = "Un interrupteur MudBlazor ; l'état affiché est celui que l'appareil confirme.")]
+@attribute [WidgetSlot("interrupteur", Kinds = ["switch", "light"], Required = true)]
+
+@* Exemple de widget Blazor qui donne des ordres : par son contexte, jamais par les services du serveur. *@
+<div class="bascule">
+    <div class="titre">@(Context.Entity("interrupteur")?.Name ?? "—")</div>
+    @if (Etat is null || !Etat.Available)
+    {
+        <div class="absent">@(Etat is null ? "Jamais reçu" : "Indisponible")</div>
+    }
+    else
+    {
+        @* La valeur affichée est l'état publié, pas le clic : on attend la confirmation (WIDGETS.md §5). *@
+        <MudSwitch T="bool" Value="@Allume" ValueChanged="BasculerAsync" Disabled="_attente" Color="Color.Warning"
+                   Label="@(_attente ? "…" : Allume ? "Allumé" : "Éteint")" />
+    }
+    @if (_erreur is not null)
+    {
+        <div class="erreur">@_erreur</div>
+    }
+</div>
+
+<style>
+    .bascule { height: 100%; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; box-sizing: border-box; }
+    .bascule .titre { font-size: .82rem; color: var(--mud-palette-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bascule .absent { font-style: italic; color: var(--mud-palette-text-secondary); }
+    .bascule .erreur { font-size: .75rem; color: var(--mud-palette-error); }
+</style>
+
+@code {
+    [Parameter] public WidgetContext Context { get; set; } = default!;
+
+    private bool _attente;
+    private string? _erreur;
+
+    private WidgetState? Etat => Context.State("interrupteur");
+
+    private bool Allume => Etat?.Boolean
+        ?? (Etat?.Value.ValueKind == System.Text.Json.JsonValueKind.Object && Etat.Value.TryGetProperty("on", out var on) && on.GetBoolean());
+
+    private async Task BasculerAsync(bool allumer)
+    {
+        _attente = true;
+        _erreur = null;
+        var resultat = await Context.CommandAsync("interrupteur", allumer ? "turn_on" : "turn_off");
+        _attente = false;
+        if (!resultat.Accepted) _erreur = resultat.Detail ?? "Ordre refusé.";
+        else if (!resultat.Confirmed) _erreur = "L'appareil n'a pas confirmé.";
+    }
+}

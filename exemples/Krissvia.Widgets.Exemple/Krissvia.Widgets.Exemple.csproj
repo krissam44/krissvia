@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!--
+    Exemple de bibliothèque de widgets Blazor (WIDGETS.md §2.2). Elle ne référence que Krissvia.Widgets.Blazor
+    (et MudBlazor, déjà présent dans Krissvia). Pour l'installer : déposer Krissvia.Widgets.Exemple.dll à la racine
+    du dossier « widgets » de l'installation, puis redémarrer Krissvia.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Krissvia.Widgets.Exemple</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Krissvia.Widgets.Blazor\Krissvia.Widgets.Blazor.csproj" Private="false" />
+    <PackageReference Include="MudBlazor" />
+  </ItemGroup>
+
+</Project>

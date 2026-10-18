@@ -37,7 +37,10 @@ builder.Services.AddSingleton(TimeProvider.System);
 var dossierWidgets = Path.GetFullPath(builder.Configuration["Widgets:Directory"] ?? Path.Combine(Path.GetDirectoryName(cheminBase)!, "widgets"),
     builder.Environment.ContentRootPath);
 Directory.CreateDirectory(dossierWidgets);
-builder.Services.AddSingleton(sp => new WidgetCatalogService(sp.GetRequiredService<IWebHostEnvironment>().WebRootFileProvider, dossierWidgets));
+// Widgets Blazor : bibliothèques à la racine du dossier des widgets, ou nommées dans Widgets:Assemblies (lues une fois).
+builder.Services.AddSingleton(new BlazorWidgets(BlazorWidgets.Bibliotheques(dossierWidgets, builder.Configuration, builder.Environment.ContentRootPath)));
+builder.Services.AddSingleton(sp => new WidgetCatalogService(
+    sp.GetRequiredService<IWebHostEnvironment>().WebRootFileProvider, dossierWidgets, sp.GetRequiredService<BlazorWidgets>()));
 builder.Services.AddSingleton<DashboardService>();
 
 // Bus d'événements : tout ce qui change dans le cœur y passe (états, registre, plugins, ordres).
