@@ -131,7 +131,7 @@ public sealed class SqliteEntityRepositoryTests : IDisposable
         var db = await OuvrirAsync();
         await using (var connexion = await db.OpenAsync())
         {
-            await Dapper.SqlMapper.ExecuteAsync(connexion, "ALTER TABLE entities DROP COLUMN nominal_power; PRAGMA user_version = 3;");
+            await Dapper.SqlMapper.ExecuteAsync(connexion, "ALTER TABLE entities DROP COLUMN widget; ALTER TABLE entities DROP COLUMN nominal_power; PRAGMA user_version = 3;");
         }
 
         var registre = await OuvrirRegistreAsync();
@@ -139,6 +139,25 @@ public sealed class SqliteEntityRepositoryTests : IDisposable
         await registre.SetNominalPowerAsync("switch.prise_salon", 1500);
 
         Assert.Equal(1500, (await (await OuvrirRegistreAsync()).GetAsync("switch.prise_salon"))!.NominalPower);
+    }
+
+    [Fact]
+    public async Task Une_base_v4_gagne_la_colonne_du_widget_qui_survit_a_une_redeclaration()
+    {
+        // Base au schéma v4, telle qu'elle existait avant le widget par entité.
+        var db = await OuvrirAsync();
+        await using (var connexion = await db.OpenAsync())
+        {
+            await Dapper.SqlMapper.ExecuteAsync(connexion, "ALTER TABLE entities DROP COLUMN widget; PRAGMA user_version = 4;");
+        }
+
+        var registre = await OuvrirRegistreAsync();
+        await registre.RegisterAsync("test", [Prise()]);
+        await registre.SetWidgetAsync("switch.prise_salon", "ma-prise");
+        var apres = await OuvrirRegistreAsync();
+        await apres.RegisterAsync("test", [Prise()]);   // le plugin redéclare : le choix de l'utilisateur reste
+
+        Assert.Equal("ma-prise", (await (await OuvrirRegistreAsync()).GetAsync("switch.prise_salon"))!.Widget);
     }
 
     [Fact]

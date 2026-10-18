@@ -10,8 +10,8 @@ namespace Krissvia.Core.Widgets;
 /// <remarks>
 /// Repris de la génération automatique de DomoMud, avec deux différences : c'est une <em>proposition</em>, que
 /// l'utilisateur relit dans le mode édition avant d'enregistrer (DomoMud l'écrivait tout seul au premier
-/// affichage) ; et les slots secondaires d'un widget sont remplis avec les entités du même appareil — une sonde
-/// reçoit ainsi son humidité sans réglage. Les entités <c>excluded</c> (les radiateurs que pilote un
+/// affichage) ; et chaque carte suit son entité (<see cref="WidgetResolver"/>) : son widget est celui de l'entité, ses
+/// slots secondaires les entités du même appareil — une sonde reçoit ainsi son humidité sans réglage. Les entités <c>excluded</c> (les radiateurs que pilote un
 /// thermostat) ne sont pas proposées : un bouton qui les bascule à la main se battrait avec la régulation.
 /// </remarks>
 public static class DashboardProposal
@@ -40,19 +40,9 @@ public static class DashboardProposal
             var cartes = new List<DashboardCard>();
             foreach (var entite in proposables.Where(famille.Prend).OrderBy(e => e.DisplayName, StringComparer.CurrentCultureIgnoreCase))
             {
-                if (WidgetCatalog.CompatibleWith(catalog, entite).FirstOrDefault() is not { } widget) continue;
-
-                var liens = new Dictionary<string, string>(StringComparer.Ordinal) { [widget.Manifest.Slots[0].Name] = entite.EntityId };
-                foreach (var slot in widget.Manifest.Slots.Skip(1))
-                {
-                    var voisine = actives
-                        .Where(v => v.DeviceId == entite.DeviceId && v.EntityId != entite.EntityId && WidgetCatalog.Score(slot, v) > 0)
-                        .OrderByDescending(v => WidgetCatalog.Score(slot, v))
-                        .FirstOrDefault();
-                    if (voisine is not null) liens[slot.Name] = voisine.EntityId;
-                }
-
-                cartes.Add(new DashboardCard { Id = Guid.NewGuid().ToString("N")[..12], Widget = widget.Manifest.Id, Entities = liens });
+                // La carte suit son entité : changer le widget de l'entité dans l'écran Entités la changera aussi.
+                if (WidgetResolver.ChooseFor(entite, catalog) is null) continue;
+                cartes.Add(new DashboardCard { Id = Guid.NewGuid().ToString("N")[..12], Entity = entite.EntityId });
             }
 
             if (cartes.Count > 0) sections.Add(new DashboardSection { Id = $"{famille.Id}-{Guid.NewGuid().ToString("N")[..6]}", Title = famille.Titre, Cards = cartes });

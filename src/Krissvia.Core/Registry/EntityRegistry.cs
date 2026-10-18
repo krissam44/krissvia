@@ -215,6 +215,9 @@ public sealed class EntityRegistry(IEntityRepository repository, Krissvia.Core.E
         }
     }
 
+    public Task SetWidgetAsync(string entityId, string? widget, CancellationToken ct = default) =>
+        MettreAJourAsync(entityId, e => e with { Widget = string.IsNullOrWhiteSpace(widget) ? null : widget.Trim() }, ct);
+
     public Task SetNominalPowerAsync(string entityId, double? watts, CancellationToken ct = default)
     {
         if (watts is { } w && (double.IsNaN(w) || w < 0))

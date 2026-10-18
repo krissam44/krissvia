@@ -6,13 +6,22 @@ using Krissvia.Core.Configuration;
 namespace Krissvia.Core.Widgets;
 
 /// <summary>
-/// Une carte du tableau de bord : un widget, les entités liées à ses slots, ses options. La taille vient du
-/// manifeste si la carte n'en fixe pas.
+/// Une carte du tableau de bord. Soit elle <b>suit son entité</b> (<see cref="Widget"/> null, <see cref="Entity"/>) :
+/// son widget est celui que l'entité a dans l'écran Entités, ou le plus précis, et ses slots secondaires se lient
+/// aux entités du même appareil — changer le widget d'une sonde change toutes ses cartes. Soit elle <b>impose</b>
+/// son widget et ses liens (<see cref="Widget"/>, <see cref="Entities"/>). La taille vient du manifeste si la carte
+/// n'en fixe pas.
 /// </summary>
 public sealed record DashboardCard
 {
     public required string Id { get; init; }
-    public required string Widget { get; init; }
+
+    /// <summary>Widget imposé par la carte ; null : celui de l'entité (<see cref="Entity"/>).</summary>
+    public string? Widget { get; init; }
+
+    /// <summary>L'entité que montre une carte qui suit son entité.</summary>
+    public string? Entity { get; init; }
+
     public IReadOnlyDictionary<string, string> Entities { get; init; } = new Dictionary<string, string>();
     public JsonElement? Settings { get; init; }
     public int? Cols { get; init; }
@@ -187,7 +196,8 @@ public sealed partial class DashboardService(IConfigurationStore store)
             {
                 if (string.IsNullOrWhiteSpace(carte.Id)) throw new DashboardValidationException("une carte n'a pas d'identifiant");
                 if (!cartes.Add(carte.Id)) throw new DashboardValidationException($"deux cartes portent l'identifiant « {carte.Id} »");
-                if (string.IsNullOrWhiteSpace(carte.Widget)) throw new DashboardValidationException($"carte « {carte.Id} » : widget manquant");
+                if (carte.Widget is null ? string.IsNullOrWhiteSpace(carte.Entity) : string.IsNullOrWhiteSpace(carte.Widget))
+                    throw new DashboardValidationException($"carte « {carte.Id} » : il faut un widget, ou une entité dont suivre le widget");
                 if (carte.Cols is < 1 or > WidgetCatalog.MaxCols || carte.Rows is < 1 or > WidgetCatalog.MaxRows)
                     throw new DashboardValidationException($"carte « {carte.Id} » : de 1 à {WidgetCatalog.MaxCols} colonnes et de 1 à {WidgetCatalog.MaxRows} lignes");
                 if (carte.Entities.Any(kv => string.IsNullOrWhiteSpace(kv.Key) || string.IsNullOrWhiteSpace(kv.Value)))

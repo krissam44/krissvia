@@ -48,6 +48,20 @@ public class EntityRegistryTests
     }
 
     [Fact]
+    public async Task Le_widget_de_l_entite_est_un_champ_de_l_utilisateur()
+    {
+        var registre = new EntityRegistry(new InMemoryEntityRepository());
+        await registre.RegisterAsync("zigbee2mqtt", [Prise()]);
+
+        await registre.SetWidgetAsync("switch.prise_salon", " ma-prise ");
+        await registre.RegisterAsync("zigbee2mqtt", [Prise()]);
+        Assert.Equal("ma-prise", (await registre.GetAsync("switch.prise_salon"))!.Widget);
+
+        await registre.SetWidgetAsync("switch.prise_salon", "");
+        Assert.Null((await registre.GetAsync("switch.prise_salon"))!.Widget);
+    }
+
+    [Fact]
     public async Task Les_entites_chargees_sont_lisibles_sans_attente()
     {
         var registre = NouveauRegistre();

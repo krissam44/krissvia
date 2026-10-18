@@ -34,6 +34,12 @@ Chaque module qui référence des entités implémente `IEntityReferenceSource` 
 `EntityIntegrityChecker` en tire la liste des problèmes : `Unknown` (n'existe pas), `Missing` (le plugin ne la
 déclare plus), `Disabled` (désactivée par l'utilisateur). C'est le même contrôle pour tous les modules.
 
+## Widget
+
+Champ de l'utilisateur (schéma v5, colonne `widget`) : le widget des cartes « automatiques » du tableau de bord
+(WIDGETS.md §12). Null : le plus précis, choisi par le catalogue. Comme la pièce ou la puissance, jamais écrasé par
+un plugin.
+
 ## Entités du cœur
 
 Un module du cœur peut publier ses propres entités, comme un plugin : les thermostats sont des entités `climate`

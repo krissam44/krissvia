@@ -314,32 +314,39 @@ public class DashboardProposalTests
     [Fact]
     public void Une_section_par_famille_dans_l_ordre_avec_le_meilleur_widget()
     {
-        var sections = DashboardProposal.Propose(
+        RegisteredEntity[] entites =
         [
             E("switch.prise", EntityKind.Switch, appareil: "p1"),
             E("sensor.salon_t", EntityKind.Sensor, "temperature", "s1"),
             E("climate.salon", EntityKind.Climate, appareil: "t1"),
             E("binary_sensor.porte", EntityKind.BinarySensor, "opening", "b1"),
-        ], Catalogue);
+        ];
+
+        var sections = DashboardProposal.Propose(entites, Catalogue);
 
         Assert.Equal(["Thermostats", "Températures", "Interrupteurs et lumières", "Capteurs"], sections.Select(s => s.Title));
-        Assert.Equal(["thermostat", "temperature", "interrupteur", "valeur"], sections.Select(s => s.Cards.Single().Widget));
+        // Les cartes proposées suivent leur entité : aucun widget figé dans la carte.
+        Assert.All(sections, s => Assert.Null(s.Cards.Single().Widget));
+        Assert.Equal(["thermostat", "temperature", "interrupteur", "valeur"],
+            sections.Select(s => WidgetResolver.Resolve(s.Cards.Single(), entites, Catalogue).WidgetId));
     }
 
     [Fact]
     public void Une_sonde_recoit_l_humidite_de_son_propre_appareil()
     {
-        var sections = DashboardProposal.Propose(
+        RegisteredEntity[] entites =
         [
+            E("sensor.cave_h", EntityKind.Sensor, "humidity", "cave"),
             E("sensor.salon_t", EntityKind.Sensor, "temperature", "salon"),
             E("sensor.salon_h", EntityKind.Sensor, "humidity", "salon"),
-            E("sensor.cave_h", EntityKind.Sensor, "humidity", "cave"),
             E("sensor.cave_t", EntityKind.Sensor, "temperature", "autre"),
-        ], Catalogue);
+        ];
 
-        var cartes = sections.Single().Cards;
-        Assert.Equal("sensor.salon_h", cartes.Single(c => c.Entities["temperature"] == "sensor.salon_t").Entities["humidite"]);
-        Assert.False(cartes.Single(c => c.Entities["temperature"] == "sensor.cave_t").Entities.ContainsKey("humidite"));
+        var cartes = DashboardProposal.Propose(entites, Catalogue).Single().Cards
+            .Select(c => WidgetResolver.Resolve(c, entites, Catalogue).Entities).ToList();
+
+        Assert.Equal("sensor.salon_h", cartes.Single(c => c["temperature"] == "sensor.salon_t")["humidite"]);
+        Assert.False(cartes.Single(c => c["temperature"] == "sensor.cave_t").ContainsKey("humidite"));
     }
 
     [Fact]
@@ -361,7 +368,7 @@ public class DashboardProposalTests
             [E("switch.radiateur", EntityKind.Switch, appareil: "1"), E("switch.prise", EntityKind.Switch, appareil: "2")],
             Catalogue, new HashSet<string> { "switch.radiateur" });
 
-        Assert.Equal("switch.prise", sections.Single().Cards.Single().Entities["interrupteur"]);
+        Assert.Equal("switch.prise", sections.Single().Cards.Single().Entity);
     }
 
     [Fact]
@@ -372,5 +379,97 @@ public class DashboardProposalTests
 
         Assert.Equal(2, sections.SelectMany(s => s.Cards).Select(c => c.Id).Distinct().Count());
         DashboardService.Validate(new Dashboard { Id = "p", Sections = sections });
+    }
+}
+
+public class WidgetResolverTests
+{
+    private static RegisteredEntity E(string id, EntityKind kind, string? classe = null, string appareil = "d", string? widget = null) => new()
+    {
+        EntityId = id, DeviceId = appareil, IntegrationId = "p", UniqueId = id, Kind = kind, DisplayName = id,
+        DeviceClass = classe, Widget = widget,
+    };
+
+    private static CatalogWidget W(string id, params WidgetSlot[] slots) =>
+        new(new WidgetManifest { Contract = 1, Id = id, Name = id, Element = $"kv-{id}", Script = "w.js", Slots = slots }, WidgetCatalog.Standard, $"/{id}.js");
+
+    private static readonly WidgetCatalogSnapshot Catalogue = new(
+    [
+        W("valeur", new WidgetSlot { Name = "entite", Required = true }),
+        W("temperature",
+            new WidgetSlot { Name = "temperature", Kinds = [EntityKind.Sensor], DeviceClasses = ["temperature"], Required = true },
+            new WidgetSlot { Name = "humidite", Kinds = [EntityKind.Sensor], DeviceClasses = ["humidity"] }),
+        W("jauge", new WidgetSlot { Name = "mesure", Kinds = [EntityKind.Sensor], Required = true }),
+        W("interrupteur", new WidgetSlot { Name = "interrupteur", Kinds = [EntityKind.Switch], Required = true }),
+    ], []);
+
+    private static DashboardCard Auto(string entite) => new() { Id = "c", Entity = entite };
+
+    [Fact]
+    public void Une_carte_automatique_prend_le_widget_choisi_pour_l_entite()
+    {
+        RegisteredEntity[] entites = [E("sensor.t", EntityKind.Sensor, "temperature", widget: "jauge")];
+
+        var carte = WidgetResolver.Resolve(Auto("sensor.t"), entites, Catalogue);
+
+        Assert.Equal("jauge", carte.WidgetId);
+        Assert.Equal("sensor.t", carte.Entities["mesure"]);
+    }
+
+    [Fact]
+    public void Sans_choix_ou_avec_un_choix_qui_ne_convient_pas_c_est_le_plus_precis()
+    {
+        RegisteredEntity[] entites =
+        [
+            E("sensor.a", EntityKind.Sensor, "temperature"),
+            E("sensor.b", EntityKind.Sensor, "temperature", widget: "interrupteur"),
+            E("sensor.c", EntityKind.Sensor, "temperature", widget: "disparu"),
+        ];
+
+        Assert.All(new[] { "sensor.a", "sensor.b", "sensor.c" },
+            id => Assert.Equal("temperature", WidgetResolver.Resolve(Auto(id), entites, Catalogue).WidgetId));
+    }
+
+    [Fact]
+    public void Le_widget_impose_par_la_carte_passe_avant_celui_de_l_entite()
+    {
+        RegisteredEntity[] entites = [E("sensor.t", EntityKind.Sensor, "temperature", widget: "jauge")];
+        var carte = new DashboardCard { Id = "c", Widget = "valeur", Entities = new Dictionary<string, string> { ["entite"] = "sensor.t" } };
+
+        var resolue = WidgetResolver.Resolve(carte, entites, Catalogue);
+
+        Assert.Equal("valeur", resolue.WidgetId);
+        Assert.Equal("sensor.t", resolue.Entities["entite"]);
+    }
+
+    [Fact]
+    public void Les_slots_secondaires_ne_prennent_que_des_entites_actives_du_meme_appareil()
+    {
+        RegisteredEntity[] entites =
+        [
+            E("sensor.h_ailleurs", EntityKind.Sensor, "humidity", "autre"),
+            E("sensor.h_desactivee", EntityKind.Sensor, "humidity", "salon") with { Enabled = false },
+            E("sensor.t", EntityKind.Sensor, "temperature", "salon"),
+        ];
+
+        Assert.False(WidgetResolver.Resolve(Auto("sensor.t"), entites, Catalogue).Entities.ContainsKey("humidite"));
+    }
+
+    [Fact]
+    public void Une_entite_disparue_s_affiche_dans_le_widget_generique()
+    {
+        var resolue = WidgetResolver.Resolve(Auto("sensor.disparue"), [], Catalogue);
+
+        Assert.Equal(WidgetCatalog.FallbackId, resolue.WidgetId);
+        Assert.Equal("sensor.disparue", resolue.Entities["entite"]);
+    }
+
+    [Fact]
+    public void Une_carte_doit_avoir_un_widget_ou_une_entite_a_suivre()
+    {
+        DashboardService.Validate(new Dashboard { Id = "p", Sections = [new DashboardSection { Id = "s", Cards = [Auto("sensor.t")] }] });
+
+        Assert.Throws<DashboardValidationException>(() => DashboardService.Validate(
+            new Dashboard { Id = "p", Sections = [new DashboardSection { Id = "s", Cards = [new DashboardCard { Id = "c" }] }] }));
     }
 }

@@ -6,8 +6,9 @@ using Krissvia.Core.Widgets;
 namespace Krissvia.Server.Components.Widgets;
 
 /// <summary>
-/// Ajout ou réglage d'une carte : on choisit d'abord l'entité, puis un widget parmi ceux qui l'acceptent — le plus
-/// précis est proposé d'office (WIDGETS.md §6) —, ses autres slots, sa taille et ses options.
+/// Ajout ou réglage d'une carte : on choisit d'abord l'entité, puis son widget. Par défaut « Automatique » : la carte
+/// suit le widget de l'entité (écran Entités, sinon le plus précis) et lie seule les entités du même appareil. On peut
+/// aussi imposer un widget à cette carte, avec ses slots (WIDGETS.md §6).
 /// </summary>
 public partial class CarteDialog
 {
@@ -31,11 +32,36 @@ public partial class CarteDialog
     private static readonly int[] Largeurs = [.. Enumerable.Range(1, WidgetCatalog.MaxCols)];
     private static readonly int[] Hauteurs = [.. Enumerable.Range(1, WidgetCatalog.MaxRows)];
 
-    private CatalogWidget? Widget => _widget is null ? null : Catalogue.Find(_widget);
+    /// <summary>Valeur de la liste pour « la carte suit son entité ».</summary>
+    private const string Auto = "";
+
+    private bool EstAuto => _widget == Auto;
+
+    /// <summary>Le widget qui s'affichera : celui de l'entité en automatique, sinon celui choisi.</summary>
+    private CatalogWidget? Widget =>
+        EstAuto ? (_principale is null ? null : WidgetResolver.ChooseFor(_principale, Catalogue))
+        : _widget is null ? null : Catalogue.Find(_widget);
+
+    /// <summary>Les liens qu'une carte automatique fera seule, pour les montrer.</summary>
+    private IReadOnlyDictionary<string, string> LiensAuto =>
+        EstAuto && _principale is not null && Widget is { } w ? WidgetResolver.Bind(w, _principale, Entites) : new Dictionary<string, string>();
+
+    private string LibelleAuto =>
+        Widget is { } w && _principale is not null
+            ? $"Automatique — {w.Manifest.Name}{(_principale.Widget is not null ? " (choisi pour l'entité)" : "")}"
+            : "Automatique";
 
     protected override void OnInitialized()
     {
         if (Carte is null) return;
+
+        if (Carte.Widget is null)
+        {
+            _principale = Entites.FirstOrDefault(e => e.EntityId == Carte.Entity);
+            _compatibles = _principale is null ? [] : WidgetCatalog.CompatibleWith(Catalogue, _principale);
+            Appliquer(Auto, Carte);
+            return;
+        }
 
         var widget = Catalogue.Find(Carte.Widget);
         var principalId = widget is null ? Carte.Entities.Values.FirstOrDefault() : Carte.Entities.GetValueOrDefault(widget.Manifest.Slots[0].Name);
@@ -58,7 +84,7 @@ public partial class CarteDialog
     {
         _principale = entite;
         _compatibles = entite is null ? [] : WidgetCatalog.CompatibleWith(Catalogue, entite);
-        Appliquer(_compatibles.FirstOrDefault()?.Manifest.Id, null);
+        Appliquer(Auto, null);
     }
 
     private void ChoisirWidget(string? id) => Appliquer(id, null);
@@ -77,7 +103,7 @@ public partial class CarteDialog
 
         var anciens = new Dictionary<string, string?>(_liens);
         _liens.Clear();
-        foreach (var slot in widget.Manifest.Slots.Skip(1))
+        foreach (var slot in EstAuto ? Enumerable.Empty<WidgetSlot>() : widget.Manifest.Slots.Skip(1))
         {
             var lien = existante?.Entities.GetValueOrDefault(slot.Name) ?? anciens.GetValueOrDefault(slot.Name);
             _liens[slot.Name] = Entites.FirstOrDefault(e => e.EntityId == lien) is { } e && WidgetCatalog.Score(slot, e) >= 0 ? lien : null;
@@ -94,7 +120,7 @@ public partial class CarteDialog
     {
         if (_principale is null || Widget is not { } widget) return;
 
-        var manquant = widget.Manifest.Slots.Skip(1).FirstOrDefault(s => s.Required && _liens.GetValueOrDefault(s.Name) is null);
+        var manquant = EstAuto ? null : widget.Manifest.Slots.Skip(1).FirstOrDefault(s => s.Required && _liens.GetValueOrDefault(s.Name) is null);
         if (manquant is not null)
         {
             _erreur = $"Choisissez l'entité « {manquant.Name} ».";
@@ -107,14 +133,19 @@ public partial class CarteDialog
             return;
         }
 
-        var liens = new Dictionary<string, string>(StringComparer.Ordinal) { [widget.Manifest.Slots[0].Name] = _principale.EntityId };
-        foreach (var (slot, entite) in _liens)
-            if (entite is not null) liens[slot] = entite;
+        var liens = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (!EstAuto)
+        {
+            liens[widget.Manifest.Slots[0].Name] = _principale.EntityId;
+            foreach (var (slot, entite) in _liens)
+                if (entite is not null) liens[slot] = entite;
+        }
 
         Dialogue.Close(DialogResult.Ok(new DashboardCard
         {
             Id = Carte?.Id ?? Guid.NewGuid().ToString("N")[..12],
-            Widget = widget.Manifest.Id,
+            Widget = EstAuto ? null : widget.Manifest.Id,
+            Entity = EstAuto ? _principale.EntityId : null,
             Entities = liens,
             Settings = _reglages is null ? null : JsonSerializer.SerializeToElement(_reglages),
             // La taille du manifeste n'est pas recopiée : si le widget change de taille par défaut, la carte suit.

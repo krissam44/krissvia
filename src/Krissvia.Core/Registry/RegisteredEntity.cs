@@ -54,6 +54,12 @@ public sealed record RegisteredEntity
     /// </summary>
     public double? NominalPower { get; init; }
 
+    /// <summary>
+    /// Widget choisi pour cette entité (identifiant du catalogue) ; null : le plus précis, choisi automatiquement.
+    /// Les cartes « widget de l'entité » du tableau de bord le suivent (WIDGETS.md §6).
+    /// </summary>
+    public string? Widget { get; init; }
+
     /// <summary>Le plugin ne déclare plus cette entité. Elle reste dans le registre : ses références ne disparaissent pas.</summary>
     public bool Missing { get; init; }
 }

@@ -30,6 +30,9 @@ public interface IEntityRegistry
     /// <summary>Puissance consommée allumé, en W ; null l'efface. Refuse une valeur négative.</summary>
     Task SetNominalPowerAsync(string entityId, double? watts, CancellationToken ct = default);
 
+    /// <summary>Widget de l'entité (identifiant du catalogue) ; null ou vide : choix automatique.</summary>
+    Task SetWidgetAsync(string entityId, string? widget, CancellationToken ct = default);
+
     /// <summary>
     /// Les entités du dernier instantané chargé, sans attente : pour un calcul fait toutes les 2 s (la somme des
     /// équipements). Vide tant que le registre n'a jamais été lu.

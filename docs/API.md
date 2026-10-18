@@ -211,6 +211,10 @@ ouvrirait le flux avec le cookie de session.
 }
 ```
 
+Une carte **suit son entité** quand elle n'a pas de `widget` : `{"id": "a2", "entity": "sensor.salon"}` prend le
+widget choisi pour l'entité (champ `widget` du registre, réglé dans l'écran Entités) ou le plus précis, et lie seule
+les entités du même appareil. Avec `widget`, ce sont ses `entities` qui comptent (WIDGETS.md §12).
+
 Identifiant de page : minuscules, chiffres et `-`. Une carte est unique dans sa page (pas seulement dans sa
 section). `cols` (1 à 6) et `rows` (1 à 4) sont facultatifs : sans eux, la taille du manifeste. Un widget ou une
 entité disparus ne bloquent pas l'enregistrement : la carte affiche le widget « valeur » et un bandeau.

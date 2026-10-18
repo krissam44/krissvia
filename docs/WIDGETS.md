@@ -196,5 +196,19 @@ laisse rien ; replier une section hors édition s'enregistre aussitôt.
   n'est écrit avant « Enregistrer » — DomoMud générait ses sections tout seul au premier affichage.
 - Widgets standards : `valeur`, `temperature`, `interrupteur`, `ouverture`, `puissance`, `thermostat`.
 - Widgets locaux : dossier `widgets` à côté de la base (ou `Widgets:Directory`), publié sous `/widgets/local`.
-- Pas encore : widgets Blazor (§2.2), choix du widget par entité dans l'écran Entités (§6, point 2), widgets
-  livrés par un plugin.
+- Pas encore : widgets Blazor (§2.2), widgets livrés par un plugin.
+
+## 12. Widget par entité (18/10/2026)
+
+Le §6 au complet. L'écran Entités donne à chaque entité un champ **Widget** (« Automatique » par défaut : le plus
+précis), enregistré dans le registre comme la pièce ou la puissance. Une carte peut :
+
+- **suivre son entité** (`"entity": "sensor.salon"`, sans `widget`) : son widget est celui de l'entité, ses slots
+  secondaires se lient aux entités actives du même appareil (l'humidité d'une sonde). Changer le widget d'une sonde
+  dans l'écran Entités change toutes ses cartes, en direct. C'est le choix par défaut à l'ajout, et celui de
+  « Proposer » ;
+- **imposer** son widget et ses liens (`"widget"`, `"entities"`), comme avant.
+
+Un widget choisi pour l'entité mais devenu impossible (retiré du dossier, ou qui refuse l'entité) laisse place au
+plus précis ; une entité disparue s'affiche dans « valeur ». La résolution est dans
+`Krissvia.Core.Widgets.WidgetResolver`.

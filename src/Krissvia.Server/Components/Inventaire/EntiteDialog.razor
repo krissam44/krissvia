@@ -29,6 +29,17 @@
                                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Room"
                                       HelperText="@(AutresEntites.Count == 0 ? "Ex : Salon, Chambre…" : $"Celle de l'appareil : commune à ses {AutresEntites.Count + 1} entités")" />
                     </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" @bind-Value="_widget" Label="Widget" Variant="Variant.Outlined"
+                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Widgets"
+                                   HelperText="Celui des cartes « automatiques » du tableau de bord.">
+                            <MudSelectItem Value="@Automatique">@LibelleAutomatique</MudSelectItem>
+                            @foreach (var w in _compatibles)
+                            {
+                                <MudSelectItem Value="@w.Manifest.Id">@w.Manifest.Name@(w.IsStandard ? "" : $" — {w.Origin}")</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
                     @if (Entite.Kind == EntityKind.Switch)
                     {
                         <MudItem xs="12" sm="6">
