@@ -185,6 +185,29 @@ public sealed class WidgetCatalogTests : IDisposable
         Assert.Equal(-1, WidgetCatalog.Score(slot, Entite(EntityKind.Sensor)));
     }
 
+    /// <summary>Les widgets standards livrés avec le serveur, tels quels.</summary>
+    private static string DossierLivre()
+    {
+        var dossier = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dossier is not null && !File.Exists(Path.Combine(dossier.FullName, "Krissvia.slnx"))) dossier = dossier.Parent;
+        return Path.Combine(dossier!.FullName, "src", "Krissvia.Server", "wwwroot", "widgets", "standard");
+    }
+
+    [Theory]
+    [InlineData(EntityKind.Switch, null, "interrupteur")]
+    [InlineData(EntityKind.Switch, EntityUsages.Radiator, "radiateur")]
+    [InlineData(EntityKind.Switch, EntityUsages.Lighting, "eclairage")]
+    [InlineData(EntityKind.Light, null, "eclairage")]   // une lumière éclaire sans qu'on ait à le dire
+    public void Chaque_interrupteur_a_par_defaut_la_carte_de_son_usage(EntityKind famille, string? usage, string attendu)
+    {
+        var catalogue = WidgetCatalog.Load([WidgetSource.FromDirectory(DossierLivre(), WidgetCatalog.Standard, "/widgets/standard")]);
+
+        Assert.Empty(catalogue.Errors);
+        var compatibles = WidgetCatalog.CompatibleWith(catalogue, Entite(famille, usage: usage));
+        Assert.Equal(attendu, compatibles[0].Manifest.Id);
+        Assert.Contains(compatibles, w => w.Manifest.Id == "interrupteur");   // le bouton simple reste au choix
+    }
+
     [Fact]
     public void Le_widget_le_plus_precis_vient_d_abord_et_un_local_l_emporte_a_egalite()
     {

@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "eclairage",
+  "name": "Éclairage",
+  "description": "Allume et éteint une lumière, ampoule jaune quand elle est allumée ; l'état affiché est celui que l'appareil confirme.",
+  "version": "1.0.0",
+  "element": "kv-eclairage",
+  "script": "eclairage.js",
+  "slots": [ { "name": "interrupteur", "kinds": ["switch", "light"], "usages": ["eclairage"], "required": true } ],
+  "size": { "cols": 2, "rows": 1 }
+}
