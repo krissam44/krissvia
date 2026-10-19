@@ -92,6 +92,18 @@ public sealed record ThermostatSettings
     /// <summary>Sonde extérieure, pour le feed-forward. Facultative.</summary>
     public string? OutdoorTemperatureEntityId { get; init; }
 
+    /// <summary>
+    /// Entité météo d'un lieu (sensor <c>weather</c> du plugin Météo), dont la prévision horaire sert à anticiper :
+    /// le feed-forward prend la moyenne prévue sur 2 h au lieu de la mesure. Facultative.
+    /// </summary>
+    public string? ForecastEntityId { get; init; }
+
+    /// <summary>
+    /// Anticipation météo active. Vrai par défaut ; l'éteindre garde l'entité choisie, pour comparer avec et sans
+    /// (l'interrupteur de DomoMud).
+    /// </summary>
+    public bool ForecastAnticipation { get; init; } = true;
+
     /// <summary>Capteur d'ouverture (binary_sensor, true = ouvert). Facultatif.</summary>
     public string? OpeningEntityId { get; init; }
 

@@ -61,6 +61,20 @@ else if (_m is not null && _planning is not null)
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12" md="6">
+                        <MudSelect T="string" @bind-Value="_m.Prevision" Label="Prévision météo (facultative)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   HelperText="Un lieu du plugin Météo : sa prévision sur 2 h anticipe un coup de froid">
+                            <MudSelectItem Value="@Aucune">— aucune —</MudSelectItem>
+                            @foreach (var e in Options(_previsions, _m.Prevision))
+                            {
+                                <MudSelectItem Value="e.EntityId">@Libelle(e)</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="6" Class="d-flex align-center">
+                        <MudSwitch T="bool" @bind-Value="_m.Anticipation" Color="Color.Primary" Disabled="@(_m.Prevision == Aucune)"
+                                   Label="Anticiper avec la prévision (sinon : la sonde extérieure seule)" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
                         <MudSelect T="string" @bind-Value="_m.Ouverture" Label="Capteur d'ouverture porte/fenêtre (facultatif)" Variant="Variant.Outlined" Margin="Margin.Dense"
                                    HelperText="Suspend le chauffage tant que c'est ouvert">
                             <MudSelectItem Value="@Aucune">— aucun —</MudSelectItem>

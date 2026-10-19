@@ -7,6 +7,9 @@ Exemple de plugin Krissvia écrit en Python (docs/PLUGINS-PYTHON.md). Un apparei
 - des entités numériques (température, humidité, pression, vent), celles dont le cœur se sert : la
   température d'un lieu peut servir de température extérieure à un thermostat.
 
+L'entité « météo » porte aussi la température prévue heure par heure sur 48 h (``hourly``, heures en UTC) :
+un thermostat qui la choisit comme prévision anticipe un coup de froid au lieu de le subir.
+
 Quand Open-Meteo ne répond pas pour un lieu, son appareil devient indisponible : le cœur ne garde pas
 la dernière valeur comme si elle était fraîche.
 
@@ -19,13 +22,14 @@ import json
 import logging
 import re
 import unicodedata
+from datetime import datetime, timedelta
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 
 import krissvia
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 API = "https://api.open-meteo.com/v1/forecast"
 
 log = logging.getLogger("meteo")
@@ -48,6 +52,8 @@ GRANDEURS = [
     ("pression", "surface_pressure", "Pression", "pressure", "hPa"),
     ("vent", "wind_speed_10m", "Vent", "wind_speed", "km/h"),
 ]
+
+HEURES_PREVUES = 48
 
 COURANT = ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day", "weather_code",
            "wind_speed_10m", "precipitation", "surface_pressure"]
@@ -107,6 +113,20 @@ def lire_lieux() -> list[Lieu]:
     return lieux
 
 
+def horaire(donnees: dict) -> list[dict]:
+    """La série horaire d'Open-Meteo en UTC. Avec ``timezone=auto``, ses heures sont celles du lieu, sans décalage :
+    on le retire (``utc_offset_seconds``) pour que le cœur compare à son horloge sans ambiguïté."""
+    heures = donnees.get("hourly", {})
+    decalage = timedelta(seconds=donnees.get("utc_offset_seconds", 0))
+    serie = []
+    for quand, temperature in zip(heures.get("time") or [], heures.get("temperature_2m") or []):
+        if temperature is None:
+            continue
+        utc = datetime.fromisoformat(quand) - decalage
+        serie.append({"time": utc.strftime("%Y-%m-%dT%H:%M:%SZ"), "temperature": temperature})
+    return serie
+
+
 def mesures(lieu: Lieu, donnees: dict) -> dict:
     """Une réponse d'Open-Meteo → les valeurs des entités du lieu (fonction pure, testée)."""
     actuel, jours = donnees["current"], donnees.get("daily", {})
@@ -140,6 +160,7 @@ def mesures(lieu: Lieu, donnees: dict) -> dict:
         "sunrise": jour(0, "sunrise"),
         "sunset": jour(0, "sunset"),
         "forecast": prevision,
+        "hourly": horaire(donnees),
     }
     return valeurs
 
@@ -165,6 +186,7 @@ class Meteo(krissvia.Plugin):
         parametres = urllib.parse.urlencode({
             "latitude": lieu.latitude, "longitude": lieu.longitude, "timezone": "auto", "forecast_days": 7,
             "current": ",".join(COURANT), "daily": ",".join(QUOTIDIEN),
+            "hourly": "temperature_2m", "forecast_hours": HEURES_PREVUES,
         })
         requete = urllib.request.Request(f"{API}?{parametres}", headers={"User-Agent": f"Krissvia-meteo/{VERSION}"})
         with urllib.request.urlopen(requete, timeout=15) as reponse:

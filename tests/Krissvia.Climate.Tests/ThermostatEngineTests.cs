@@ -86,6 +86,66 @@ public class ThermostatEngineTests
 
     // ── Régulation ───────────────────────────────────────────────────────────
 
+    // ── Anticipation météo ───────────────────────────────────────────────────
+
+    private const string Exterieur = "sensor.dehors_temperature";
+    private const string Prevision = "sensor.vertou_meteo";
+
+    /// <summary>Pièce à 19,5 pour 20, dehors 10 °C mesurés ; la prévision annonce 0 °C sur les deux heures.</summary>
+    private static async Task<(Banc Banc, ThermostatSnapshot Etat)> FroidAnnonceAsync(
+        Func<ThermostatSettings, ThermostatSettings> reglages, DateTimeOffset? releve = null)
+    {
+        var b = new Banc();
+        b.Mesurer(19.5);
+        b.Etats.Set(Exterieur, 10.0, T0);
+        b.Etats.Set(Prevision, OutdoorForecastTests.Meteo(T0.AddHours(-1), 0, 0, 0, 0, 0), releve ?? T0);
+        var s = await b.DemarrerAsync(Banc.Salon(t => reglages(t with { OutdoorTemperatureEntityId = Exterieur })));
+        return (b, s);
+    }
+
+    [Fact]
+    public async Task Un_froid_annonce_chauffe_davantage_que_la_mesure_seule()
+    {
+        var (_, mesure) = await FroidAnnonceAsync(t => t);
+        var (_, anticipe) = await FroidAnnonceAsync(t => t with { ForecastEntityId = Prevision });
+
+        // Feed-forward Ki × (cible − extérieur) : 0,01 × (20 − 0) au lieu de 0,01 × (20 − 10).
+        Assert.Equal(0.1, anticipe.Power - mesure.Power, 3);
+        Assert.Equal(0, anticipe.OutdoorForecast);
+        Assert.Equal(10, anticipe.OutdoorTemperature);   // l'écran montre toujours la mesure
+    }
+
+    [Fact]
+    public async Task Sans_prevision_utilisable_le_moteur_reprend_la_mesure()
+    {
+        var (_, mesure) = await FroidAnnonceAsync(t => t);
+        var (_, eteinte) = await FroidAnnonceAsync(t => t with { ForecastEntityId = Prevision, ForecastAnticipation = false });
+        var (_, vieille) = await FroidAnnonceAsync(t => t with { ForecastEntityId = Prevision }, releve: T0 - TimeSpan.FromHours(4));
+
+        Assert.Equal(mesure.Power, eteinte.Power);
+        Assert.Null(eteinte.OutdoorForecast);
+        Assert.Equal(mesure.Power, vieille.Power);
+        Assert.Null(vieille.OutdoorForecast);
+    }
+
+    [Fact]
+    public async Task Sans_sonde_exterieure_la_prevision_suffit_au_feed_forward()
+    {
+        var b = new Banc();
+        b.Mesurer(19.5);
+        b.Etats.Set(Prevision, OutdoorForecastTests.Meteo(T0.AddHours(-1), 0, 0, 0, 0, 0), T0);
+
+        var temoin = new Banc();
+        temoin.Mesurer(19.5);
+        var sansPrevision = await temoin.DemarrerAsync(Banc.Salon());
+
+        var s = await b.DemarrerAsync(Banc.Salon(t => t with { ForecastEntityId = Prevision }));
+
+        Assert.Null(s.OutdoorTemperature);
+        Assert.Equal(0.2, s.Power - sansPrevision.Power, 3);   // Ki × (20 − 0)
+        Assert.Equal(0, s.OutdoorForecast);
+    }
+
     [Fact]
     public async Task Une_piece_froide_declenche_la_chauffe()
     {

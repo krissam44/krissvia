@@ -140,6 +140,8 @@ public sealed class ThermostatEntities(
             ["temperature"] = s.Temperature,
             ["humidity"] = Humidite(t.TemperatureEntityId),
             ["outdoor_temperature"] = s.OutdoorTemperature,
+            // Moyenne prévue sur 2 h, quand l'anticipation météo est active et la prévision utilisable.
+            ["outdoor_forecast"] = s.OutdoorForecast,
             ["target"] = s.Target,
             ["target_adjusted"] = t.TargetOverride is not null,
             ["mode"] = ModeId(s.Mode),

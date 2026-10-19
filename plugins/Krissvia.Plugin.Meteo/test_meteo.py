@@ -14,6 +14,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "sdk", "p
 import meteo  # noqa: E402
 
 REPONSE = {
+    "utc_offset_seconds": 7200,
+    "hourly": {"time": ["2026-10-19T14:00", "2026-10-19T15:00", "2026-10-19T16:00"],
+               "temperature_2m": [12.0, None, 9.5]},
     "current": {"temperature_2m": 6.8, "relative_humidity_2m": 93, "apparent_temperature": 4.7, "is_day": 1,
                 "weather_code": 0, "wind_speed_10m": 7.2, "precipitation": 0.0, "surface_pressure": 1019.8},
     "daily": {"time": ["2026-10-19", "2026-10-20"], "weather_code": [3, 63], "temperature_2m_max": [15.2, 15.0],
@@ -70,6 +73,12 @@ class MesuresTests(unittest.TestCase):
         self.assertEqual(("2026-10-19T08:36", "2026-10-19T19:16"), (m["sunrise"], m["sunset"]))
         self.assertEqual({"date": "2026-10-20", "code": 63, "condition": "Pluie", "max": 15.0, "min": 8.0,
                           "precipitation_probability": 50}, m["forecast"][1])
+
+    def test_la_prevision_horaire_est_publiee_en_utc_sans_trous(self):
+        # Heure d'été à Paris : 14:00 locale = 12:00 UTC ; le point sans valeur est omis.
+        self.assertEqual([{"time": "2026-10-19T12:00:00Z", "temperature": 12.0},
+                          {"time": "2026-10-19T14:00:00Z", "temperature": 9.5}],
+                         self.valeurs["trinite:meteo"]["hourly"])
 
     def test_une_serie_quotidienne_absente_ne_casse_rien(self):
         reponse = {"current": REPONSE["current"], "daily": {"time": ["2026-10-19"]}}

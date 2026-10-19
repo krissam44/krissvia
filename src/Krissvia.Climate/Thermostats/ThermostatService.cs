@@ -103,6 +103,8 @@ public sealed partial class ThermostatService(IConfigurationStore store, IEntity
             await VerifierEntiteAsync(radiateur, EntityKind.Switch, "radiateur", ct);
         if (thermostat.OutdoorTemperatureEntityId is { } exterieure)
             await VerifierEntiteAsync(exterieure, EntityKind.Sensor, "sonde extérieure", ct);
+        if (thermostat.ForecastEntityId is { } prevision)
+            await VerifierEntiteAsync(prevision, EntityKind.Sensor, "prévision météo", ct);
         if (thermostat.OpeningEntityId is { } ouverture)
             await VerifierEntiteAsync(ouverture, EntityKind.BinarySensor, "capteur d'ouverture", ct);
 

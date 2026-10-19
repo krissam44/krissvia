@@ -33,6 +33,7 @@ public partial class ThermostatConfiguration
     private List<RegisteredEntity> _sondes = [];
     private List<RegisteredEntity> _interrupteurs = [];
     private List<RegisteredEntity> _ouvertures = [];
+    private List<RegisteredEntity> _previsions = [];
 
     private bool Creation => Id is null;
     private string Titre => Creation ? "Nouveau thermostat" : $"Configuration · {(_existant?.Name is { Length: > 0 } n ? n : Id)}";
@@ -45,6 +46,7 @@ public partial class ThermostatConfiguration
         // Les interrupteurs déclarés « Radiateur » dans l'écran Entités viennent en tête.
         _interrupteurs = [.. actives.Where(e => e.Kind == EntityKind.Switch).OrderByDescending(EntityUsages.IsRadiator)];
         _ouvertures = actives.Where(e => e.Kind == EntityKind.BinarySensor).ToList();
+        _previsions = actives.Where(e => e.Kind == EntityKind.Sensor && e.DeviceClass == DeviceClasses.Weather).ToList();
 
         // Le lien « planning » de la carte ouvre directement l'onglet Planning.
         _onglet = Navigation.Uri.TrimEnd('/').EndsWith("/planning", StringComparison.Ordinal) ? 3 : 0;
@@ -155,6 +157,8 @@ public partial class ThermostatConfiguration
         public IReadOnlyCollection<string> Radiateurs { get; set; } = [];
         public string SondeExterieure { get; set; } = Aucune;
         public string Ouverture { get; set; } = Aucune;
+        public string Prevision { get; set; } = Aucune;
+        public bool Anticipation { get; set; } = Defaut.ForecastAnticipation;
         public double Confort { get; set; } = Defaut.ComfortTemperature;
         public double Eco { get; set; } = Defaut.EcoTemperature;
         public double HorsGel { get; set; } = Defaut.FrostProtectionTemperature;
@@ -179,6 +183,8 @@ public partial class ThermostatConfiguration
             Radiateurs = t.SwitchEntityIds.ToHashSet(),
             SondeExterieure = t.OutdoorTemperatureEntityId ?? Aucune,
             Ouverture = t.OpeningEntityId ?? Aucune,
+            Prevision = t.ForecastEntityId ?? Aucune,
+            Anticipation = t.ForecastAnticipation,
             Confort = t.ComfortTemperature,
             Eco = t.EcoTemperature,
             HorsGel = t.FrostProtectionTemperature,
@@ -205,6 +211,8 @@ public partial class ThermostatConfiguration
             SwitchEntityIds = Radiateurs.ToList(),
             OutdoorTemperatureEntityId = string.IsNullOrEmpty(SondeExterieure) ? null : SondeExterieure,
             OpeningEntityId = string.IsNullOrEmpty(Ouverture) ? null : Ouverture,
+            ForecastEntityId = string.IsNullOrEmpty(Prevision) ? null : Prevision,
+            ForecastAnticipation = Anticipation,
             ComfortTemperature = Confort,
             EcoTemperature = Eco,
             FrostProtectionTemperature = HorsGel,
