@@ -199,7 +199,8 @@ l'API. La restriction de §5 est une **discipline**, pas une barrière. Donc :
    planning actif, chauffe, part de chauffe TPI et le **statut calculé par le cœur**. Ordres : `set_mode`,
    `set_schedule`, `set_target` (valeur exacte) et `adjust_target` (pas relatif, calculé côté serveur : pas de
    double « + » sur une valeur périmée). Le widget standard reprend la carte de DomoMud (couleurs des modes,
-   barre TPI ou d'inertie, icônes Material Symbols, chargées par la page hôte). Les modes
+   barre TPI ou d'inertie, icônes Material Symbols, chargées par la page hôte) ; l'écran Thermostats affiche
+   ce même widget (celui choisi pour l'entité s'il est un Web Component), avec le même hôte que le tableau de bord. Les modes
    restent ceux de Krissvia : Arrêt, Hors-gel, Éco, Confort −2, Confort −1, Confort.
 2. **Grille responsive**, comme Gladys, Home Assistant et DomoMud : le nombre de colonnes suit la largeur de
    l'écran, une carte occupe `size.cols` × `size.rows` cellules (ramenée à la largeur disponible sur téléphone).

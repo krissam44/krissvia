@@ -1,0 +1,25 @@
+/* Cartes de widgets, communes au tableau de bord et aux écrans qui hébergent un widget (Thermostats).
+   Le module js/tableau-de-bord.js remplit chaque .kv-carte-corps ; la racine (.kv-hote) reçoit kv-hors-ligne. */
+
+/* Variables du contrat (WIDGETS.md §4), tirées du thème : elles suivent le mode clair ou sombre. */
+.kv-hote {
+    --kv-primary: var(--mud-palette-primary);
+    --kv-text: var(--mud-palette-text-primary);
+    --kv-text-secondary: var(--mud-palette-text-secondary);
+    --kv-surface: var(--mud-palette-surface);
+    --kv-success: var(--mud-palette-success);
+    --kv-warning: var(--mud-palette-warning);
+    --kv-error: var(--mud-palette-error);
+}
+
+.kv-carte { position: relative; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px;
+            background: var(--mud-palette-surface); border: 1px solid var(--mud-palette-lines-default); }
+.kv-carte-corps { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.kv-carte-corps > :last-child { flex: 1; min-height: 0; }
+.kv-carte-erreur { font-size: .72rem; padding: 4px 10px; background: var(--mud-palette-warning); color: #fff;
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.kv-bandeau-hors-ligne { display: none; margin-bottom: 12px; padding: 8px 12px; border-radius: 8px;
+                         background: var(--mud-palette-warning); color: #fff; font-size: .85rem; }
+.kv-hote.kv-hors-ligne .kv-bandeau-hors-ligne { display: block; }
+.kv-hote.kv-hors-ligne .kv-carte-corps { opacity: .5; }

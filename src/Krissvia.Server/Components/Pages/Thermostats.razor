@@ -1,5 +1,5 @@
 @page "/thermostats"
-@implements IDisposable
+@implements IAsyncDisposable
 
 <PageTitle>Thermostats · Krissvia</PageTitle>
 
@@ -12,86 +12,44 @@
 {
     <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">Configuration illisible, thermostat écarté : @erreur</MudAlert>
 }
+@if (_erreurNavigateur is not null)
+{
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">Cartes indisponibles : @_erreurNavigateur</MudAlert>
+}
 
-@if (_thermostats.Count == 0)
+@if (_cartes.Count == 0)
 {
     <MudAlert Severity="Severity.Info">Aucun thermostat. Créez-en un : il lui faut une sonde de température et au moins un radiateur.</MudAlert>
 }
 
-<MudGrid>
-    @foreach (var (t, etat) in _thermostats)
-    {
-        <MudItem xs="12" sm="6" lg="4" @key="t.Id">
-            <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                    <MudText Typo="Typo.h6">@(string.IsNullOrEmpty(t.Name) ? t.Id : t.Name)</MudText>
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
-                        @if (etat is not null)
-                        {
-                            <MudChip T="string" Size="Size.Small" Color="@LibellesThermostat.Couleur(etat.Status)">@LibellesThermostat.Statut(etat.Status)</MudChip>
-                        }
-                        <MudIconButton Href="@($"/thermostats/{t.Id}/planning")" Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" aria-label="Planning" />
-                        <MudIconButton Href="@($"/thermostats/{t.Id}")" Icon="@Icons.Material.Filled.Settings" Size="Size.Small" aria-label="Configuration" />
-                    </MudStack>
-                </MudStack>
-
-                <MudStack Row="true" AlignItems="AlignItems.End" Class="mt-2">
-                    <MudText Typo="Typo.h3">@Temperature(etat?.Temperature)</MudText>
-                    <div class="mb-2">
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary">consigne</MudText>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
-                            <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small" OnClick="() => AjusterAsync(t, -0.5)"
-                                           Disabled="@ConsigneFigee(t)" aria-label="Baisser la consigne" />
-                            <MudText Typo="Typo.h6">@Temperature(Consigne(t, etat))</MudText>
-                            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="() => AjusterAsync(t, 0.5)"
-                                           Disabled="@ConsigneFigee(t)" aria-label="Monter la consigne" />
-                        </MudStack>
+@* Chaque carte est le widget du thermostat, le même que sur le tableau de bord : rempli par js/tableau-de-bord.js,
+   tenu à jour par le flux en direct. Blazor ne dessine que le cadre vide, sinon chaque rendu l'effacerait. *@
+<div class="kv-hote kv-thermostats" @ref="_racine">
+    <div class="kv-bandeau-hors-ligne">Connexion au serveur perdue : les valeurs ne sont plus à jour. Reconnexion…</div>
+    <div class="kv-thermostats-grille">
+        @foreach (var carte in _cartes)
+        {
+            <div class="kv-carte" data-carte="@carte.Id" @key="carte.Id">
+                @if (carte.EntityId is null)
+                {
+                    <div class="pa-4">
+                        <MudText Typo="Typo.subtitle1">@carte.Nom</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">En attente de sa publication…</MudText>
                     </div>
-                </MudStack>
-
-                @if (t.TargetOverride is not null)
-                {
-                    <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Undo"
-                               OnClick="() => RetablirAsync(t)">Revenir à la consigne du mode</MudButton>
                 }
-
-                <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1">
-                    @if (etat is not null)
-                    {
-                        <span>Puissance @((etat.Power * 100).ToString("0")) %</span>
-                        @if (etat.OutdoorTemperature is { } ext)
-                        {
-                            <span> · dehors @Temperature(ext)</span>
-                        }
-                    }
-                    else
-                    {
-                        <span>En attente du premier calcul…</span>
-                    }
-                </MudText>
-
-                @if (etat is { InhibitionReasons.Count: > 0 })
+                else
                 {
-                    <MudText Typo="Typo.body2" Color="Color.Warning">Coupé : @string.Join(", ", etat.InhibitionReasons.Select(LibellesThermostat.Motif))</MudText>
+                    <div class="kv-carte-corps"></div>
                 }
-                @if (etat is { UnknownSwitches.Count: > 0 })
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Error">Radiateur introuvable : @string.Join(", ", etat.UnknownSwitches)</MudText>
-                }
+            </div>
+        }
+    </div>
+</div>
 
-                <div class="d-flex flex-wrap gap-1 mt-3">
-                    @foreach (var mode in LibellesThermostat.Modes)
-                    {
-                        var actif = !t.ScheduleActive && t.ManualMode == mode;
-                        <MudButton Size="Size.Small" Variant="@(actif ? Variant.Filled : Variant.Outlined)"
-                                   Color="@(actif ? Color.Primary : Color.Default)"
-                                   OnClick="() => ModeAsync(t, mode)">@LibellesThermostat.Mode(mode)</MudButton>
-                    }
-                </div>
-
-                <MudSwitch T="bool" Value="t.ScheduleActive" ValueChanged="actif => PlanningAsync(t, actif)" Color="Color.Primary" Class="mt-2"
-                           Label="@(t.ScheduleActive && etat is not null ? $"Planning ({LibellesThermostat.Mode(etat.Mode)} en ce moment)" : "Planning")" />
-            </MudPaper>
-        </MudItem>
-    }
-</MudGrid>
+<style>
+    /* Comme l'écran Thermostats de DomoMud : trois cartes par ligne sur grand écran, deux sur tablette, une sur téléphone. */
+    .kv-thermostats-grille { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    @@media (min-width: 600px) { .kv-thermostats-grille { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @@media (min-width: 1280px) { .kv-thermostats-grille { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    .kv-thermostats .kv-carte { height: 260px; }
+</style>

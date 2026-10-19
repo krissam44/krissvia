@@ -1,76 +1,118 @@
-using System.Globalization;
+using Krissvia.Core.Registry;
+using Krissvia.Core.Widgets;
+using Microsoft.JSInterop;
 
 namespace Krissvia.Server.Components.Pages;
 
 /// <summary>
-/// Thermostats : une carte par thermostat, sa température, sa consigne et son statut, les boutons de mode et le
-/// planning. Relue toutes les 2 s, comme la page Services : le moteur tourne toutes les 10 s, sans prévenir l'écran.
+/// Thermostats : une carte par thermostat, qui est le widget de son entité <c>climate</c> (celui choisi pour l'entité,
+/// sinon le widget « thermostat » standard) — la même carte que sur le tableau de bord, à la manière de l'écran
+/// Thermostats de DomoMud.
 /// </summary>
 /// <remarks>
-/// Les boutons passent par <see cref="ThermostatService"/>, comme l'API : l'écran ne peut produire aucun état
-/// qu'un appel d'API ne produirait pas.
+/// Les cartes envoient leurs ordres par l'API des entités, comme tout widget : l'écran ne peut produire aucun état
+/// qu'un appel d'API ne produirait pas. La liste est relue toutes les 2 s pour voir arriver un thermostat créé
+/// ailleurs ; les valeurs, elles, arrivent par le flux en direct.
 /// </remarks>
-public partial class Thermostats : IDisposable
+public partial class Thermostats : IAsyncDisposable
 {
-    [Inject] private ThermostatService Service { get; set; } = default!;
-    [Inject] private ThermostatEngine Moteur { get; set; } = default!;
-    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    /// <summary>Le widget d'un thermostat dont l'entité n'en a pas d'affichable ici (un widget Blazor).</summary>
+    private const string WidgetParDefaut = "thermostat";
 
-    private List<(ThermostatSettings Reglages, ThermostatSnapshot? Etat)> _thermostats = [];
+    [Inject] private ThermostatService Service { get; set; } = default!;
+    [Inject] private IEntityRegistry Registre { get; set; } = default!;
+    [Inject] private WidgetCatalogService Widgets { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private sealed record Carte(string Id, string Nom, string? EntityId, string Widget, IReadOnlyDictionary<string, string> Entities);
+
+    private List<Carte> _cartes = [];
+    private WidgetCatalogSnapshot _catalogue = new([], []);
+    private ElementReference _racine;
+    private IJSObjectReference? _module;
+    private bool _aAppliquer = true;
+    private string? _erreurNavigateur;
     private Timer? _minuterie;
 
     protected override void OnInitialized()
     {
+        _catalogue = Widgets.Load();
         Relire();
         _minuterie = new Timer(_ => InvokeAsync(() =>
         {
-            Relire();
-            StateHasChanged();
+            if (Relire()) StateHasChanged();
         }), null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
     }
 
-    private void Relire() =>
-        _thermostats = Service.List().Select(t => (t, Moteur.GetSnapshot(t.Id))).ToList();
-
-    /// <summary>
-    /// La consigne ajustée d'abord : le moteur ne la reprend qu'à son prochain passage (10 s), et deux clics rapides
-    /// sur « + » partiraient sinon de la même valeur. Sans ajustement, celle que régule le moteur (planning compris),
-    /// puis celle du mode avant son premier calcul.
-    /// </summary>
-    private static double Consigne(ThermostatSettings t, ThermostatSnapshot? etat) =>
-        t.TargetOverride ?? etat?.Target ?? t.TargetFor(t.ManualMode);
-
-    /// <summary>Arrêté à la main : le service refuse une consigne, autant ne pas proposer les boutons.</summary>
-    private static bool ConsigneFigee(ThermostatSettings t) => !t.ScheduleActive && t.ManualMode == ThermostatMode.Off;
-
-    private static string Temperature(double? valeur) =>
-        valeur is { } v ? v.ToString("0.0", CultureInfo.GetCultureInfo("fr-FR")) + " °C" : "—";
-
-    private Task ModeAsync(ThermostatSettings t, ThermostatMode mode) =>
-        ExecuterAsync(() => Service.SetModeAsync(t.Id, mode));
-
-    // Le pas est appliqué par le service, sous son verrou, à la consigne réellement suivie : le même chemin que
-    // l'ordre adjust_target d'un widget.
-    private Task AjusterAsync(ThermostatSettings t, double pas) => ExecuterAsync(() => Service.AdjustTargetAsync(t.Id, pas));
-
-    private Task RetablirAsync(ThermostatSettings t) => ExecuterAsync(() => Service.SetTargetAsync(t.Id, null));
-
-    private Task PlanningAsync(ThermostatSettings t, bool actif) =>
-        ExecuterAsync(() => Service.SetScheduleActiveAsync(t.Id, actif));
-
-    private async Task ExecuterAsync(Func<Task<ThermostatSettings?>> action)
+    /// <summary>Recalcule les cartes ; vrai si elles ont changé (thermostat ajouté, renommé, publié, autre widget).</summary>
+    private bool Relire()
     {
-        try
+        var entites = Registre.Loaded;
+        var cartes = Service.List().Select(t =>
         {
-            if (await action() is null) Snackbar.Add("Ce thermostat n'existe plus.", Severity.Warning);
-        }
-        catch (ThermostatValidationException ex)
-        {
-            Snackbar.Add(Phrases.Majuscule(ex.Message), Severity.Warning);
-        }
+            var entite = entites.FirstOrDefault(e => e.IntegrationId == ThermostatEntities.IntegrationId && e.UniqueId == t.Id);
+            var nom = t.Name is { Length: > 0 } n ? n : t.Id;
+            if (entite is null) return new Carte(t.Id, nom, null, WidgetParDefaut, new Dictionary<string, string>());
 
-        Relire();
+            var resolue = WidgetResolver.Resolve(new DashboardCard { Id = t.Id, Entity = entite.EntityId }, entites, _catalogue);
+            return resolue.Widget is { IsBlazor: false } widget
+                ? new Carte(t.Id, nom, entite.EntityId, widget.Manifest.Id, resolue.Entities)
+                : new Carte(t.Id, nom, entite.EntityId, WidgetParDefaut,
+                    new Dictionary<string, string> { [WidgetParDefaut] = entite.EntityId });
+        }).ToList();
+
+        if (cartes.Select(Cle).SequenceEqual(_cartes.Select(Cle))) return false;
+        _cartes = cartes;
+        _aAppliquer = true;
+        return true;
     }
 
-    public void Dispose() => _minuterie?.Dispose();
+    private static string Cle(Carte c) =>
+        $"{c.Id}|{c.Nom}|{c.EntityId}|{c.Widget}|{string.Join(",", c.Entities.OrderBy(e => e.Key).Select(e => $"{e.Key}={e.Value}"))}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Une erreur du navigateur ne doit pas couper le circuit (et toute la page) : elle s'affiche à la place.
+        try
+        {
+            if (firstRender)
+            {
+                // « ./ » : un import de module veut une adresse relative explicite.
+                _module = await JS.InvokeAsync<IJSObjectReference>("import", "./" + Assets["js/tableau-de-bord.js"]);
+                await _module.InvokeVoidAsync("demarrer", _racine, _catalogue.Widgets.Select(WidgetApi.Vue).Select(PourJs));
+            }
+
+            if (_module is not null && _aAppliquer)
+            {
+                _aAppliquer = false;
+                await _module.InvokeVoidAsync("appliquer", _cartes.Where(c => c.EntityId is not null)
+                    .Select(c => new { id = c.Id, widget = c.Widget, entities = c.Entities }));
+            }
+        }
+        catch (JSException ex)
+        {
+            _erreurNavigateur = ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Les noms du catalogue tels que l'API les donne (snake_case), quel que soit le format de l'interop.</summary>
+    private static Dictionary<string, object?> PourJs(object vue) =>
+        System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object?>>(
+            System.Text.Json.JsonSerializer.Serialize(vue, ThermostatService.Json))!;
+
+    public async ValueTask DisposeAsync()
+    {
+        _minuterie?.Dispose();
+        if (_module is null) return;
+        try
+        {
+            await _module.InvokeVoidAsync("arreter");
+            await _module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit déjà fermé : le navigateur a quitté la page.
+        }
+    }
 }
