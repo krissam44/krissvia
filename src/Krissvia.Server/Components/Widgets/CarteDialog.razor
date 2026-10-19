@@ -7,9 +7,20 @@
 
         <MudAutocomplete T="RegisteredEntity" Label="Entité" Value="_principale" ValueChanged="ChoisirEntite"
                          SearchFunc="ChercherAsync" ToStringFunc="@(e => e is null ? "" : $"{e.DisplayName} ({e.EntityId})")"
-                         Variant="Variant.Outlined" Clearable="true" MaxItems="null" ResetValueOnEmptyText="true"
+                         Variant="Variant.Outlined" Clearable="true" MaxItems="null" ResetValueOnEmptyText="true" Dense="true"
                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                         HelperText="Ce que la carte montre. Tapez une partie du nom ou de l'identifiant." />
+                         HelperText="Ce que la carte montre. Tapez une partie du nom, de l'identifiant ou du type.">
+            <ItemTemplate Context="e">
+                @{ var c = Categories.De(e); }
+                @* Deux colonnes, type puis nom, comme le tableau de l'écran Entités. *@
+                <div class="kv-choix-entite">
+                    <span class="kv-choix-type" style="color: @c.Couleur">
+                        <MudIcon Icon="@c.Icone" Size="Size.Small" Style="@($"color: {c.Couleur}")" />@c.Libelle
+                    </span>
+                    <span class="kv-choix-nom" title="@e.EntityId">@e.DisplayName <span class="kv-choix-id">@e.EntityId</span></span>
+                </div>
+            </ItemTemplate>
+        </MudAutocomplete>
 
         @if (_principale is not null)
         {
@@ -69,3 +80,10 @@
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(Widget is null)" OnClick="Valider">@(Carte is null ? "Ajouter" : "Enregistrer")</MudButton>
     </DialogActions>
 </MudDialog>
+
+<style>
+    .kv-choix-entite { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center; width: 100%; }
+    .kv-choix-type { display: flex; align-items: center; gap: 6px; font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kv-choix-nom { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kv-choix-id { font-size: .75rem; color: var(--mud-palette-text-secondary); margin-left: 4px; }
+</style>

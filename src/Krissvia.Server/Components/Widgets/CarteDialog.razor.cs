@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Krissvia.Core.Registry;
 using Krissvia.Core.Widgets;
+using Krissvia.Server.Components.Inventaire;
 
 namespace Krissvia.Server.Components.Widgets;
 
@@ -77,9 +78,12 @@ public partial class CarteDialog
         Task.FromResult<IEnumerable<RegisteredEntity>>(Entites
             .Where(e => string.IsNullOrWhiteSpace(texte)
                         || e.DisplayName.Contains(texte, StringComparison.CurrentCultureIgnoreCase)
-                        || e.EntityId.Contains(texte, StringComparison.OrdinalIgnoreCase))
+                        || e.EntityId.Contains(texte, StringComparison.OrdinalIgnoreCase)
+                        || Categories.De(e).Libelle.Contains(texte, StringComparison.CurrentCultureIgnoreCase))
             .Where(e => WidgetCatalog.CompatibleWith(Catalogue, e).Count > 0)
-            .OrderBy(e => e.DisplayName, StringComparer.CurrentCultureIgnoreCase));
+            // Rangées par type, dans l'ordre du filtre de l'écran Entités, puis par nom.
+            .OrderBy(e => Array.IndexOf(Categories.Toutes, Categories.De(e)))
+            .ThenBy(e => e.DisplayName, StringComparer.CurrentCultureIgnoreCase));
 
     private void ChoisirEntite(RegisteredEntity? entite)
     {
