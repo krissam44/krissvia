@@ -44,9 +44,10 @@
 | C12 | Chevauchement de créneaux : le plus matinal gagne, avertissement à la saisie | conservé : le premier commencé gagne, nuit de la veille comprise ; l'éditeur de planning avertit, y compris d'un jour sur l'autre |
 
 Port du moteur des thermostats (`Krissvia.Climate.Thermostats`, 15/10/2026) : régulation TPI, inertie, délais
-minimaux, cycle figé, Off, failsafe, fenêtre, inhibitions, radiateur inconnu. **Pas encore portés** : C8-C10
-(absence programmée, hiérarchie de présence, auto-TPI), le préchauffage anticipé, la prévision météo,
-l'apprentissage de la pente, l'historique, et la persistance de la configuration.
+minimaux, cycle figé, Off, failsafe, fenêtre, inhibitions, radiateur inconnu. Portés depuis : la prévision météo
+dans le feed-forward (19/10/2026), le préchauffage anticipé avec l'apprentissage de la pente et sa correction par
+la prévision (19/10/2026, `Preheat`, pente dans la collection `thermostat_pentes`). **Pas encore portés** : C8-C10
+(absence programmée, hiérarchie de présence, auto-TPI) et l'historique.
 
 ## Alarme
 

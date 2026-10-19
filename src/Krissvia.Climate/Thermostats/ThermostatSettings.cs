@@ -104,6 +104,13 @@ public sealed record ThermostatSettings
     /// </summary>
     public bool ForecastAnticipation { get; init; } = true;
 
+    /// <summary>
+    /// Préchauffage anticipé : avec le planning actif, chauffer avant un créneau plus chaud pour que sa consigne
+    /// soit atteinte à l'heure du créneau (pente de chauffe apprise, corrigée par la prévision météo). Vrai par
+    /// défaut, comme dans DomoMud.
+    /// </summary>
+    public bool PreheatEnabled { get; init; } = true;
+
     /// <summary>Capteur d'ouverture (binary_sensor, true = ouvert). Facultatif.</summary>
     public string? OpeningEntityId { get; init; }
 

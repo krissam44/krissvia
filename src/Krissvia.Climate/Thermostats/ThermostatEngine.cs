@@ -29,6 +29,9 @@ public enum ThermostatStatus
     Off,
     Heating,
     Idle,
+
+    /// <summary>Planning : on chauffe en avance pour que la consigne du prochain créneau soit atteinte à l'heure.</summary>
+    Preheating,
 }
 
 /// <summary>État publié d'un thermostat : un instantané, jamais l'objet que le moteur modifie (C6).</summary>
@@ -44,7 +47,8 @@ public sealed record ThermostatSnapshot(
     double Integral,
     IReadOnlyCollection<string> InhibitionReasons,
     IReadOnlyList<string> UnknownSwitches,
-    double? OutdoorForecast = null);
+    double? OutdoorForecast = null,
+    HeatingSlope? Slope = null);
 
 /// <summary>
 /// Moteur des thermostats : régulation TPI de DomoMud (terme proportionnel, feed-forward extérieur, intégrale,
@@ -64,16 +68,24 @@ public sealed record ThermostatSnapshot(
 /// <item>C7 : sous inhibition extérieure (délestage), l'intégrale est conservée ; fenêtre ouverte, elle repart
 /// de zéro ; sonde perdue, conservée.</item>
 /// </list>
-/// Pas encore portés : préchauffage anticipé, absence programmée, prévision météo, apprentissage de la pente
-/// et auto-TPI.
+/// Portés depuis : prévision météo dans le feed-forward, préchauffage anticipé et apprentissage de la pente.
+/// Pas encore : absence programmée et auto-TPI.
 /// </remarks>
 public sealed class ThermostatEngine(
     IEntityStateReader states,
     IEntityRegistry registry,
     ICommandBus commands,
     ThermostatInhibitor inhibitor,
-    TimeProvider clock)
+    TimeProvider clock,
+    IHeatingSlopeStore? slopes = null)
 {
+    private readonly IHeatingSlopeStore _magasinPentes = slopes ?? new MemoryHeatingSlopeStore();
+
+    /// <summary>Pentes apprises, par thermostat ; chargées à la première configuration.</summary>
+    private readonly Dictionary<string, HeatingSlope> _pentes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, HeatingSlope> _pentesAEnregistrer = new(StringComparer.Ordinal);
+    private bool _pentesChargees;
+
     private readonly SemaphoreSlim _verrou = new(1, 1);
     private readonly Dictionary<string, Runtime> _runtimes = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ThermostatSnapshot> _instantanes = new(StringComparer.Ordinal);
@@ -98,6 +110,10 @@ public sealed class ThermostatEngine(
         public DateTimeOffset? OuvertDepuis;
         public DateTimeOffset? FermeDepuis;
         public bool FenetreSuspendue;
+
+        /// <summary>Fenêtre d'observation de la pente : début et ambiante au début (chauffe à pleine puissance).</summary>
+        public DateTimeOffset? PenteDebut;
+        public double PenteAmbiante;
     }
 
     public IReadOnlyCollection<ThermostatSnapshot> Snapshots => _instantanes.Values.OrderBy(s => s.Id, StringComparer.Ordinal).ToList();
@@ -115,6 +131,12 @@ public sealed class ThermostatEngine(
         await _verrou.WaitAsync(ct);
         try
         {
+            if (!_pentesChargees)
+            {
+                foreach (var (id, pente) in await _magasinPentes.LoadAsync(ct)) _pentes[id] = pente;
+                _pentesChargees = true;
+            }
+
             var presents = thermostats.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
             foreach (var retire in _runtimes.Keys.Where(k => !presents.Contains(k)).ToList())
             {
@@ -152,6 +174,9 @@ public sealed class ThermostatEngine(
 
                 _instantanes[t.Id] = await TraiterAsync(t, rt, ct);
             }
+
+            foreach (var (id, pente) in _pentesAEnregistrer) await _magasinPentes.SaveAsync(id, pente, ct);
+            _pentesAEnregistrer.Clear();
         }
         finally
         {
@@ -178,13 +203,14 @@ public sealed class ThermostatEngine(
 
         ThermostatSnapshot Instantane(ThermostatStatus statut) => new(
             t.Id, statut, mode, cible, interieur, exterieur, rt.Puissance, rt.RelaisConnu == true, rt.Integrale,
-            inhibitor.GetReasons(t.Id), inconnus, prevue);
+            inhibitor.GetReasons(t.Id), inconnus, prevue, _pentes.GetValueOrDefault(t.Id));
 
         void Arreter()
         {
             rt.Puissance = 0;
             rt.SecondesMarche = 0;
             rt.CibleCycle = null;   // la reprise recalcule tout de suite au lieu d'attendre la fin du cycle
+            rt.PenteDebut = null;   // la montée observée est interrompue : elle ne dit plus rien de la pièce
         }
 
         // ── 1. Fenêtre ouverte ───────────────────────────────────────────────
@@ -230,7 +256,16 @@ public sealed class ThermostatEngine(
 
         // ── 5. Sans température (failsafe désactivé) : on ne change rien ─────
         if (interieur is not { } tint)
+        {
+            rt.PenteDebut = null;
             return Instantane(inconnus.Count > 0 ? ThermostatStatus.UnknownSwitch : ThermostatStatus.Idle);
+        }
+
+        // ── 5 bis. Préchauffage anticipé : la consigne du prochain créneau, assez tôt pour l'atteindre à l'heure ─
+        var pente = _pentes.GetValueOrDefault(t.Id) ?? new HeatingSlope(Preheat.DefaultMinutesPerDegree, null);
+        var prechauffe = Preheat.Target(t, tint, clock.GetLocalNow().DateTime, cible, (future, avant) =>
+            Preheat.CorrectedMinutesPerDegree(pente, t.Tpi.Ki, future, MoyennePrevue(t, maintenant, avant)));
+        if (prechauffe is { } cibleFuture) cible = cibleFuture;
 
         // ── 6. Inertie : double seuil, pour absorber l'inertie du radiateur ──
         if (t.Tpi.CoastingHigh > 0)
@@ -273,8 +308,58 @@ public sealed class ThermostatEngine(
         var chauffer = rt.SecondesMarche > 0 && ecoule < TimeSpan.FromSeconds(rt.SecondesMarche);
         await PiloterAsync(t, rt, chauffer, ct);
 
-        var regime = rt.RelaisConnu == true ? ThermostatStatus.Heating : ThermostatStatus.Idle;
+        Apprendre(t, rt, tint, exterieur ?? prevue, maintenant);
+
+        var regime = prechauffe is not null ? ThermostatStatus.Preheating
+            : rt.RelaisConnu == true ? ThermostatStatus.Heating
+            : ThermostatStatus.Idle;
         return Instantane(inconnus.Count > 0 ? ThermostatStatus.UnknownSwitch : regime);
+    }
+
+    /// <summary>
+    /// Température extérieure moyenne prévue sur la durée qui reste avant un créneau (une demi-heure au moins), si le
+    /// thermostat a une prévision active et utilisable.
+    /// </summary>
+    private double? MoyennePrevue(ThermostatSettings t, DateTimeOffset maintenant, TimeSpan fenetre) =>
+        t.ForecastAnticipation && t.ForecastEntityId is { } prevision
+            ? OutdoorForecast.MeanOver(states.Get(prevision), maintenant, fenetre < TimeSpan.FromMinutes(30) ? TimeSpan.FromMinutes(30) : fenetre)
+            : null;
+
+    /// <summary>
+    /// Apprentissage de la pente (DomoMud) : pendant une chauffe à pleine puissance (90 % ou plus), dès que la pièce
+    /// a gagné 0,5 °C en 5 min au moins, la pente mesurée est fusionnée, puis enregistrée à la fin du tick. Deux
+    /// heures sans gagner 0,5 °C (porte ouverte, radiateur trop faible) : la fenêtre repart, rien n'est appris.
+    /// </summary>
+    private void Apprendre(ThermostatSettings t, Runtime rt, double ambiante, double? exterieur, DateTimeOffset maintenant)
+    {
+        if (rt.Puissance < 0.9)
+        {
+            rt.PenteDebut = null;
+            return;
+        }
+
+        if (rt.PenteDebut is not { } debut)
+        {
+            rt.PenteDebut = maintenant;
+            rt.PenteAmbiante = ambiante;
+            return;
+        }
+
+        var gain = ambiante - rt.PenteAmbiante;
+        var minutes = (maintenant - debut).TotalMinutes;
+        if (gain >= 0.5 && minutes >= 5)
+        {
+            var apprise = Preheat.Learn(_pentes.GetValueOrDefault(t.Id), minutes, gain, exterieur);
+            _pentes[t.Id] = apprise;
+            _pentesAEnregistrer[t.Id] = apprise;
+        }
+        else if (minutes <= 120)
+        {
+            return;
+        }
+
+        rt.PenteDebut = maintenant;
+        rt.PenteAmbiante = ambiante;
     }
 
     /// <summary>

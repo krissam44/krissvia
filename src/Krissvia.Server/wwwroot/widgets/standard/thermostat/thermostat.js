@@ -13,7 +13,7 @@ const MODES = {
 const MODE_INCONNU = { couleur: "#78909c", icone: "thermostat" };
 
 const STATUTS = {
-    heating: "#ff5722", coasting: "#26c6da", idle: "#66bb6a", off: "#546e7a",
+    heating: "#ff5722", preheating: "#ab47bc", coasting: "#26c6da", idle: "#66bb6a", off: "#546e7a",
     inhibited: "#ffa726", window_open: "#42a5f5", sensor_lost: "#ef5350", unknown_switch: "#ef5350",
 };
 

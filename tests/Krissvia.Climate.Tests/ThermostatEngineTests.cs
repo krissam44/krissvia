@@ -1,6 +1,7 @@
 using Krissvia.Climate.Thermostats;
 using Krissvia.Contracts;
 using Krissvia.Core.Registry;
+using Krissvia.Core.Scheduling;
 using Krissvia.Core.Tests;
 using Microsoft.Extensions.Time.Testing;
 
@@ -26,11 +27,13 @@ public class ThermostatEngineTests
         public EntityRegistry Registre { get; } = new(new InMemoryEntityRepository());
         public ThermostatInhibitor Inhibiteur { get; }
         public ThermostatEngine Moteur { get; }
+        public MemoryHeatingSlopeStore Pentes { get; }
 
-        public Banc()
+        public Banc(MemoryHeatingSlopeStore? pentes = null)
         {
+            Pentes = pentes ?? new MemoryHeatingSlopeStore();
             Inhibiteur = new ThermostatInhibitor(Commandes);
-            Moteur = new ThermostatEngine(Etats, Registre, Commandes, Inhibiteur, Horloge);
+            Moteur = new ThermostatEngine(Etats, Registre, Commandes, Inhibiteur, Horloge, Pentes);
             Registre.RegisterAsync("test",
             [
                 new DeviceDescriptor
@@ -85,6 +88,109 @@ public class ThermostatEngineTests
     }
 
     // ── Régulation ───────────────────────────────────────────────────────────
+
+    // ── Préchauffage anticipé ────────────────────────────────────────────────
+
+    /// <summary>Planning : Éco (16,5) jusqu'à 12 h 30, Confort (20) ensuite. Il est 12 h (UTC = heure locale du banc).</summary>
+    private static ThermostatSettings AvecPlanning(ThermostatSettings t) => t with
+    {
+        ScheduleActive = true,
+        Schedule = new WeeklySchedule
+        {
+            Days = new Dictionary<DayOfWeek, IReadOnlyList<ScheduleSlot>>
+            {
+                [DayOfWeek.Wednesday] = [new ScheduleSlot(new TimeSpan(12, 30, 0), TimeSpan.FromHours(23), ThermostatMode.Comfort)],
+            },
+            DefaultMode = ThermostatMode.Eco,
+        },
+    };
+
+    [Fact]
+    public async Task Le_prechauffage_vise_la_consigne_du_creneau_assez_tot_pour_l_atteindre_a_l_heure()
+    {
+        // 1,5 °C à gagner × 30 min/°C = 45 min, il en reste 30 : on chauffe dès maintenant vers 20 °C.
+        var b = new Banc();
+        b.Mesurer(18.5);
+
+        var s = await b.DemarrerAsync(Banc.Salon(AvecPlanning));
+
+        Assert.Equal(ThermostatStatus.Preheating, s.Status);
+        Assert.Equal(20, s.Target);
+        Assert.Equal(ThermostatMode.Eco, s.Mode);
+        Assert.Equal(1, b.Ordres(StandardCommands.TurnOn));
+    }
+
+    [Fact]
+    public async Task Trop_tot_le_planning_suit_son_cours()
+    {
+        // 0,5 °C × 30 = 15 min, il en reste 30 : rien à faire encore, la consigne reste celle d'Éco.
+        var b = new Banc();
+        b.Mesurer(19.5);
+
+        var s = await b.DemarrerAsync(Banc.Salon(AvecPlanning));
+
+        Assert.NotEqual(ThermostatStatus.Preheating, s.Status);
+        Assert.Equal(16.5, s.Target);
+        Assert.Equal(0, b.Ordres(StandardCommands.TurnOn));
+    }
+
+    [Fact]
+    public async Task Un_froid_annonce_pendant_la_montee_avance_le_prechauffage()
+    {
+        // Pente apprise 29 min/°C par 10 °C dehors ; 1 °C à gagner, 30 min avant le créneau : encore tôt par
+        // 10 °C, déjà en retard par −10 °C annoncés (29 × 0,9 / 0,7 ≈ 37 min) : la prévision fait partir maintenant.
+        async Task<ThermostatSnapshot> Essai(double prevu)
+        {
+            var pentes = new MemoryHeatingSlopeStore();
+            pentes.Slopes["salon"] = new HeatingSlope(29, OutdoorReference: 10);
+            var b = new Banc(pentes);
+            b.Mesurer(19);
+            b.Etats.Set(Prevision, OutdoorForecastTests.Meteo(T0.AddHours(-1), prevu, prevu, prevu, prevu, prevu), T0);
+            return await b.DemarrerAsync(Banc.Salon(t => AvecPlanning(t) with { ForecastEntityId = Prevision }));
+        }
+
+        Assert.NotEqual(ThermostatStatus.Preheating, (await Essai(10)).Status);
+        Assert.Equal(ThermostatStatus.Preheating, (await Essai(-10)).Status);
+    }
+
+    [Fact]
+    public async Task La_pente_s_apprend_a_pleine_puissance_et_survit_a_un_redemarrage()
+    {
+        var b = new Banc();
+        b.Mesurer(15);
+        b.Etats.Set(Exterieur, 6.0, T0);
+        var t = Banc.Salon(s => s with { OutdoorTemperatureEntityId = Exterieur });
+        await b.DemarrerAsync(t);   // 5 °C sous la consigne : pleine puissance
+
+        await b.AvancerAsync(TimeSpan.FromMinutes(10));
+        b.Mesurer(15.5);
+        b.Etats.Set(Exterieur, 6.0, b.Horloge.GetUtcNow());
+        var s = await b.TickAsync();
+
+        // 0,5 °C en 10 min : 20 min/°C, enregistrée avec la température dehors.
+        Assert.Equal(new HeatingSlope(20, 6), s.Slope);
+        Assert.Equal(new HeatingSlope(20, 6), b.Pentes.Slopes["salon"]);
+
+        // Un autre moteur sur le même magasin (le cœur a redémarré) la retrouve.
+        var apres = new Banc(b.Pentes);
+        apres.Mesurer(19);
+        Assert.Equal(new HeatingSlope(20, 6), (await apres.DemarrerAsync(t)).Slope);
+    }
+
+    [Fact]
+    public async Task Sans_pleine_puissance_rien_n_est_appris()
+    {
+        var b = new Banc();
+        b.Mesurer(19.8);   // 0,2 °C sous la consigne : puissance partielle
+        await b.DemarrerAsync(Banc.Salon());
+
+        await b.AvancerAsync(TimeSpan.FromMinutes(10));
+        b.Mesurer(20.3);
+        var s = await b.TickAsync();
+
+        Assert.Null(s.Slope);
+        Assert.Empty(b.Pentes.Slopes);
+    }
 
     // ── Anticipation météo ───────────────────────────────────────────────────
 
