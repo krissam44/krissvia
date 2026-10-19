@@ -319,6 +319,20 @@ public class DashboardServiceTests
     }
 
     [Fact]
+    public async Task Le_nom_propre_a_une_carte_est_enregistre_et_borne()
+    {
+        var magasin = new Magasin();
+        var service = new DashboardService(magasin);
+
+        await service.SaveAsync(Page("confort", Section("s", Carte("a") with { Title = "Salon" })));
+
+        Assert.Equal("Salon", (await new DashboardService(magasin).GetAsync("confort"))!.AllCards.Single().Title);
+        var refus = await Assert.ThrowsAsync<DashboardValidationException>(() =>
+            service.SaveAsync(Page("confort", Section("s", Carte("a") with { Title = new string('x', DashboardService.MaxTitleLength + 1) }))));
+        Assert.Contains("nom", refus.Message);
+    }
+
+    [Fact]
     public async Task Une_page_comptee_dans_une_autre_grille_est_refusee()
     {
         var service = new DashboardService(new Magasin());

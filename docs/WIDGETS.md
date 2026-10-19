@@ -113,7 +113,7 @@ Le tableau de bord crée l'élément, puis lui affecte des **propriétés** (pas
 
 | Propriété | Contenu |
 |---|---|
-| `entities` | Par slot : `{ entity_id, name, kind, device_class, unit, commands, room, usage }`. Absent si le slot facultatif n'est pas lié. |
+| `entities` | Par slot : `{ entity_id, name, kind, device_class, unit, commands, room, usage }`. Absent si le slot facultatif n'est pas lié. Si la carte a un nom propre (« Nom sur la carte »), il remplace `name` dans l'entité du slot principal : le widget n'a rien à faire. |
 | `states` | Par slot : `{ value, available, measured_at }`, ou `null` si jamais reçu. Remplacé à chaque changement d'état. |
 | `settings` | Les options de la carte, validées contre le schéma du manifeste. |
 | `kv` | L'hôte : voir §5. |
@@ -222,6 +222,7 @@ laisse rien ; replier une section hors édition s'enregistre aussitôt.
   la moitié de sa largeur, arrondie au-dessus) ; sur téléphone, 2 (une demi-ligne jusqu'à 2/12, puis la ligne).
   Les pages écrites avant la grille de 12 (sans `grid`) sont relues en doublant leurs largeurs.
 - Cartes : glisser-déposer, y compris d'une section à l'autre ; flèches ◀ ▶ pour le téléphone ; menu de taille.
+- Nom sur la carte (`title` de la carte, 80 caractères au plus) : remplace, sur cette carte seulement, le nom de l'entité principale ; vide, la carte suit le nom de l'écran Entités.
 - **Proposer** (mode édition) : ajoute une section par famille (thermostats, températures, interrupteurs et
   lumières, capteurs, énergie), chaque entité avec son meilleur widget ; les slots secondaires prennent les entités
   du même appareil (l'humidité d'une sonde) ; les radiateurs pilotés par un thermostat ne sont pas proposés. Rien
