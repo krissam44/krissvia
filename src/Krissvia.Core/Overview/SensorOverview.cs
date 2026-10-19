@@ -39,7 +39,9 @@ public static class SensorOverview
         IReadOnlyList<RegisteredEntity> entities, IReadOnlyList<RegisteredDevice> devices, IEntityStateReader states, DateTimeOffset now)
     {
         var pieces = devices.ToDictionary(d => d.DeviceId, d => string.IsNullOrWhiteSpace(d.Room) ? null : d.Room.Trim(), StringComparer.Ordinal);
-        var actives = entities.Where(e => e.Enabled && !e.Missing).ToList();
+        // Les moyennes publiées par le cœur sont elles-mêmes des sondes : elles n'entrent ni dans la liste ni dans les
+        // moyennes (elles se nourriraient d'elles-mêmes).
+        var actives = entities.Where(e => e.Enabled && !e.Missing && e.IntegrationId != Commands.CoreIntegrations.RoomAverages).ToList();
 
         double? Voisine(RegisteredEntity sonde, string classe) =>
             actives.FirstOrDefault(v => v.DeviceId == sonde.DeviceId && v.Kind == EntityKind.Sensor && v.DeviceClass == classe) is { } e

@@ -25,6 +25,8 @@ public static class CoreIntegrations
 
     public const string Presence = Prefix + "presence";
 
+    public const string RoomAverages = Prefix + "moyennes";
+
     public static bool IsCore(string integrationId) => integrationId.StartsWith(Prefix, StringComparison.Ordinal);
 }
 

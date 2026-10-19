@@ -32,7 +32,7 @@ else if (_m is not null && _planning is not null)
                                       HelperText="@(Creation ? "Minuscules, chiffres, « _ » et « - ». Il ne change plus ensuite : l'API l'utilise." : "Utilisé par l'API, ne change pas.")" />
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudSelect T="string" @bind-SelectedValues="_m.Radiateurs" MultiSelection="true" Label="Radiateurs"
+                        <MudSelect Dense="true" T="string" @bind-SelectedValues="_m.Radiateurs" MultiSelection="true" Label="Radiateurs"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Interrupteurs pilotés ensemble ; ceux déclarés « Radiateur » dans Entités viennent en tête"
                                    MultiSelectionTextFunc="@(v => string.Join(", ", v.Select(Nom)))">
                             @foreach (var e in Options(_interrupteurs, _m.Radiateurs.ToArray()))
@@ -42,7 +42,7 @@ else if (_m is not null && _planning is not null)
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudSelect T="string" @bind-Value="_m.Sonde" Label="Sonde intérieure" Variant="Variant.Outlined" Margin="Margin.Dense"
+                        <MudSelect Dense="true" T="string" @bind-Value="_m.Sonde" Label="Sonde intérieure" Variant="Variant.Outlined" Margin="Margin.Dense"
                                    HelperText="Capteur de température de la pièce">
                             @foreach (var e in Options(_sondes, _m.Sonde))
                             {
@@ -51,7 +51,7 @@ else if (_m is not null && _planning is not null)
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudSelect T="string" @bind-Value="_m.SondeExterieure" Label="Sonde extérieure (facultative)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                        <MudSelect Dense="true" T="string" @bind-Value="_m.SondeExterieure" Label="Sonde extérieure (facultative)" Variant="Variant.Outlined" Margin="Margin.Dense"
                                    HelperText="Anticipe les besoins quand il fait froid dehors">
                             <MudSelectItem Value="@Aucune">— aucune —</MudSelectItem>
                             @foreach (var e in Options(_sondes, _m.SondeExterieure))
@@ -61,7 +61,7 @@ else if (_m is not null && _planning is not null)
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudSelect T="string" @bind-Value="_m.Prevision" Label="Prévision météo (facultative)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                        <MudSelect Dense="true" T="string" @bind-Value="_m.Prevision" Label="Prévision météo (facultative)" Variant="Variant.Outlined" Margin="Margin.Dense"
                                    HelperText="Un lieu du plugin Météo : sa prévision sur 2 h anticipe un coup de froid">
                             <MudSelectItem Value="@Aucune">— aucune —</MudSelectItem>
                             @foreach (var e in Options(_previsions, _m.Prevision))
@@ -75,7 +75,7 @@ else if (_m is not null && _planning is not null)
                                    Label="Anticiper avec la prévision (sinon : la sonde extérieure seule)" />
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudSelect T="string" @bind-Value="_m.Ouverture" Label="Capteur d'ouverture porte/fenêtre (facultatif)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                        <MudSelect Dense="true" T="string" @bind-Value="_m.Ouverture" Label="Capteur d'ouverture porte/fenêtre (facultatif)" Variant="Variant.Outlined" Margin="Margin.Dense"
                                    HelperText="Suspend le chauffage tant que c'est ouvert">
                             <MudSelectItem Value="@Aucune">— aucun —</MudSelectItem>
                             @foreach (var e in Options(_ouvertures, _m.Ouverture))
