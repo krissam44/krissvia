@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "delesteur",
+  "name": "Délesteur",
+  "description": "Puissance appelée et sa part de l'abonnement, équipements délestés : la carte du délesteur de DomoMud.",
+  "version": "1.0.0",
+  "element": "kv-delesteur",
+  "script": "delesteur.js",
+  "slots": [ { "name": "delesteur", "kinds": ["sensor"], "device_classes": ["load_shedding"], "required": true } ],
+  "size": { "cols": 3, "rows": 2 }
+}

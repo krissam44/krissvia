@@ -197,6 +197,20 @@ public sealed class WidgetCatalogTests : IDisposable
 
         Assert.Equal(["ma-temp", "temperature", "valeur"], compatibles.Select(w => w.Manifest.Id));
     }
+
+    [Fact]
+    public void A_score_egal_le_widget_le_plus_specifique_l_emporte_mais_jamais_sur_un_widget_installe()
+    {
+        Deposer(Standards, "puissance", Manifeste("puissance", """[{ "name": "m", "kinds": ["sensor"], "device_classes": ["power", "apparent_power", "energy"], "required": true }]"""));
+        Deposer(Standards, "zlinky", Manifeste("zlinky", """[{ "name": "m", "kinds": ["sensor"], "device_classes": ["apparent_power"], "required": true }]"""));
+        var linky = Entite(EntityKind.Sensor, "apparent_power");
+
+        // « zlinky » vient après « puissance » dans l'alphabet : seule la spécificité le fait passer devant.
+        Assert.Equal("zlinky", WidgetCatalog.CompatibleWith(Charger(), linky)[0].Manifest.Id);
+
+        Deposer(Locaux, "large", Manifeste("large", """[{ "name": "m", "kinds": ["sensor"], "device_classes": ["power", "apparent_power"], "required": true }]"""));
+        Assert.Equal("large", WidgetCatalog.CompatibleWith(Charger(), linky)[0].Manifest.Id);
+    }
 }
 
 public class DashboardServiceTests

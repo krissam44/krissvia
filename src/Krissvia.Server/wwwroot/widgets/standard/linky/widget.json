@@ -1,0 +1,23 @@
+{
+  "contract": 2,
+  "id": "linky",
+  "name": "Linky",
+  "description": "Puissance apparente et sa part de l'abonnement, heures pleines ou creuses, courant, tension et index : la carte Linky de DomoMud.",
+  "version": "1.0.0",
+  "element": "kv-linky",
+  "script": "linky.js",
+  "slots": [
+    { "name": "puissance", "kinds": ["sensor"], "device_classes": ["apparent_power"], "required": true },
+    { "name": "tarif", "kinds": ["sensor"], "device_classes": ["enum"], "required": false },
+    { "name": "courant", "kinds": ["sensor"], "device_classes": ["current"], "required": false },
+    { "name": "tension", "kinds": ["sensor"], "device_classes": ["voltage"], "required": false },
+    { "name": "index", "kinds": ["sensor"], "device_classes": ["energy"], "required": false }
+  ],
+  "size": { "cols": 3, "rows": 2 },
+  "settings": {
+    "type": "object",
+    "properties": {
+      "abonnement_kva": { "type": "number", "title": "Abonnement (kVA)", "default": 6, "minimum": 3, "maximum": 36 }
+    }
+  }
+}

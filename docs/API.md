@@ -188,6 +188,11 @@ font +1 °C, là où deux `set_target` calculés par l'écran repartiraient de l
 d'état à vérifier (`not_applicable`) : le nouvel état arrive par le flux. Un refus porte son motif dans `detail`
 (« thermostat arrêté (mode off)… »).
 
+**Délesteur** : publié par le cœur comme l'entité `sensor` de classe `load_shedding` (intégration `coeur.delestage`).
+Valeur : `enabled`, `power` (VA lus), `source`, `source_unavailable`, `subscription_va`, `alert_threshold`,
+`restore_threshold`, `shedding`, `shed` et `unconfirmed` (`[{"id", "name"}]`), `devices`. Pas d'ordre : il se règle dans
+son écran (et `/api/load-shedding`).
+
 **Flux** (`/api/live`, WebSocket) : à la connexion, `{"type": "entities", "entities": […]}` ; puis
 `{"type": "states", "states": {"switch.cave_chauffe_eau": {…état…}}}` à chaque changement, et de nouveau
 `entities` quand le registre change (entité ajoutée, renommée, désactivée). Les changements sont regroupés : un

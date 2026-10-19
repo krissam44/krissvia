@@ -9,6 +9,7 @@ namespace Krissvia.Server;
 internal sealed partial class LoadSheddingLoop(
     LoadSheddingService service,
     LoadShedder shedder,
+    LoadSheddingEntities entites,
     TimeProvider clock,
     ILogger<LoadSheddingLoop> logger) : BackgroundService
 {
@@ -55,6 +56,7 @@ internal sealed partial class LoadSheddingLoop(
         _source = service.ActiveSource ?? _source;
         var tick = await shedder.TickAsync(lecture, ct);
         service.RecordTick(lecture, tick, clock.GetUtcNow());
+        await entites.PublishAsync(ct);   // l'état que voient la carte du délesteur, l'API et le flux
 
         foreach (var id in tick.Shed) Deleste(logger, id, lecture?.Value);
         foreach (var id in tick.Restored) Retabli(logger, id, lecture?.Value);

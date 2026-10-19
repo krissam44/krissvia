@@ -112,6 +112,9 @@ public static class DeviceClasses
     /// </summary>
     public const string Weather = "weather";
 
+    /// <summary>sensor dont la valeur est un OBJET : l'état du délesteur, publié par le cœur (puissance, seuils, délestés).</summary>
+    public const string LoadShedding = "load_shedding";
+
     /// <summary>sensor dont la valeur est un libellé (tarif en cours…), pas un nombre.</summary>
     public const string Enum = "enum";
 
