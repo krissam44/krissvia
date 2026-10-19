@@ -34,6 +34,7 @@ public sealed class MenuService
         new("delestage", "Délestage", "/delestage", Icons.Material.Filled.Bolt),
         new("entites", "Entités", "/entites", Icons.Material.Filled.Devices),
         new("services", "Services", "/parametres/services", Icons.Material.Filled.Extension, Exact: true),
+        new("notifications", "Notifications", "/parametres/notifications", Icons.Material.Filled.NotificationsActive),
         new("comptes", "Comptes", "/parametres/comptes", Icons.Material.Filled.ManageAccounts),
     ];
 

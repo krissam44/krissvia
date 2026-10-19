@@ -58,6 +58,16 @@ public static class OutdoorForecast
         return Math.Round(somme / n, 2);
     }
 
+    /// <summary>
+    /// Le minimum prévu entre l'heure en cours et <paramref name="maintenant"/> + <paramref name="horizon"/> (les
+    /// points horaires eux-mêmes : c'est là que sont les creux). Null sans aucun point à venir.
+    /// </summary>
+    public static double? MinimumAhead(JsonElement valeur, DateTimeOffset maintenant, TimeSpan horizon)
+    {
+        var points = Lire(valeur).Where(p => p.Item1 > maintenant.AddHours(-1) && p.Item1 <= maintenant + horizon).ToList();
+        return points.Any(p => p.Item1 > maintenant) ? points.Min(p => p.Item2) : null;
+    }
+
     private static double? Interpoler(List<(DateTimeOffset Quand, double Temperature)> points, DateTimeOffset t)
     {
         for (var i = 0; i < points.Count - 1; i++)
