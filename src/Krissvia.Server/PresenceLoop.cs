@@ -3,13 +3,15 @@ using Krissvia.Climate.Presence;
 namespace Krissvia.Server;
 
 /// <summary>
-/// Présence du foyer recalculée toutes les 10 s, comme le tick des thermostats. Le journal ne note que les bascules :
-/// maison vide, retour, détection perdue.
+/// Présence du foyer recalculée toutes les 10 s, comme le tick des thermostats, puis transmise à l'absence (départ
+/// constaté, retour anticipé, fin de période). Le journal ne note que les bascules.
 /// </summary>
-internal sealed partial class PresenceLoop(HomePresence presence, TimeProvider clock, ILogger<PresenceLoop> logger) : BackgroundService
+internal sealed partial class PresenceLoop(HomePresence presence, AbsenceService absence, TimeProvider clock, ILogger<PresenceLoop> logger) : BackgroundService
 {
     private static readonly TimeSpan Periode = TimeSpan.FromSeconds(10);
     private HomePresenceState? _precedent;
+    private ScheduledAbsence? _periode;
+    private HomeAbsenceState? _absence;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -29,6 +31,22 @@ internal sealed partial class PresenceLoop(HomePresence presence, TimeProvider c
                     }
 
                     _precedent = etat;
+
+                    await absence.UpdateAsync(etat, stoppingToken);
+                    var periode = absence.Period;
+                    if (_periode is { } av && periode is not null && av.Departure == periode.Departure && av.Return == periode.Return)
+                    {
+                        if (periode.DepartureSeen && !av.DepartureSeen) DepartConstate(logger);
+                        if (periode.Cancelled && !av.Cancelled) RetourAnticipe(logger, periode.Return.ToLocalTime());
+                    }
+                    else if (_periode is { } fini && periode is null && clock.GetUtcNow() >= fini.Return)
+                    {
+                        PeriodeTerminee(logger, fini.Return.ToLocalTime());
+                    }
+
+                    if (_absence is { } a && a != absence.Current)
+                        AbsenceChange(logger, absence.Current.Away ? "vide" : "occupée", absence.Current.Source);
+                    (_periode, _absence) = (periode, absence.Current);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -50,6 +68,18 @@ internal sealed partial class PresenceLoop(HomePresence presence, TimeProvider c
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Présence : détection perdue ({Inconnus}) — maison considérée occupée par sécurité.")]
     private static partial void DetectionPerdue(ILogger logger, string inconnus);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Absence programmée : départ constaté, un retour anticipé pourra l'annuler.")]
+    private static partial void DepartConstate(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Absence programmée annulée : présence détectée avant le retour prévu ({Retour:dd/MM HH:mm}).")]
+    private static partial void RetourAnticipe(ILogger logger, DateTimeOffset retour);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Absence programmée terminée (retour {Retour:dd/MM HH:mm}) : la détection de présence reprend.")]
+    private static partial void PeriodeTerminee(ILogger logger, DateTimeOffset retour);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Absence : maison {Etat} ({Source}).")]
+    private static partial void AbsenceChange(ILogger logger, string etat, AbsenceSource source);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Calcul de la présence en échec.")]
     private static partial void CalculEnEchec(ILogger logger, Exception ex);

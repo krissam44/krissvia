@@ -1,0 +1,140 @@
+@page "/absence"
+@using Krissvia.Climate.Presence
+@implements IDisposable
+
+<PageTitle>Absence · Krissvia</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">Absence</MudText>
+
+@if (_erreur is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="() => _erreur = null">@_erreur</MudAlert>
+}
+
+<MudGrid>
+    <MudItem xs="12" md="6">
+        <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-3">
+                <MudIcon Icon="@(Etat.Away ? Icons.Material.Filled.Luggage : Icons.Material.Filled.Home)" Size="Size.Large"
+                         Style="@($"color:{(Etat.Away ? "#ab47bc" : "#66bb6a")}")" />
+                <div>
+                    <MudText Typo="Typo.h6">@(Etat.Away ? "Maison vide" : "Maison occupée")</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">@Source</MudText>
+                </div>
+            </MudStack>
+
+            <MudText Typo="Typo.subtitle2" Class="mud-text-secondary mb-1">Forcer</MudText>
+            <MudToggleGroup T="string" Value="@Forcage" ValueChanged="ForcerAsync" Color="Color.Primary" Size="Size.Small" Class="mb-2" Style="max-width: 360px">
+                <MudToggleItem Value="@("auto")" Text="Automatique" />
+                <MudToggleItem Value="@("present")" Text="Présent" />
+                <MudToggleItem Value="@("absent")" Text="Absent" />
+            </MudToggleGroup>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">
+                Le forçage l'emporte sur tout, jusqu'à ce que vous repassiez en automatique. Sinon : l'absence programmée,
+                puis la détection de présence.
+            </MudText>
+
+            <MudText Typo="Typo.subtitle2" Class="mud-text-secondary mb-1">Détection de présence</MudText>
+            @if (Presence is not { Tracked: > 0 } p)
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    Aucun appareil suivi : cochez « Suivi » dans la carte « Appareils du réseau » (plugin Livebox). Sans
+                    détection, la maison est considérée occupée.
+                </MudText>
+            }
+            else
+            {
+                @if (p.DetectionLost)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">Détection perdue : maison considérée occupée par sécurité.</MudAlert>
+                }
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var n in p.Present) { <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Smartphone">@n</MudChip> }
+                    @foreach (var n in p.Absent) { <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.PhonelinkErase">@n</MudChip> }
+                    @foreach (var n in p.Unknown) { <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.QuestionMark">@n</MudChip> }
+                </div>
+                @if (p.EmptySince is { } vide)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1">Vide depuis @Heure(vide).</MudText>
+                }
+            }
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
+            <MudText Typo="Typo.h6" Class="mb-2">Absence programmée</MudText>
+            @if (Absences.Period is { } periode)
+            {
+                <MudAlert Severity="@(periode.Cancelled ? Severity.Warning : Severity.Info)" Dense="true" Class="mb-3"
+                          ShowCloseIcon="true" CloseIconClicked="SupprimerAsync">
+                    Du <b>@Heure(periode.Departure)</b> au <b>@Heure(periode.Return)</b> — @Avancement(periode)
+                </MudAlert>
+            }
+            <MudGrid Spacing="2">
+                <MudItem xs="7">
+                    <MudDatePicker @bind-Date="_departJour" Label="Départ" Variant="Variant.Outlined" Margin="Margin.Dense" DateFormat="dd/MM/yyyy" />
+                </MudItem>
+                <MudItem xs="5">
+                    <MudTimePicker @bind-Time="_departHeure" Label="Heure" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="7">
+                    <MudDatePicker @bind-Date="_retourJour" Label="Retour" Variant="Variant.Outlined" Margin="Margin.Dense" DateFormat="dd/MM/yyyy" />
+                </MudItem>
+                <MudItem xs="5">
+                    <MudTimePicker @bind-Time="_retourHeure" Label="Heure" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+            </MudGrid>
+            <MudSwitch T="bool" @bind-Value="_annulerSiPresence" Color="Color.Primary" Class="mt-2"
+                       Label="Rentrer plus tôt annule l'absence" />
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">
+                Seulement une fois la maison vue vide pendant la période : programmer son départ depuis son salon ne
+                l'annule pas. Les thermostats qui suivent l'absence remontent en température pour être au niveau à l'heure
+                du retour.
+            </MudText>
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.EventAvailable"
+                           OnClick="ProgrammerAsync">Programmer</MudButton>
+                @if (Absences.Period is not null)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.EventBusy"
+                               OnClick="SupprimerAsync">Supprimer</MudButton>
+                }
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12">
+        <MudPaper Elevation="1" Class="pa-4 rounded-lg">
+            <MudText Typo="Typo.h6" Class="mb-2">Thermostats</MudText>
+            @if (Thermostats.List().Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Aucun thermostat.</MudText>
+            }
+            else
+            {
+                <MudSimpleTable Dense="true" Elevation="0">
+                    <tbody>
+                        @foreach (var t in Thermostats.List())
+                        {
+                            <tr @key="t.Id">
+                                <td><MudLink Href="@($"/thermostats/{t.Id}")">@(t.Name is { Length: > 0 } n ? n : t.Id)</MudLink></td>
+                                <td>
+                                    @if (t.FollowAbsence)
+                                    {
+                                        <span>Pendant l'absence : <b>@LibellesThermostat.Mode(t.AwayMode)</b>@(t.PreheatEnabled ? ", remontée avant le retour" : "")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="mud-text-secondary">Ne suit pas l'absence</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2">Réglage par thermostat, onglet « Températures » de sa configuration.</MudText>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>

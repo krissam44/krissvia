@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using Krissvia.Climate.Presence;
 using Krissvia.Climate.Thermostats;
 using Krissvia.Core.Commands;
 
@@ -14,6 +15,7 @@ internal sealed partial class ThermostatLoop(
     ThermostatService thermostats,
     ThermostatEngine engine,
     ThermostatEntities entites,
+    AbsenceService absence,
     CoreCommandRouter routeur,
     TimeProvider clock,
     ILogger<ThermostatLoop> logger) : BackgroundService
@@ -27,10 +29,13 @@ internal sealed partial class ThermostatLoop(
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
+        // L'absence d'abord : redémarrer en pleine absence ne doit pas rallumer les radiateurs le temps d'un tick.
+        await absence.LoadAsync(cancellationToken);
         await thermostats.LoadAsync(cancellationToken);
         foreach (var erreur in thermostats.LoadErrors) ConfigurationIllisible(logger, erreur);
         Demarrage(logger, thermostats.List().Count);
         thermostats.Changed += Reveiller;
+        absence.Changed += Reveiller;   // départ, retour, forçage : appliqués tout de suite
         routeur.Register(ThermostatEntities.IntegrationId, entites);
         await base.StartAsync(cancellationToken);
     }
@@ -38,6 +43,7 @@ internal sealed partial class ThermostatLoop(
     public override Task StopAsync(CancellationToken cancellationToken)
     {
         thermostats.Changed -= Reveiller;
+        absence.Changed -= Reveiller;
         return base.StopAsync(cancellationToken);
     }
 

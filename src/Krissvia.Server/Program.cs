@@ -93,8 +93,11 @@ builder.Services.AddSingleton<DesiredSwitchStates>();
 builder.Services.AddSingleton<LoadShedder>();
 builder.Services.AddSingleton<LoadSheddingService>();
 builder.Services.AddSingleton<LoadSheddingEntities>();
-builder.Services.AddSingleton<Krissvia.Climate.Presence.HomePresence>();
-builder.Services.AddSingleton<Krissvia.Core.Overview.RoomAverageEntities>();   // moyennes par pièce, sondes à part entière   // présence du foyer (capteurs « presence »)   // le délesteur en entité, pour sa carte
+builder.Services.AddSingleton<Krissvia.Climate.Presence.HomePresence>();   // présence du foyer (capteurs « presence »)
+// Absence : période programmée et forçage, combinés à la présence ; les thermostats qui la suivent la lisent.
+builder.Services.AddSingleton<Krissvia.Climate.Presence.AbsenceService>();
+builder.Services.AddSingleton<Krissvia.Climate.Presence.IHomeAbsence>(sp => sp.GetRequiredService<Krissvia.Climate.Presence.AbsenceService>());
+builder.Services.AddSingleton<Krissvia.Core.Overview.RoomAverageEntities>();   // moyennes par pièce, sondes à part entière
 
 // Programmations des équipements (prises, chauffe-eau…) : même règle de créneaux que les thermostats.
 builder.Services.AddSingleton<DeviceScheduleEngine>();
@@ -172,6 +175,7 @@ app.MapAuthentification();
 var api = app.MapGroup("/api").AddEndpointFilter<ApiKeyFilter>();
 api.MapThermostatApi();
 api.MapLoadSheddingApi();
+api.MapAbsenceApi();
 api.MapDeviceScheduleApi();
 api.MapEntityApi();
 api.MapWidgetApi();

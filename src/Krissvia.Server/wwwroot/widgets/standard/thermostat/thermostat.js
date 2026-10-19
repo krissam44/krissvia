@@ -133,6 +133,7 @@ class KvThermostat extends KvWidget {
         const humidite = typeof v.humidity === "number"
             ? `<div class="annexe" style="color:var(--kv-text-secondary, #777)">${ms("humidity_percentage")} ${nombre(v.humidity, 0)} %</div>` : "";
         const fenetre = v.window_open ? `<div class="annexe" style="color:#42a5f5">${ms("sensor_door")} Fenêtre ouverte</div>` : "";
+        const absent = v.away ? `<div class="annexe" style="color:#ab47bc" title="La maison est vide : mode d'absence">${ms("luggage")} Absence</div>` : "";
 
         const modes = entite?.extra?.modes ?? [];
         const boutonsModes = modes.map(m => {
@@ -151,7 +152,7 @@ class KvThermostat extends KvWidget {
                     <div class="bloc">
                         <div class="valeur" style="color:${couleurAmbiante(v.temperature)}">${nombre(v.temperature)}</div>
                         <div class="legende">°C ambiance</div>
-                        ${exterieure}${humidite}${fenetre}
+                        ${exterieure}${humidite}${fenetre}${absent}
                     </div>
                     <span class="fleche">${ms("arrow_right_alt")}</span>
                     <div class="consigne">

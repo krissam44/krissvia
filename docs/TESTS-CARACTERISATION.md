@@ -37,8 +37,8 @@
 | C5 | ✱ Les drapeaux « coupure envoyée » sont posés même si l'ordre échoue | corrigé : le moteur ne retient que le dernier ordre **accepté** et renvoie sinon |
 | C6 | ✱ Dictionnaire d'états modifié par la configuration pendant que d'autres services le lisent | corrigé : état interne sous verrou, instantanés immuables publiés |
 | C7 | Après reprise d'un délestage, l'intégrale du TPI n'est pas remise à zéro | conservé. Test `Sous_delestage_*` |
-| C8 | Une période d'absence programmée s'efface après le retour ; une présence détectée l'annule seulement si le départ a été constaté | conserver |
-| C9 | Hiérarchie : forçage manuel > période programmée > détection | conserver |
+| C8 | Une période d'absence programmée s'efface après le retour ; une présence détectée l'annule seulement si le départ a été constaté | conservé, et resserré : seul quelqu'un de réellement **présent** annule ; une détection perdue (maison « occupée » par sécurité) n'est pas un retour. Tests `AbsenceTests` |
+| C9 | Hiérarchie : forçage manuel > période programmée > détection | conservé. Test `Le_forcage_l_emporte_*` |
 | C10 | Auto-TPI : pas de correction avant 6 cycles, cycles saturés ignorés, bornes Ki ∈ [0 ; 0,10], Kp ∈ [0,2 ; 1,5] | conserver |
 | C11 | Les créneaux de planning qui passent minuit (fin < début) sont actifs de début à minuit puis de minuit à fin **du même jour** | **changé le 15/10/2026** à la demande de l'utilisateur : un créneau de nuit finit **le lendemain matin** (lundi 22:00 → 06:00 couvre la nuit du lundi au mardi ; celui du dimanche finit le lundi). En chevauchement, la fin de la nuit l'emporte sur les créneaux du matin (C12 : le premier commencé). **Import DomoMud** : un créneau de nuit DomoMud du jour J devient deux créneaux, J début → 00:00 et J 00:00 → fin. Tests `PlanningThermostatTests` |
 | C12 | Chevauchement de créneaux : le plus matinal gagne, avertissement à la saisie | conservé : le premier commencé gagne, nuit de la veille comprise ; l'éditeur de planning avertit, y compris d'un jour sur l'autre |
@@ -46,8 +46,9 @@
 Port du moteur des thermostats (`Krissvia.Climate.Thermostats`, 15/10/2026) : régulation TPI, inertie, délais
 minimaux, cycle figé, Off, failsafe, fenêtre, inhibitions, radiateur inconnu. Portés depuis : la prévision météo
 dans le feed-forward (19/10/2026), le préchauffage anticipé avec l'apprentissage de la pente et sa correction par
-la prévision (19/10/2026, `Preheat`, pente dans la collection `thermostat_pentes`). **Pas encore portés** : C8-C10
-(absence programmée, hiérarchie de présence, auto-TPI) et l'historique.
+la prévision (19/10/2026, `Preheat`, pente dans la collection `thermostat_pentes`), l'absence (19/10/2026, C8-C9 :
+mode d'absence par thermostat, remontée avant le retour même depuis Off, voir PRESENCE.md §5). **Pas encore
+portés** : C10 (auto-TPI) et l'historique.
 
 ## Alarme
 

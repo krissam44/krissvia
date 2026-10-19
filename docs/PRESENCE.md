@@ -10,7 +10,7 @@ connexion (la **supervision**). Elles ne servent pas aux mêmes fonctions et ne 
 
 | | Publié par un plugin de box | Consommé par le cœur |
 |---|---|---|
-| Présence | un `binary_sensor` de classe `presence` par appareil suivi | `HomePresence` → `sensor.maison_presence` ; demain l'absence programmée et l'alarme |
+| Présence | un `binary_sensor` de classe `presence` par appareil suivi | `HomePresence` → `sensor.maison_presence` ; l'absence (§5), demain l'alarme |
 | Supervision | `connectivity` (lien établi), `public_ip`, `data_rate` (kbit/s) | la supervision (étape suivante de la feuille de route) |
 
 Changer de fournisseur (Free, SFR…) = un autre plugin qui publie les mêmes classes : la présence du foyer, l'alarme
@@ -71,3 +71,35 @@ leur source, et publie toutes les 10 s, s'il a changé, `sensor.maison_presence`
 Le repli « occupée » est celui de DomoMud (02/10/2026) : chauffer une maison vide quelques heures coûte des centimes,
 une détection figée sur « vide » laisserait le chauffage en hors-gel jusqu'au retour dans le froid. La carte
 « Présence » affiche « INCONNUE » et le dit.
+
+## 5. Absence
+
+> Livré le 19/10/2026. `Krissvia.Climate.Presence.AbsenceService` (collection `absence`, document `maison`), page
+> `/absence`, API `/api/absence`.
+
+**Qui décide** (C9, hiérarchie de DomoMud) : le forçage manuel (présent ou absent, jusqu'au retour en automatique),
+sinon une absence programmée en cours, sinon la détection de présence (§4). Sans détection encore calculée, la maison
+est occupée.
+
+**Absence programmée** (C8) : du départ au retour, enregistrée — un redémarrage en pleine absence la retrouve.
+- Elle s'efface à la date de retour.
+- « Rentrer plus tôt annule l'absence » n'agit qu'une fois le **départ constaté** (maison vue vide pendant la
+  période), sinon programmer son départ depuis son salon l'annulerait au calcul suivant. Le constat est enregistré.
+- Seul quelqu'un de réellement **présent** l'annule. Une détection perdue rend la maison « occupée » par sécurité,
+  mais une box injoignable au milieu des vacances n'est pas un retour : l'annulation ferait chauffer la maison vide
+  jusqu'à la date prévue. (Écart voulu avec DomoMud.)
+
+**Thermostats** : chacun choisit de suivre l'absence (onglet « Températures », faux par défaut) et son mode
+d'absence (hors-gel par défaut). Maison vide, ce mode remplace planning et consigne ajustée (un « +0,5 » laissé avant
+de partir ne chauffe pas la maison vide), et le préchauffage de planning ne s'applique pas. Avant un **retour
+programmé**, le préchauffage anticipé remonte la pièce à la consigne de l'heure d'arrivée (mode du planning à cette
+heure-là, ou mode manuel), avec la pente apprise corrigée par la prévision, **sans** le plafond de 3 h des créneaux :
+remonter du hors-gel en demande souvent plus. Un mode d'absence Off n'empêche pas cette remontée ; un Off choisi hors
+absence reste ferme. L'état publié du thermostat porte `away` ; sa carte affiche « Absence ».
+
+| API | |
+|---|---|
+| `GET /api/absence` | `state` (`away`, `source` : `none`, `detection`, `scheduled`, `manual` ; `return`), `period`, `forced`, `presence` |
+| `PUT /api/absence/period` | `{"departure": "…", "return": "…", "cancel_on_presence": true}` (dates ISO 8601 avec fuseau) |
+| `DELETE /api/absence/period` | supprime la période |
+| `PUT /api/absence/forced` | `{"away": true \| false \| null}` (null : automatique) |

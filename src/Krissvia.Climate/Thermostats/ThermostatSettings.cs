@@ -111,6 +111,16 @@ public sealed record ThermostatSettings
     /// </summary>
     public bool PreheatEnabled { get; init; } = true;
 
+    /// <summary>
+    /// Suit l'absence de la maison (détection de présence, absence programmée, forçage) : passe alors dans
+    /// <see cref="AwayMode"/>, et remonte avant un retour programmé. Au choix de chaque thermostat, comme dans
+    /// DomoMud : une salle de bain y gagne, un séjour à forte inertie peut préférer garder son planning. Faux par défaut.
+    /// </summary>
+    public bool FollowAbsence { get; init; }
+
+    /// <summary>Mode pendant l'absence. Hors-gel par défaut ; Off n'empêche pas la remontée avant le retour.</summary>
+    public ThermostatMode AwayMode { get; init; } = ThermostatMode.FrostProtection;
+
     /// <summary>Capteur d'ouverture (binary_sensor, true = ouvert). Facultatif.</summary>
     public string? OpeningEntityId { get; init; }
 
