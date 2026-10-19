@@ -34,6 +34,7 @@ internal static class Categories
     public static Categorie De(RegisteredEntity e) => e.Kind switch
     {
         EntityKind.Switch when e.Usage == EntityUsages.Radiator => Radiateur,
+        EntityKind.Switch when e.Usage == EntityUsages.Lighting => Lumiere,
         EntityKind.Switch => Interrupteur,
         EntityKind.Light => Lumiere,
         EntityKind.Event => Evenement,

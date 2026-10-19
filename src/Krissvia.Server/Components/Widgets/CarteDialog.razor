@@ -24,7 +24,7 @@
 
         @if (_principale is not null)
         {
-            <MudSelect T="string" Label="Widget" Value="_widget" ValueChanged="ChoisirWidget" Variant="Variant.Outlined" Class="mt-4"
+            <MudSelect Dense="true" T="string" Label="Widget" Value="_widget" ValueChanged="ChoisirWidget" Variant="Variant.Outlined" Class="mt-4"
                        HelperText="@(EstAuto ? "La carte suit le widget de l'entité : le changer dans l'écran Entités changera cette carte." : Widget?.Manifest.Description ?? "")">
                 <MudSelectItem Value="@Auto">@LibelleAuto</MudSelectItem>
                 @foreach (var w in _compatibles)
@@ -44,7 +44,7 @@
             }
             @foreach (var slot in EstAuto ? Enumerable.Empty<WidgetSlot>() : widget.Manifest.Slots.Skip(1))
             {
-                <MudSelect T="string" Label="@Phrases.Majuscule(slot.Name)" @bind-Value="_liens[slot.Name]" Variant="Variant.Outlined" Class="mt-4"
+                <MudSelect Dense="true" T="string" Label="@Phrases.Majuscule(slot.Name)" @bind-Value="_liens[slot.Name]" Variant="Variant.Outlined" Class="mt-4"
                            Clearable="@(!slot.Required)" HelperText="@(slot.Required ? "Obligatoire" : "Facultatif")">
                     @foreach (var e in Entites.Where(e => WidgetCatalog.Score(slot, e) >= 0))
                     {
@@ -54,13 +54,13 @@
             }
 
             <div class="d-flex gap-4 mt-4">
-                <MudSelect T="int" Label="Largeur" @bind-Value="_cols" Variant="Variant.Outlined" HelperText="Part de la largeur d'un grand écran">
+                <MudSelect Dense="true" T="int" Label="Largeur" @bind-Value="_cols" Variant="Variant.Outlined" HelperText="Part de la largeur d'un grand écran">
                     @foreach (var n in ChoixLargeurs)
                     {
                         <MudSelectItem Value="@n">@Largeurs.Libelle(n)</MudSelectItem>
                     }
                 </MudSelect>
-                <MudSelect T="int" Label="Hauteur" @bind-Value="_rows" Variant="Variant.Outlined" HelperText="En lignes">
+                <MudSelect Dense="true" T="int" Label="Hauteur" @bind-Value="_rows" Variant="Variant.Outlined" HelperText="En lignes">
                     @foreach (var n in Hauteurs)
                     {
                         <MudSelectItem Value="@n">@n</MudSelectItem>

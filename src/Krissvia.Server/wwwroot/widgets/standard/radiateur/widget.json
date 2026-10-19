@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "radiateur",
+  "name": "Radiateur",
+  "description": "Allume et éteint un radiateur, flamme orange quand il chauffe ; l'état affiché est celui que l'appareil confirme.",
+  "version": "1.0.0",
+  "element": "kv-radiateur",
+  "script": "radiateur.js",
+  "slots": [ { "name": "interrupteur", "kinds": ["switch"], "usages": ["radiateur"], "required": true } ],
+  "size": { "cols": 2, "rows": 1 }
+}

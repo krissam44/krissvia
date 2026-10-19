@@ -98,6 +98,8 @@ MudBlazor, déjà dans Krissvia). Le manifeste s'écrit en attributs :
 - `slots` : les entités attendues, chacune avec un rôle. Un widget simple n'a qu'un slot ; une carte « prise
   avec mesure » en a deux (le switch, sa puissance). Un slot vise une entité (`"type": "entity"`) filtrée par
   `kinds`, `device_classes`, `usages` — ou un objet de module (`"type": "thermostat"`, et plus tard d'autres).
+  L'usage est choisi par l'utilisateur dans l'écran Entités (`radiateur`, `eclairage` pour un interrupteur) ; une
+  entité `light` a d'elle-même l'usage `eclairage`.
 - `size` : taille par défaut d'une carte. `cols` en douzièmes de la largeur d'un grand écran (1 à 12 : 3 = un quart,
   quatre cartes par ligne, comme un `lg="3"` de MudGrid), `rows` en lignes (1 à 4). Contrat 2 ; un manifeste du
   contrat 1 comptait en sixièmes (1 à 6) : il est encore lu, sa largeur doublée. Même unité pour l'attribut
@@ -224,7 +226,7 @@ laisse rien ; replier une section hors édition s'enregistre aussitôt.
   lumières, capteurs, énergie), chaque entité avec son meilleur widget ; les slots secondaires prennent les entités
   du même appareil (l'humidité d'une sonde) ; les radiateurs pilotés par un thermostat ne sont pas proposés. Rien
   n'est écrit avant « Enregistrer » — DomoMud générait ses sections tout seul au premier affichage.
-- Widgets standards : `valeur`, `temperature`, `interrupteur`, `ouverture`, `puissance`, `thermostat`, `meteo` (entité `weather` du plugin Météo : conditions et prévision sur 7 jours, à la manière de la carte de DomoMud),
+- Widgets standards : `valeur`, `temperature`, `interrupteur`, `radiateur` et `eclairage` (le même bouton, avec la flamme ou l'ampoule de leur usage ; base commune `bascule.js`), `ouverture`, `puissance`, `thermostat`, `meteo` (entité `weather` du plugin Météo : conditions et prévision sur 7 jours, à la manière de la carte de DomoMud),
   `linky` (puissance apparente et part de l'abonnement, HP/HC, courant, tension, index), `energie` (tuiles d'un compteur :
   puissance, tension, courant, index) et `delesteur` (entité `load_shedding` publiée par le cœur). À score égal, le widget
   dont le slot principal accepte le moins de classes l'emporte (Linky devant Puissance), après la règle « installé exprès ».

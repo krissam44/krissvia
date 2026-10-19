@@ -223,7 +223,7 @@ public static partial class WidgetCatalog
     {
         if (slot.Kinds.Count > 0 && !slot.Kinds.Contains(entity.Kind)) return -1;
         if (slot.DeviceClasses.Count > 0 && (entity.DeviceClass is null || !slot.DeviceClasses.Contains(entity.DeviceClass))) return -1;
-        if (slot.Usages.Count > 0 && (entity.Usage is null || !slot.Usages.Contains(entity.Usage))) return -1;
+        if (slot.Usages.Count > 0 && (EntityUsages.Of(entity) is not { } usage || !slot.Usages.Contains(usage))) return -1;
 
         return slot.Usages.Count > 0 ? 3 : slot.DeviceClasses.Count > 0 ? 2 : slot.Kinds.Count > 0 ? 1 : 0;
     }
