@@ -196,8 +196,10 @@ l'API. La restriction de §5 est une **discipline**, pas une barrière. Donc :
    widgets, scénarios, historique) ; même modèle ensuite pour l'alarme, la présence, le délesteur. Le descripteur
    porte la liste des modes (le widget les dessine depuis les données, jamais en dur), les bornes et le pas de la
    consigne, le nombre de radiateurs ; l'état porte ambiante, humidité et extérieure si connues, consigne, mode,
-   planning actif, chauffe et le **statut calculé par le cœur**. Ordres : `set_mode`, `set_target` (valeur exacte)
-   et `adjust_target` (pas relatif, calculé côté serveur : pas de double « + » sur une valeur périmée). Les modes
+   planning actif, chauffe, part de chauffe TPI et le **statut calculé par le cœur**. Ordres : `set_mode`,
+   `set_schedule`, `set_target` (valeur exacte) et `adjust_target` (pas relatif, calculé côté serveur : pas de
+   double « + » sur une valeur périmée). Le widget standard reprend la carte de DomoMud (couleurs des modes,
+   barre TPI ou d'inertie, icônes Material Symbols, chargées par la page hôte). Les modes
    restent ceux de Krissvia : Arrêt, Hors-gel, Éco, Confort −2, Confort −1, Confort.
 2. **Grille responsive**, comme Gladys, Home Assistant et DomoMud : le nombre de colonnes suit la largeur de
    l'écran, une carte occupe `size.cols` × `size.rows` cellules (ramenée à la largeur disponible sur téléphone).

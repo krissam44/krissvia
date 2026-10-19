@@ -34,7 +34,7 @@ public sealed class ThermostatEntities(
     public const double TargetStep = 0.5;
 
     private static readonly IReadOnlyList<string> Commandes =
-        [StandardCommands.SetMode, StandardCommands.SetTarget, StandardCommands.AdjustTarget];
+        [StandardCommands.SetMode, StandardCommands.SetTarget, StandardCommands.AdjustTarget, StandardCommands.SetSchedule];
 
     private readonly SemaphoreSlim _verrou = new(1, 1);
     private readonly Dictionary<string, string> _entites = new(StringComparer.Ordinal);    // thermostat → entité
@@ -78,6 +78,7 @@ public sealed class ThermostatEntities(
             StandardCommands.SetMode => await service.SetModeAsync(id, LireMode(args), ct),
             StandardCommands.SetTarget => await service.SetTargetAsync(id, LireConsigne(args), ct),
             StandardCommands.AdjustTarget => await service.AdjustTargetAsync(id, LirePas(args), ct),
+            StandardCommands.SetSchedule => await service.SetScheduleActiveAsync(id, LireActif(args), ct),
             _ => throw new ArgumentException($"commande « {command.Command} » inconnue d'un thermostat"),
         };
 
@@ -125,6 +126,8 @@ public sealed class ThermostatEntities(
                     ["max_target"] = JsonSerializer.SerializeToElement(ThermostatService.MaxTarget),
                     ["target_step"] = JsonSerializer.SerializeToElement(TargetStep),
                     ["radiators"] = JsonSerializer.SerializeToElement(t.SwitchEntityIds.Count),
+                    // Écran de réglage du thermostat, pour le bouton « paramètres » d'un widget.
+                    ["configuration"] = JsonSerializer.SerializeToElement($"/thermostats/{t.Id}"),
                 },
             },
         ],
@@ -142,6 +145,12 @@ public sealed class ThermostatEntities(
             ["mode"] = ModeId(s.Mode),
             ["schedule_active"] = t.ScheduleActive,
             ["heating"] = s.Heating,
+            // Part de chauffe du cycle TPI (0 à 1) et ce qui sert à la montrer, comme la carte de DomoMud.
+            ["power"] = Math.Round(s.Power, 3),
+            ["cycle_seconds"] = t.Tpi.CycleSeconds,
+            ["coasting_high"] = t.Tpi.CoastingHigh,
+            ["coasting_low"] = t.Tpi.CoastingLow,
+            ["window_open"] = s.InhibitionReasons.Contains(InhibitionReasons.FenetreOuverte),
             ["status"] = JsonSerializer.SerializeToNode(s.Status, ThermostatService.Json),
             ["status_label"] = ThermostatLabels.Status(s.Status),
         };
@@ -179,6 +188,11 @@ public sealed class ThermostatEntities(
                 _ => throw new ArgumentException("attendu : {\"temperature\": 19.5} ou {\"temperature\": null}"),
             }
             : throw new ArgumentException("attendu : {\"temperature\": 19.5} ou {\"temperature\": null}");
+
+    private static bool LireActif(JsonElement args) =>
+        args.ValueKind == JsonValueKind.Object && args.TryGetProperty("active", out var a) && a.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? a.GetBoolean()
+            : throw new ArgumentException("attendu : {\"active\": true}");
 
     private static double LirePas(JsonElement args) =>
         args.ValueKind == JsonValueKind.Object && args.TryGetProperty("delta", out var d) && d.ValueKind == JsonValueKind.Number
