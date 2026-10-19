@@ -166,6 +166,13 @@ class MessagesTests(unittest.TestCase):
                          krissvia.availability(False, device_unique_id="m"))
         self.assertEqual({"entity_unique_id": "m:t", "value": 12.5}, krissvia.value("m:t", 12.5))
 
+    def test_une_liste_de_reglages_est_relue_dans_l_ordre_quelle_que_soit_la_casse(self):
+        env = {"Lieux__1__Nom": "Vertou", "LIEUX__0__NOM": "La Trinité", "Lieux__0__Latitude": "47.58",
+               "Lieux__10__Nom": "Paris", "Lieux__2__Vide": "", "Autre__0__Nom": "x"}
+        with mock.patch.dict(os.environ, env, clear=True):
+            lieux = krissvia.settings_list("Lieux")
+        self.assertEqual([{"nom": "La Trinité", "latitude": "47.58"}, {"nom": "Vertou"}, {"nom": "Paris"}], lieux)
+
     def test_les_reglages_suivent_la_convention_dotnet(self):
         with mock.patch.dict(os.environ, {"Meteo__Latitude": "47.65", "Meteo__Actif": "true", "Meteo__Vide": ""}):
             self.assertEqual(47.65, krissvia.setting("Meteo:Latitude", convert=float))

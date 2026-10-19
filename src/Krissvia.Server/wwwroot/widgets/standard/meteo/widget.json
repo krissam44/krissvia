@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "meteo",
+  "name": "Météo",
+  "description": "Conditions du moment et prévision sur 7 jours d'un lieu, comme la carte météo de DomoMud.",
+  "version": "1.0.0",
+  "element": "kv-meteo",
+  "script": "meteo.js",
+  "slots": [ { "name": "meteo", "kinds": ["sensor"], "device_classes": ["weather"], "required": true } ],
+  "size": { "cols": 3, "rows": 3 }
+}

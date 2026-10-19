@@ -224,7 +224,7 @@ laisse rien ; replier une section hors édition s'enregistre aussitôt.
   lumières, capteurs, énergie), chaque entité avec son meilleur widget ; les slots secondaires prennent les entités
   du même appareil (l'humidité d'une sonde) ; les radiateurs pilotés par un thermostat ne sont pas proposés. Rien
   n'est écrit avant « Enregistrer » — DomoMud générait ses sections tout seul au premier affichage.
-- Widgets standards : `valeur`, `temperature`, `interrupteur`, `ouverture`, `puissance`, `thermostat`.
+- Widgets standards : `valeur`, `temperature`, `interrupteur`, `ouverture`, `puissance`, `thermostat`, `meteo` (entité `weather` du plugin Météo : conditions et prévision sur 7 jours, à la manière de la carte de DomoMud).
 - Widgets locaux : dossier `widgets` à côté de la base (ou `Widgets:Directory`), publié sous `/widgets/local`.
 - Pas encore : widgets livrés par un plugin.
 

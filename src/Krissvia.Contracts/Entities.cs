@@ -102,6 +102,16 @@ public static class DeviceClasses
     public const string Illuminance = "illuminance";
     public const string CarbonDioxide = "carbon_dioxide";
 
+    /// <summary>Vitesse du vent, en km/h.</summary>
+    public const string WindSpeed = "wind_speed";
+
+    /// <summary>
+    /// sensor dont la valeur est un OBJET : les conditions du moment et la prévision d'un lieu (docs/PLUGINS-PYTHON.md,
+    /// plugin Météo). Les grandeurs dont le cœur se sert (température extérieure d'un thermostat) sont publiées à part,
+    /// en entités numériques.
+    /// </summary>
+    public const string Weather = "weather";
+
     /// <summary>sensor dont la valeur est un libellé (tarif en cours…), pas un nombre.</summary>
     public const string Enum = "enum";
 
@@ -137,6 +147,7 @@ public static class Units
     public const string Hectopascal = "hPa";
     public const string Lux = "lx";
     public const string PartsPerMillion = "ppm";
+    public const string KilometerPerHour = "km/h";
 }
 
 /// <summary>Commandes standard par famille. Un plugin peut en déclarer d'autres.</summary>

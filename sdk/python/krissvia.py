@@ -68,6 +68,24 @@ def setting(name: str, default: Any = None, convert=str) -> Any:
         raise ValueError(f"réglage {name} invalide : « {brut} »") from ex
 
 
+def settings_list(name: str) -> list[dict[str, str]]:
+    """Une liste de réglages (tableau d'objets de la page Services), dans l'ordre de la page.
+
+    ``settings_list("Lieux")`` lit ``Lieux__0__Nom``, ``Lieux__0__Latitude``, ``Lieux__1__Nom``… et rend
+    ``[{"nom": …, "latitude": …}, …]``. Les noms de champs sont en MINUSCULES, sur tous les systèmes :
+    Windows met en majuscules les noms des variables d'environnement qu'on parcourt.
+    """
+    prefixe = name.replace(":", "__").lower() + "__"
+    elements: dict[int, dict[str, str]] = {}
+    for cle, brut in os.environ.items():
+        if not cle.lower().startswith(prefixe):
+            continue
+        rang, _, champ = cle[len(prefixe):].partition("__")
+        if rang.isdigit() and champ and brut != "":
+            elements.setdefault(int(rang), {})[champ.lower()] = brut
+    return [elements[i] for i in sorted(elements)]
+
+
 # ── Messages ─────────────────────────────────────────────────────────────────
 # Les champs absents ne sont pas écrits (contrat : jamais de null) ; ces fonctions s'en chargent.
 

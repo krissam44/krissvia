@@ -2,7 +2,8 @@
 
 Un plugin Krissvia est un processus séparé qui parle au cœur par WebSocket (`TRANSPORT.md`). Le SDK C#
 n'est qu'une façon de le faire : `sdk/python/krissvia.py` en est l'équivalent Python, en un fichier, et
-`plugins/Krissvia.Plugin.Meteo` l'exemple complet (Open-Meteo : température, humidité, pression).
+`plugins/Krissvia.Plugin.Meteo` l'exemple complet : plusieurs lieux, chacun avec ses conditions du moment et sa
+prévision sur 7 jours (Open-Meteo), dessinés par le widget standard `meteo`.
 
 ## 1. Ce qu'il faut sur la machine
 
@@ -44,7 +45,10 @@ Services le trouve, l'active, le lance, le relance s'il s'arrête, et montre ce 
 
 Les réglages saisis dans la page Services arrivent en variables d'environnement, comme pour un plugin C# :
 `Meteo:Latitude` devient `Meteo__Latitude`. `krissvia.setting("Meteo:Latitude", convert=float)` les lit ; une
-valeur invalide lève une `ValueError` qui nomme le réglage. L'adresse du cœur, le jeton et l'identifiant
+valeur invalide lève une `ValueError` qui nomme le réglage. Une liste d'objets de la page (`"type": "array"`,
+comme les lieux du plugin Météo) arrive en `Lieux__0__Nom`, `Lieux__0__Latitude`, `Lieux__1__Nom`… ;
+`krissvia.settings_list("Lieux")` la rend en `[{"nom": …, "latitude": …}, …]`, noms de champs en minuscules
+(Windows met en majuscules les noms des variables qu'on parcourt). L'adresse du cœur, le jeton et l'identifiant
 (`Krissvia__Url`, `Krissvia__Token`, `Krissvia__PluginId`) sont posés par le cœur : `CoreClient` les lit
 seul.
 
@@ -85,8 +89,21 @@ krissvia.run(Cave(), Cave.surveiller, plugin_version="1.0.0")
 
 ```bash
 python -m unittest discover -s sdk/python
+python -m unittest discover -s plugins/Krissvia.Plugin.Meteo
 ```
 
 Contre un faux cœur WebSocket sur la boucle locale : poignée de main et resynchronisation, ordres réussis et
 en échec, refus suivi d'une attente, cœur muet suivi d'une reconnexion, messages sans champs vides, lecture des
-réglages.
+réglages. Ceux du plugin Météo n'appellent pas le réseau : lecture des lieux (et de l'ancien réglage d'un seul
+lieu), traduction d'une réponse d'Open-Meteo, instantané.
+
+## 6. Le plugin Météo
+
+- Un appareil par lieu. Son entité `…_meteo` (`device_class: weather`) a pour valeur un objet : `temperature`,
+  `apparent_temperature`, `humidity`, `wind_speed`, `precipitation`, `pressure`, `code` (WMO), `condition`,
+  `is_day`, `sunrise`, `sunset` (heure locale du lieu) et `forecast` (7 jours : `date`, `code`, `condition`, `max`,
+  `min`, `precipitation_probability`). Le widget `meteo` la dessine.
+- La température, l'humidité, la pression et le vent sont aussi publiés en entités numériques : ce sont elles
+  qu'un thermostat prend comme température extérieure, et qu'un graphique suivra.
+- L'identifiant d'un lieu est tiré de son nom s'il est vide ; il fixe les identifiants des entités, donc ne plus
+  le changer. Sans aucun lieu, le plugin relit l'ancien réglage d'un seul lieu (appareil `meteo`).
