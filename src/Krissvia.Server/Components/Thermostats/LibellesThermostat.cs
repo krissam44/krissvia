@@ -17,6 +17,7 @@ internal static class LibellesThermostat
         ThermostatStatus.SensorLost or ThermostatStatus.UnknownSwitch => Color.Error,
         ThermostatStatus.Inhibited or ThermostatStatus.WindowOpen => Color.Warning,
         ThermostatStatus.Heating => Color.Secondary,
+        ThermostatStatus.Preheating => Color.Tertiary,
         ThermostatStatus.Coasting => Color.Info,
         _ => Color.Default,
     };

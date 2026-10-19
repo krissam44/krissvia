@@ -17,6 +17,7 @@ public partial class ThermostatConfiguration
     [Parameter] public string? Id { get; set; }
 
     [Inject] private ThermostatService Service { get; set; } = default!;
+    [Inject] private ThermostatEngine Moteur { get; set; } = default!;
     [Inject] private IEntityRegistry Registre { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IDialogService Dialogues { get; set; } = default!;
@@ -36,6 +37,11 @@ public partial class ThermostatConfiguration
     private List<RegisteredEntity> _previsions = [];
 
     private bool Creation => Id is null;
+
+    /// <summary>La pente apprise par le moteur, dite en clair ; celle par défaut tant qu'il n'a rien observé.</summary>
+    private string Pente => (Id is null ? null : Moteur.GetSnapshot(Id)?.Slope) is { } p
+        ? $"apprise : {p.MinutesPerDegree:0} min par °C gagné" + (p.OutdoorReference is { } r ? $", mesurée par {r:0.#} °C dehors" : "")
+        : $"pas encore apprise : {Preheat.DefaultMinutesPerDegree:0} min par °C, en attendant une montée à pleine puissance";
     private string Titre => Creation ? "Nouveau thermostat" : $"Configuration · {(_existant?.Name is { Length: > 0 } n ? n : Id)}";
 
     protected override async Task OnParametersSetAsync()
@@ -159,6 +165,7 @@ public partial class ThermostatConfiguration
         public string Ouverture { get; set; } = Aucune;
         public string Prevision { get; set; } = Aucune;
         public bool Anticipation { get; set; } = Defaut.ForecastAnticipation;
+        public bool Prechauffage { get; set; } = Defaut.PreheatEnabled;
         public double Confort { get; set; } = Defaut.ComfortTemperature;
         public double Eco { get; set; } = Defaut.EcoTemperature;
         public double HorsGel { get; set; } = Defaut.FrostProtectionTemperature;
@@ -185,6 +192,7 @@ public partial class ThermostatConfiguration
             Ouverture = t.OpeningEntityId ?? Aucune,
             Prevision = t.ForecastEntityId ?? Aucune,
             Anticipation = t.ForecastAnticipation,
+            Prechauffage = t.PreheatEnabled,
             Confort = t.ComfortTemperature,
             Eco = t.EcoTemperature,
             HorsGel = t.FrostProtectionTemperature,
@@ -213,6 +221,7 @@ public partial class ThermostatConfiguration
             OpeningEntityId = string.IsNullOrEmpty(Ouverture) ? null : Ouverture,
             ForecastEntityId = string.IsNullOrEmpty(Prevision) ? null : Prevision,
             ForecastAnticipation = Anticipation,
+            PreheatEnabled = Prechauffage,
             ComfortTemperature = Confort,
             EcoTemperature = Eco,
             FrostProtectionTemperature = HorsGel,

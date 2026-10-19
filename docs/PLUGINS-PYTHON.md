@@ -123,3 +123,8 @@ météo** (écran de configuration, onglet Général) :
   reprend la sonde extérieure (`OutdoorForecast`, fonction pure couverte par les tests).
 - L'interrupteur « Anticiper avec la prévision » garde l'entité choisie mais revient à la mesure seule, pour
   comparer avec et sans.
+- La prévision corrige aussi le **préchauffage anticipé** : avant un créneau plus chaud du planning, le moteur
+  chauffe en avance de (consigne à venir − ambiante) × pente, la pente (min/°C) étant apprise sur les montées à
+  pleine puissance. Par froid annoncé pendant la montée, la pente s'allonge : `Ki × (consigne − extérieur)` est la
+  part de puissance qui sert à tenir la consigne, le reste sert à monter, et la durée suit l'inverse de ce reste
+  (facteur borné à [0,5 ; 3]). Statut « Préchauffage » pendant ce temps ; avance de 3 h au plus.

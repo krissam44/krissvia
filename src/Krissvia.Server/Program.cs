@@ -76,6 +76,7 @@ builder.Services.AddSingleton<IEntityCommander>(sp => sp.GetRequiredService<Comm
 // Thermostats : configuration en base, moteur, et l'inhibiteur que partageront délestage et protections.
 builder.Services.AddSingleton<IConfigurationStore, SqliteConfigurationStore>();
 builder.Services.AddSingleton(sp => new ThermostatInhibitor(sp.GetRequiredService<ICommandBus>()));
+builder.Services.AddSingleton<IHeatingSlopeStore, HeatingSlopeStore>();
 builder.Services.AddSingleton<ThermostatEngine>();
 builder.Services.AddSingleton<ThermostatService>();
 builder.Services.AddSingleton<ThermostatEntities>();   // les thermostats en entités climate

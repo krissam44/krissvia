@@ -33,6 +33,7 @@ public static class ThermostatLabels
         ThermostatStatus.Coasting => "Inertie",
         ThermostatStatus.Off => "Arrêté",
         ThermostatStatus.Heating => "Chauffe",
+        ThermostatStatus.Preheating => "Préchauffage",
         _ => "Attente",
     };
 }

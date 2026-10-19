@@ -28,9 +28,12 @@ public static class OutdoorForecast
     private static readonly TimeSpan Pas = TimeSpan.FromMinutes(30);
 
     /// <summary>La moyenne prévue d'une entité météo, ou null si elle n'est pas utilisable maintenant.</summary>
-    public static double? Anticipated(EntityStateSnapshot? etat, DateTimeOffset maintenant) =>
+    public static double? Anticipated(EntityStateSnapshot? etat, DateTimeOffset maintenant) => MeanOver(etat, maintenant, Horizon);
+
+    /// <summary>La moyenne prévue sur un autre horizon (la durée d'une montée en température), mêmes garde-fous.</summary>
+    public static double? MeanOver(EntityStateSnapshot? etat, DateTimeOffset maintenant, TimeSpan horizon) =>
         etat is { Available: true } && maintenant - etat.MeasuredAt <= MaxAge
-            ? MeanAhead(etat.Value, maintenant, Horizon)
+            ? MeanAhead(etat.Value, maintenant, horizon)
             : null;
 
     /// <summary>

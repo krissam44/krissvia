@@ -111,6 +111,13 @@ else if (_m is not null && _planning is not null)
             </MudTabPanel>
 
             <MudTabPanel Text="Régulation" Icon="@Icons.Material.Filled.Tune">
+                <MudText Typo="Typo.subtitle2" Class="mud-text-secondary mb-2">Préchauffage anticipé</MudText>
+                <MudSwitch T="bool" @bind-Value="_m.Prechauffage" Color="Color.Primary"
+                           Label="Avec le planning, chauffer en avance pour atteindre la consigne à l'heure du créneau" />
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+                    Pente de chauffe @Pente. Corrigée par la prévision météo quand le thermostat en a une. Avance de @(Preheat.MaxMinutes / 60) h au plus.
+                </MudText>
+
                 <MudText Typo="Typo.subtitle2" Class="mud-text-secondary mb-2">Régulation proportionnelle</MudText>
                 <MudGrid>
                     <MudItem xs="12" sm="6"><MudNumericField @bind-Value="_m.Kp" Label="Coefficient Kp" Step="0.05" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="0,6 recommandé : réaction à l'écart intérieur" /></MudItem>
