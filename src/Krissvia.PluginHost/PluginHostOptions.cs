@@ -24,4 +24,16 @@ public sealed class PluginHostOptions
     /// du réseau pourrait sinon déclarer des entités ou recevoir les ordres d'un plugin légitime.
     /// </summary>
     public bool AllowUnregisteredPlugins { get; set; }
+
+    /// <summary>
+    /// Interpréteur de chaque runtime de plugin (<c>"python": "/usr/bin/python3"</c>). Absent : celui du PATH,
+    /// <c>python</c> sous Windows, <c>python3</c> ailleurs.
+    /// </summary>
+    public Dictionary<string, string> Runtimes { get; set; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Dossier des SDK livrés avec le cœur (<c>sdk/python/krissvia.py</c>) : un plugin Python lancé par le cœur y
+    /// trouve <c>import krissvia</c> sans rien installer d'autre que ses propres dépendances.
+    /// </summary>
+    public string SdkDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "sdk");
 }

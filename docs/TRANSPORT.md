@@ -88,3 +88,5 @@ Les jetons ne vont pas dans un fichier versionné : `appsettings.Local.json`, va
   le cœur, `wss://` derrière le reverse proxy, le jeton seul ne protégeant pas d'une écoute.
 - **Kit de conformité** (v0.2 §4) : les tests de `Krissvia.PluginHost.Tests` en sont le côté cœur ; il
   reste à en faire un exécutable contre lequel un plugin d'un autre langage se teste.
+- **Autres langages** : le SDK Python (`sdk/python/krissvia.py`) refait `CoreClient` en Python, et le cœur
+  lance un plugin Python lui-même (`"runtime": "python"` dans `plugin.json`) — voir `PLUGINS-PYTHON.md`.

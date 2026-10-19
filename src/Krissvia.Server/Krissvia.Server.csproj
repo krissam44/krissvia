@@ -13,4 +13,9 @@
     <PackageReference Include="MudBlazor" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- SDK des plugins Python : livré avec le cœur, mis dans le PYTHONPATH des plugins qu'il lance. -->
+    <None Include="..\..\sdk\python\krissvia.py" Link="sdk\python\krissvia.py" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
