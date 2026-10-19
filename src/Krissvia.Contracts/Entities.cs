@@ -156,8 +156,10 @@ public static class StandardCommands
     public const string Stop = "stop";
     public const string SetPosition = "set_position";
 
-    // climate : args {"mode": "comfort"} ; {"temperature": 19.5} (null : consigne du mode) ; {"delta": 0.5}
+    // climate : args {"mode": "comfort"} ; {"temperature": 19.5} (null : consigne du mode) ; {"delta": 0.5} ;
+    // {"active": true} (planning)
     public const string SetMode = "set_mode";
     public const string SetTarget = "set_target";
     public const string AdjustTarget = "adjust_target";
+    public const string SetSchedule = "set_schedule";
 }

@@ -67,13 +67,15 @@ public class ThermostatEntitiesTests
         public ThermostatEngine Moteur { get; }
         public ThermostatService Service { get; }
         public ThermostatEntities Entites { get; }
+        public ThermostatInhibitor Inhibiteur { get; }
 
         public Banc()
         {
             Etats = new EntityStateStore(new SansPersistance(), Horloge);
             Ecrivain = new EcrivainCompteur(Etats);
             var commandes = new ScriptedCommander();
-            Moteur = new ThermostatEngine(Etats, Registre, commandes, new ThermostatInhibitor(commandes), Horloge);
+            Inhibiteur = new ThermostatInhibitor(commandes);
+            Moteur = new ThermostatEngine(Etats, Registre, commandes, Inhibiteur, Horloge);
             Service = new ThermostatService(new Magasin(), Registre, Moteur);
             Entites = new ThermostatEntities(Service, Moteur, Registre, Etats, Ecrivain);
             Registre.RegisterAsync("test",
@@ -129,7 +131,7 @@ public class ThermostatEntitiesTests
         Assert.NotNull(e);
         Assert.Equal(EntityKind.Climate, e.Kind);
         Assert.Equal(ThermostatEntities.IntegrationId, e.IntegrationId);
-        Assert.Equal([StandardCommands.SetMode, StandardCommands.SetTarget, StandardCommands.AdjustTarget], e.Commands);
+        Assert.Equal([StandardCommands.SetMode, StandardCommands.SetTarget, StandardCommands.AdjustTarget, StandardCommands.SetSchedule], e.Commands);
         using var extra = JsonDocument.Parse(e.ExtraJson!);
         Assert.Equal(["comfort", "comfort1", "comfort2", "eco", "frost_protection", "off"],
             extra.RootElement.GetProperty("modes").EnumerateArray().Select(m => m.GetProperty("id").GetString()));
@@ -166,6 +168,28 @@ public class ThermostatEntitiesTests
         Assert.True(etat.GetProperty("heating").GetBoolean());
         Assert.Equal("heating", etat.GetProperty("status").GetString());
         Assert.Equal("Chauffe", etat.GetProperty("status_label").GetString());
+        Assert.InRange(etat.GetProperty("power").GetDouble(), 0.01, 1);
+        Assert.Equal(new TpiSettings().CycleSeconds, etat.GetProperty("cycle_seconds").GetInt32());
+        Assert.False(etat.GetProperty("window_open").GetBoolean());
+        Assert.Equal(new TpiSettings().CoastingHigh, etat.GetProperty("coasting_high").GetDouble());
+        Assert.Equal(new TpiSettings().CoastingLow, etat.GetProperty("coasting_low").GetDouble());
+    }
+
+    [Fact]
+    public async Task Une_fenetre_ouverte_se_voit_dans_l_etat_mais_pas_un_delestage()
+    {
+        var b = new Banc();
+        await b.AjouterAsync();
+        b.Etats.Update(Sonde, JsonSerializer.SerializeToElement(18.4));
+        var radiateurs = b.Service.Get("salon")!.SwitchEntityIds;
+
+        await b.Inhibiteur.InhibitAsync("salon", radiateurs, InhibitionReasons.Delestage);
+        await b.PasserAsync();
+        Assert.False(b.Etat().GetProperty("window_open").GetBoolean());
+
+        await b.Inhibiteur.InhibitAsync("salon", radiateurs, InhibitionReasons.FenetreOuverte);
+        await b.PasserAsync();
+        Assert.True(b.Etat().GetProperty("window_open").GetBoolean());
     }
 
     [Fact]
@@ -196,6 +220,21 @@ public class ThermostatEntitiesTests
         var t = b.Service.Get("salon")!;
         Assert.Equal(ThermostatMode.Eco, t.ManualMode);
         Assert.False(t.ScheduleActive);
+    }
+
+    [Fact]
+    public async Task Le_planning_s_active_et_se_suspend_par_un_ordre()
+    {
+        var b = new Banc();
+        await b.AjouterAsync();
+        await b.Entites.PublishAsync();
+
+        await b.OrdonnerAsync(StandardCommands.SetSchedule, new { active = true });
+        Assert.True(b.Service.Get("salon")!.ScheduleActive);
+
+        await b.OrdonnerAsync(StandardCommands.SetSchedule, new { active = false });
+        Assert.False(b.Service.Get("salon")!.ScheduleActive);
+        await Assert.ThrowsAsync<ArgumentException>(() => b.OrdonnerAsync(StandardCommands.SetSchedule, new { actif = 1 }));
     }
 
     [Fact]

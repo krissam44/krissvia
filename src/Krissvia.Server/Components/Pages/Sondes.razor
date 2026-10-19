@@ -22,7 +22,7 @@ else
         @foreach (var piece in _vue.Rooms)
         {
             var couleur = piece.Average is { } m ? Echelle.Couleur(m) : Echelle.Eteinte;
-            <MudItem xs="12" sm="6" md="4" lg="3">
+            <MudItem xs="12" sm="6" md="4" lg="2">
                 <MudPaper Elevation="2" Class="carte-sonde" Style="@($"border-top-color: {couleur}")">
                     <MudText Typo="Typo.body1" Class="font-weight-bold">@piece.Room</MudText>
                     @if (piece.Average is { } moyenne)
@@ -68,7 +68,7 @@ else
         {
             var douteuse = sonde.Health != SensorHealth.Ok;
             var couleur = !douteuse && sonde.Temperature is { } t ? Echelle.Couleur(t) : Echelle.Eteinte;
-            <MudItem xs="12" sm="6" md="4" lg="3">
+            <MudItem xs="12" sm="6" md="4" lg="2">
                 <MudPaper Elevation="2" Class="@($"carte-sonde {(douteuse ? "douteuse" : "")}")" Style="@($"border-top-color: {couleur}")">
                     <div class="d-flex justify-space-between align-start">
                         <MudText Typo="Typo.body1" Class="font-weight-bold nom" Style="@($"color: {couleur}")" title="@sonde.Entity.DisplayName">@sonde.Entity.DisplayName</MudText>
