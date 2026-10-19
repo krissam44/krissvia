@@ -23,10 +23,11 @@ internal static class Categories
     public static readonly Categorie Evenement = new("evenement", "Bouton / événement", Icons.Material.Filled.RadioButtonChecked, "#ce93d8");
     public static readonly Categorie Thermostat = new("thermostat", "Thermostat", Icons.Material.Filled.DeviceThermostat, "#ef5350");
     public static readonly Categorie Radiateur = new("radiateur", "Radiateur", Icons.Material.Filled.Whatshot, "#ff7043");
+    public static readonly Categorie Meteo = new("meteo", "Météo", Icons.Material.Filled.WbSunny, "#ffb300");
     public static readonly Categorie Autre = new("autre", "Autre mesure", Icons.Material.Filled.Sensors, "#78909c");
 
     /// <summary>L'ordre des pastilles de filtre.</summary>
-    public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Autre];
+    public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Meteo, Autre];
 
     public static Categorie De(RegisteredEntity e) => e.Kind switch
     {
@@ -44,6 +45,7 @@ internal static class Categories
             DeviceClasses.Power or DeviceClasses.ApparentPower or DeviceClasses.Energy
                 or DeviceClasses.Voltage or DeviceClasses.Current => Puissance,
             DeviceClasses.Battery => Batterie,
+            DeviceClasses.Weather => Meteo,
             _ => Autre,
         },
     };
@@ -65,6 +67,8 @@ internal static class Categories
             };
         if (etat.TryGetNumber(out var n))
             return n.ToString(Math.Abs(n) >= 100 ? "#,0" : "0.##", CultureInfo.GetCultureInfo("fr-FR")) + (e.Unit is { Length: > 0 } u ? $" {u}" : "");
+        if (e.DeviceClass == DeviceClasses.Weather && v.ValueKind == JsonValueKind.Object)
+            return string.Join(" · ", new[] { Nombre(v, "temperature", " °C"), Texte(v, "condition") }.Where(x => x is not null));
         if (e.Kind == EntityKind.Climate && v.ValueKind == JsonValueKind.Object)
             return string.Join(" · ", new[] { Nombre(v, "temperature", " °C"), Texte(v, "status_label") }.Where(x => x is not null));
         if (v.ValueKind == JsonValueKind.Object && v.TryGetProperty("on", out var on) && on.ValueKind is JsonValueKind.True or JsonValueKind.False)

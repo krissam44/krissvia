@@ -21,6 +21,7 @@ public static class DashboardProposal
     private static readonly Famille[] Familles =
     [
         new("thermostats", "Thermostats", e => e.Kind == EntityKind.Climate),
+        new("meteo", "Météo", e => e.Kind == EntityKind.Sensor && e.DeviceClass == DeviceClasses.Weather),
         new("temperatures", "Températures", e => e.Kind == EntityKind.Sensor && e.DeviceClass == DeviceClasses.Temperature),
         new("radiateurs", "Radiateurs", EntityUsages.IsRadiator),
         new("interrupteurs", "Interrupteurs et lumières", e => e.Kind is EntityKind.Switch or EntityKind.Light && !EntityUsages.IsRadiator(e)),

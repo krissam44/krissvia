@@ -1,21 +1,30 @@
 {
   "id": "meteo",
   "name": "Météo (Python)",
-  "description": "Température, humidité et pression extérieures d'un lieu, relevées sur Open-Meteo. Exemple de plugin écrit en Python.",
+  "description": "Conditions et prévisions sur 7 jours de plusieurs lieux, relevées sur Open-Meteo. Exemple de plugin écrit en Python.",
   "runtime": "python",
   "executable": "meteo.py",
   "settings": {
     "type": "object",
     "properties": {
+      "Lieux": {
+        "type": "array",
+        "title": "Lieux",
+        "items": {
+          "type": "object",
+          "required": [ "Nom", "Latitude", "Longitude" ],
+          "properties": {
+            "Nom": { "type": "string", "title": "Nom", "description": "Affiché sur la carte, par exemple « La Trinité-sur-Mer »." },
+            "Latitude": { "type": "number", "title": "Latitude", "minimum": -90, "maximum": 90, "description": "En degrés décimaux, par exemple 47.58." },
+            "Longitude": { "type": "number", "title": "Longitude", "minimum": -180, "maximum": 180, "description": "En degrés décimaux, négative à l'ouest de Greenwich." },
+            "Identifiant": { "type": "string", "title": "Identifiant", "description": "Tiré du nom s'il est vide. Ne plus le changer une fois les entités créées." }
+          }
+        }
+      },
       "Meteo": {
         "type": "object",
-        "title": "Lieu",
-        "required": [ "Latitude", "Longitude" ],
+        "title": "Relevés",
         "properties": {
-          "Latitude": { "type": "number", "title": "Latitude", "minimum": -90, "maximum": 90, "description": "En degrés décimaux, par exemple 47.66." },
-          "Longitude": { "type": "number", "title": "Longitude", "minimum": -180, "maximum": 180, "description": "En degrés décimaux, négative à l'ouest de Greenwich." },
-          "Name": { "type": "string", "title": "Nom", "default": "Météo" },
-          "DeviceId": { "type": "string", "title": "Identifiant de l'appareil", "default": "meteo", "description": "Ne plus le changer une fois les entités créées." },
           "IntervalMinutes": { "type": "integer", "title": "Relevé toutes les (min)", "default": 10, "minimum": 5, "maximum": 120 }
         }
       }
