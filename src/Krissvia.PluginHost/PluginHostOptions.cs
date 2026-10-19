@@ -32,6 +32,13 @@ public sealed class PluginHostOptions
     public Dictionary<string, string> Runtimes { get; set; } = new(StringComparer.Ordinal);
 
     /// <summary>
+    /// Dossier des données des plugins : chacun reçoit le sien (<c>{DataDirectory}/{id}</c>, variable
+    /// <c>Krissvia__DataDirectory</c>) pour y garder son propre état (la liste des appareils suivis du plugin Livebox).
+    /// À côté de la base par défaut ; null : rien n'est transmis.
+    /// </summary>
+    public string? DataDirectory { get; set; }
+
+    /// <summary>
     /// Dossier des SDK livrés avec le cœur (<c>sdk/python/krissvia.py</c>) : un plugin Python lancé par le cœur y
     /// trouve <c>import krissvia</c> sans rien installer d'autre que ses propres dépendances.
     /// </summary>

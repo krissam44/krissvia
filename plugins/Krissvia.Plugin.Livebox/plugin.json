@@ -21,7 +21,8 @@
       },
       "Suivis": {
         "type": "array",
-        "title": "Appareils suivis",
+        "title": "Appareils suivis (départ)",
+        "description": "Lu au premier démarrage seulement : ensuite, cochez « Suivi » dans la carte « Appareils du réseau » du tableau de bord.",
         "items": {
           "type": "object",
           "required": [ "Mac", "Name" ],

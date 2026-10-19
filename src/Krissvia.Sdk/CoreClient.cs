@@ -45,6 +45,12 @@ public sealed class CoreClientOptions
     /// </summary>
     public int? ParentPid { get; set; }
 
+    /// <summary>
+    /// Dossier où le plugin garde son propre état (<c>Krissvia__DataDirectory</c>, posé par la page Services). Absent
+    /// pour un plugin lancé à la main : à lui de choisir (le dossier de l'exécutable, par exemple).
+    /// </summary>
+    public string? DataDirectory { get; set; }
+
     /// <summary>Période de vérification du processus parent.</summary>
     public TimeSpan ParentCheckPeriod { get; set; } = TimeSpan.FromSeconds(5);
 }

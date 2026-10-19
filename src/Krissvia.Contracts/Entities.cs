@@ -145,6 +145,18 @@ public static class DeviceClasses
     /// <summary>sensor : un débit, en kbit/s (synchronisation descendante ou montante).</summary>
     public const string DataRate = "data_rate";
 
+    /// <summary>
+    /// sensor dont la valeur est un OBJET : l'état complet de la connexion (lien, type, IP, débits et leurs maximums,
+    /// marge de bruit, atténuation). La même forme pour toute box : la carte « Connexion Internet » le dessine.
+    /// </summary>
+    public const string InternetConnection = "internet_connection";
+
+    /// <summary>
+    /// sensor dont la valeur est un OBJET : les appareils vus sur le réseau local (<c>hosts</c> : nom, MAC, IP,
+    /// connecté, suivi). Commande <c>set_tracked</c> <c>{"mac", "tracked"}</c> pour suivre la présence d'un appareil.
+    /// </summary>
+    public const string NetworkHosts = "network_hosts";
+
     /// <summary>binary_sensor : true = présence détectée.</summary>
     public const string Occupancy = "occupancy";
 

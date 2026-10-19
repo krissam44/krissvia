@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "reseau",
+  "name": "Appareils du réseau",
+  "description": "Les appareils que voit la box, avec la case « Suivi » qui en fait une présence du foyer. Pour toute box qui publie une entité « network_hosts ».",
+  "version": "1.0.0",
+  "element": "kv-reseau",
+  "script": "reseau.js",
+  "slots": [ { "name": "reseau", "kinds": ["sensor"], "device_classes": ["network_hosts"], "required": true } ],
+  "size": { "cols": 12, "rows": 4 }
+}

@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "connexion",
+  "name": "Connexion Internet",
+  "description": "État du lien, IP publique, débits synchronisés et qualité de ligne, pour toute box qui publie une entité « internet_connection ».",
+  "version": "1.0.0",
+  "element": "kv-connexion",
+  "script": "connexion.js",
+  "slots": [ { "name": "connexion", "kinds": ["sensor"], "device_classes": ["internet_connection"], "required": true } ],
+  "size": { "cols": 12, "rows": 2 }
+}
