@@ -43,10 +43,10 @@
             }
 
             <div class="d-flex gap-4 mt-4">
-                <MudSelect T="int" Label="Largeur" @bind-Value="_cols" Variant="Variant.Outlined" HelperText="En colonnes de la grille">
-                    @foreach (var n in Largeurs)
+                <MudSelect T="int" Label="Largeur" @bind-Value="_cols" Variant="Variant.Outlined" HelperText="Part de la largeur d'un grand écran">
+                    @foreach (var n in ChoixLargeurs)
                     {
-                        <MudSelectItem Value="@n">@(n == WidgetCatalog.MaxCols ? "Pleine largeur" : n.ToString())</MudSelectItem>
+                        <MudSelectItem Value="@n">@Largeurs.Libelle(n)</MudSelectItem>
                     }
                 </MudSelect>
                 <MudSelect T="int" Label="Hauteur" @bind-Value="_rows" Variant="Variant.Outlined" HelperText="En lignes">

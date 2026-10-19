@@ -1,5 +1,5 @@
 {
-  "contract": 1,
+  "contract": 2,
   "id": "temperature",
   "name": "Température",
   "description": "Température d'une sonde, avec son humidité si on la lie.",
@@ -10,5 +10,5 @@
     { "name": "temperature", "kinds": ["sensor"], "device_classes": ["temperature"], "required": true },
     { "name": "humidite", "kinds": ["sensor"], "device_classes": ["humidity"], "required": false }
   ],
-  "size": { "cols": 1, "rows": 1 }
+  "size": { "cols": 2, "rows": 1 }
 }

@@ -209,7 +209,7 @@ ouvrirait le flux avec le cookie de session.
   "name": "Confort", "order": 0,
   "sections": [
     { "id": "thermo", "title": "Thermostats", "collapsed": false,
-      "cards": [ { "id": "a1", "widget": "thermostat", "entities": { "thermostat": "climate.salon" }, "cols": 4 } ] }
+      "cards": [ { "id": "a1", "widget": "thermostat", "entities": { "thermostat": "climate.salon" }, "cols": 3 } ] }
   ]
 }
 ```
@@ -219,5 +219,7 @@ widget choisi pour l'entité (champ `widget` du registre, réglé dans l'écran 
 les entités du même appareil. Avec `widget`, ce sont ses `entities` qui comptent (WIDGETS.md §12).
 
 Identifiant de page : minuscules, chiffres et `-`. Une carte est unique dans sa page (pas seulement dans sa
-section). `cols` (1 à 6) et `rows` (1 à 4) sont facultatifs : sans eux, la taille du manifeste. Un widget ou une
+section). `cols` (1 à 12, en douzièmes d'un grand écran : 3 = quatre cartes par ligne) et `rows` (1 à 4) sont
+facultatifs : sans eux, la taille du manifeste. La réponse porte `"grid": 12`, le nombre de colonnes dans lequel
+`cols` est compté ; à l'envoi, `grid` est facultatif, mais toute autre valeur que 12 est refusée. Un widget ou une
 entité disparus ne bloquent pas l'enregistrement : la carte affiche le widget « valeur » et un bandeau.

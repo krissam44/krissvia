@@ -47,9 +47,9 @@
 </div>
 
 <style>
-    /* Comme l'écran Thermostats de DomoMud : trois cartes par ligne sur grand écran, deux sur tablette, une sur téléphone. */
+    /* Comme l'écran Thermostats de DomoMud (lg="3") : quatre cartes par ligne sur grand écran, deux sur tablette, une sur téléphone. */
     .kv-thermostats-grille { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
     @@media (min-width: 600px) { .kv-thermostats-grille { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @@media (min-width: 1280px) { .kv-thermostats-grille { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @@media (min-width: 1280px) { .kv-thermostats-grille { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
     .kv-thermostats .kv-carte { height: 260px; }
 </style>

@@ -49,9 +49,9 @@ public partial class TableauDeBord
     private Dictionary<string, string?> _pieces = new(StringComparer.Ordinal);
     private SuiviEnDirect? _suivi;
 
-    // Largeurs du menu de taille (DomoMud) : null = celle du widget, 6 = toute la largeur d'un grand écran.
+    // Largeurs du menu de taille : null = celle du widget, puis les fractions usuelles d'un grand écran.
     private static readonly (int? Cols, string Libelle)[] Largeurs =
-        [(null, "Auto (taille du widget)"), (1, "Petite"), (2, "Moyenne"), (3, "Grande"), (4, "Très grande"), (WidgetCatalog.MaxCols, "Pleine largeur")];
+        [(null, "Auto (taille du widget)"), .. Krissvia.Server.Components.Widgets.Largeurs.Usuelles.Select(n => ((int?)n, Krissvia.Server.Components.Widgets.Largeurs.Libelle(n)))];
 
     private Dashboard Page => _pages.FirstOrDefault(p => p.Id == _pageId) ?? _pages[0];
 

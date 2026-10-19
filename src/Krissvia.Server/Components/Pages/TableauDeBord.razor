@@ -177,7 +177,7 @@
                     }
                     @if (_edition)
                     {
-                        <button type="button" class="kv-ajout c2 r1" @onclick="() => AjouterCarteAsync(sec.Id)">
+                        <button type="button" class="kv-ajout c3 r1" @onclick="() => AjouterCarteAsync(sec.Id)">
                             <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" /> Ajouter une carte
                         </button>
                     }
@@ -204,20 +204,24 @@
     .kv-section-filet { flex: 1; height: 1px; background: var(--mud-palette-lines-default); margin: 0 8px; }
     .kv-section-compte { font-size: .75rem; color: var(--mud-palette-text-secondary); white-space: nowrap; }
 
-    /* Grille responsive : 2 colonnes sur téléphone, 4 sur tablette, 6 sur grand écran ; une carte plus large que
-       l'écran est ramenée à sa largeur. */
+    /* Grille responsive. Sur grand écran, 12 colonnes comme MudGrid : une carte de 3 en met quatre par ligne. Sur
+       tablette, 4 colonnes (une carte prend la moitié de sa largeur, arrondie au-dessus) ; sur téléphone, 2 (une
+       demi-ligne jusqu'à 2, puis toute la ligne). Une carte plus large que l'écran est ramenée à sa largeur. */
     .kv-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 118px; grid-auto-flow: dense; gap: 12px; }
-    @@media (min-width: 600px) { .kv-grille { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-    @@media (min-width: 1280px) { .kv-grille { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
-    .kv-grille .c1 { grid-column: span 1; }
-    .kv-grille .c2, .kv-grille .c3, .kv-grille .c4, .kv-grille .c5, .kv-grille .c6 { grid-column: span 2; }
+    .kv-grille > * { grid-column: span 2; }
+    .kv-grille .c1, .kv-grille .c2 { grid-column: span 1; }
     @@media (min-width: 600px) {
-        .kv-grille .c3 { grid-column: span 3; }
-        .kv-grille .c4, .kv-grille .c5, .kv-grille .c6 { grid-column: span 4; }
+        .kv-grille { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .kv-grille > * { grid-column: span 4; }
+        .kv-grille .c3, .kv-grille .c4 { grid-column: span 2; }
+        .kv-grille .c5, .kv-grille .c6 { grid-column: span 3; }
     }
     @@media (min-width: 1280px) {
-        .kv-grille .c5 { grid-column: span 5; }
-        .kv-grille .c6 { grid-column: span 6; }
+        .kv-grille { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+        .kv-grille .c1 { grid-column: span 1; } .kv-grille .c2 { grid-column: span 2; } .kv-grille .c3 { grid-column: span 3; }
+        .kv-grille .c4 { grid-column: span 4; } .kv-grille .c5 { grid-column: span 5; } .kv-grille .c6 { grid-column: span 6; }
+        .kv-grille .c7 { grid-column: span 7; } .kv-grille .c8 { grid-column: span 8; } .kv-grille .c9 { grid-column: span 9; }
+        .kv-grille .c10 { grid-column: span 10; } .kv-grille .c11 { grid-column: span 11; } .kv-grille .c12 { grid-column: span 12; }
     }
     .kv-grille .r1 { grid-row: span 1; } .kv-grille .r2 { grid-row: span 2; } .kv-grille .r3 { grid-row: span 3; } .kv-grille .r4 { grid-row: span 4; }
 

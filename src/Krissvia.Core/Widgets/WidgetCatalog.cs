@@ -17,7 +17,10 @@ public sealed record WidgetSlot
     public bool Required { get; init; }
 }
 
-/// <summary>Taille d'une carte, en cellules de la grille.</summary>
+/// <summary>
+/// Taille d'une carte : <see cref="Cols"/> en douzièmes de la largeur d'un grand écran (3 = un quart, comme un
+/// <c>lg="3"</c> de MudGrid), <see cref="Rows"/> en lignes.
+/// </summary>
 public sealed record WidgetSize(int Cols = 1, int Rows = 1);
 
 /// <summary>Le manifeste <c>widget.json</c> (WIDGETS.md §3).</summary>
@@ -99,9 +102,14 @@ public static partial class WidgetCatalog
 
     /// <summary>Origine des widgets Blazor, déclarés dans les bibliothèques de <c>Widgets:Assemblies</c>.</summary>
     public const string Blazor = "blazor";
-    public const int ContractVersion = 1;
-    /// <summary>Largeur maximale : 6 colonnes, toute la largeur d'un grand écran (« pleine largeur » de DomoMud).</summary>
-    public const int MaxCols = 6;
+    /// <summary>Contrat 2 : largeurs en douzièmes. Le contrat 1 (largeurs en sixièmes) est encore lu, converti.</summary>
+    public const int ContractVersion = 2;
+
+    /// <summary>Le premier contrat, dont la grille n'avait que 6 colonnes.</summary>
+    public const int LegacyContractVersion = 1;
+
+    /// <summary>Largeur maximale : 12 colonnes, toute la largeur d'un grand écran (la grille de MudGrid et de DomoMud).</summary>
+    public const int MaxCols = 12;
 
     public const int MaxRows = 4;
 
@@ -151,6 +159,10 @@ public static partial class WidgetCatalog
                     continue;
                 }
 
+                // Contrat 1 : largeur en sixièmes, la même carte en douzièmes.
+                if (manifeste.Contract == LegacyContractVersion)
+                    manifeste = manifeste with { Size = manifeste.Size with { Cols = manifeste.Size.Cols * 2 } };
+
                 widgets.Add(new CatalogWidget(manifeste, source.Origin, $"{source.BaseUrl.TrimEnd('/')}/{dossier.Name}/{manifeste.Script}"));
             }
         }
@@ -172,7 +184,8 @@ public static partial class WidgetCatalog
     /// <param name="dossier">Le dossier d'un Web Component ; null pour un widget Blazor, qui n'a pas de script.</param>
     public static string? Validate(WidgetManifest m, IWidgetFolder? dossier)
     {
-        if (m.Contract != ContractVersion) return $"contrat {m.Contract} non pris en charge (attendu : {ContractVersion})";
+        if (m.Contract is not (ContractVersion or LegacyContractVersion))
+            return $"contrat {m.Contract} non pris en charge (attendu : {ContractVersion})";
         if (!Identifiant().IsMatch(m.Id)) return "id : minuscules, chiffres et « - », 64 caractères au plus";
         if (m.Name.Length == 0) return "name manquant";
 
@@ -196,7 +209,9 @@ public static partial class WidgetCatalog
         if (m.Slots.Select(s => s.Name).Distinct(StringComparer.Ordinal).Count() != m.Slots.Count) return "deux slots portent le même nom";
         if (m.Slots.Any(s => s.Type != "entity")) return "slot : seul le type « entity » existe";
         if (!m.Slots[0].Required) return "le premier slot (principal) doit être obligatoire";
-        if (m.Size.Cols is < 1 or > MaxCols || m.Size.Rows is < 1 or > MaxRows) return $"size : de 1 à {MaxCols} colonnes et de 1 à {MaxRows} lignes";
+        var maxCols = m.Contract == LegacyContractVersion ? MaxCols / 2 : MaxCols;
+        if (m.Size.Cols < 1 || m.Size.Cols > maxCols || m.Size.Rows is < 1 or > MaxRows)
+            return $"size : de 1 à {maxCols} colonnes et de 1 à {MaxRows} lignes";
         return null;
     }
 

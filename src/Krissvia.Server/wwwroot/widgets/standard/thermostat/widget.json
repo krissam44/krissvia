@@ -1,5 +1,5 @@
 {
-  "contract": 1,
+  "contract": 2,
   "id": "thermostat",
   "name": "Thermostat",
   "description": "Ambiante, consigne réglable, modes et statut, dans l'esprit des cartes de DomoMud.",
