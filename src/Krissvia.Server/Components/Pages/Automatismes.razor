@@ -1,0 +1,95 @@
+@page "/automatismes"
+@implements IDisposable
+
+<PageTitle>Automatismes · Krissvia</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+    <div>
+        <MudText Typo="Typo.h5">Automatismes</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+            Quand quelque chose arrive (un appui, une heure, une détection), et si les conditions sont remplies, faire une suite d'actions.
+        </MudText>
+    </div>
+    <MudButton Href="/automatismes/nouveau" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">Nouveau</MudButton>
+</MudStack>
+
+@foreach (var erreur in Service.LoadErrors)
+{
+    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">Automatisme illisible, écarté : @erreur</MudAlert>
+}
+
+@if (Service.List().Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">
+        Aucun automatisme. Par exemple : un appui sur l'interrupteur de la chambre bascule l'éclairage ; le radar du salon allume la lampe
+        entre 22 h et 6 h et l'éteint 5 minutes après.
+    </MudAlert>
+}
+
+<MudGrid>
+    @foreach (var a in Service.List())
+    {
+        var dernier = Moteur.LastRun(a.Id);
+        <MudItem xs="12" md="6" xl="4" @key="a.Id">
+            <MudPaper Elevation="1" Class="pa-4 rounded-lg d-flex flex-column" Style="height: 100%">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.h6">@Nom(a)</MudText>
+                    <MudIconButton Href="@($"/automatismes/{a.Id}")" Icon="@Icons.Material.Filled.Settings" Size="Size.Small" aria-label="Modifier" />
+                </MudStack>
+
+                <div class="kv-regle">
+                    <span class="kv-mot">Quand</span><span>@LibellesAutomatisme.Declencheur(a.Trigger, NomEntite)</span>
+                    @if (a.Conditions.Count > 0)
+                    {
+                        <span class="kv-mot">Si</span>
+                        <span>@string.Join(" et ", a.Conditions.Select(c => LibellesAutomatisme.Condition(c, NomEntite, NomThermostat)))</span>
+                    }
+                    <span class="kv-mot">Alors</span>
+                    <span>@string.Join(", puis ", a.Actions.Select(x => LibellesAutomatisme.Action(x, NomEntite, NomThermostat)))</span>
+                </div>
+
+                <MudSpacer />
+                @if (dernier is not null)
+                {
+                    <MudText Typo="Typo.body2" Class="mt-2">
+                        <MudChip T="string" Size="Size.Small" Color="@LibellesAutomatisme.Couleur(dernier.Outcome)">@LibellesAutomatisme.Issue(dernier.Outcome)</MudChip>
+                        @Heure(dernier.At) <span class="mud-text-secondary">· @dernier.Cause</span>
+                    </MudText>
+                    @if (dernier.Detail is { } detail)
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@detail</MudText>
+                    }
+                }
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mt-2">
+                    <MudSwitch T="bool" Value="a.Enabled" ValueChanged="actif => ActiverAsync(a, actif)" Color="Color.Primary" Label="Actif" />
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.PlayArrow" Disabled="@_enCours.Contains(a.Id)"
+                               OnClick="() => ExecuterAsync(a)">Exécuter</MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>
+
+@if (Moteur.Journal.Count > 0)
+{
+    <MudPaper Elevation="1" Class="pa-4 rounded-lg mt-4">
+        <MudText Typo="Typo.h6" Class="mb-2">Dernières exécutions</MudText>
+        <MudSimpleTable Dense="true" Elevation="0">
+            <tbody>
+                @foreach (var r in Moteur.Journal.Take(20))
+                {
+                    <tr>
+                        <td style="white-space: nowrap">@Heure(r.At)</td>
+                        <td><b>@r.Name</b> <span class="mud-text-secondary">· @r.Cause</span>@if (r.Detail is { } d) { <br /><span class="mud-text-secondary">@d</span> }</td>
+                        <td style="white-space: nowrap"><MudChip T="string" Size="Size.Small" Color="@LibellesAutomatisme.Couleur(r.Outcome)">@LibellesAutomatisme.Issue(r.Outcome)</MudChip></td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </MudPaper>
+}
+
+<style>
+    .kv-regle { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; margin-top: 8px; font-size: .9rem; }
+    .kv-mot { font-weight: 600; color: var(--mud-palette-primary); }
+</style>

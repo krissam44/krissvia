@@ -31,6 +31,7 @@ public sealed class MenuService
         new("sondes", "Sondes", "/sondes", Icons.Material.Filled.DeviceThermostat),
         new("actionneurs", "Actionneurs", "/actionneurs", Icons.Material.Filled.Lightbulb),
         new("programmations", "Programmations", "/programmations", Icons.Material.Filled.Schedule),
+        new("automatismes", "Automatismes", "/automatismes", Icons.Material.Filled.AutoMode),
         new("delestage", "Délestage", "/delestage", Icons.Material.Filled.Bolt),
         new("absence", "Absence", "/absence", Icons.Material.Filled.Luggage),
         new("entites", "Entités", "/entites", Icons.Material.Filled.Devices),

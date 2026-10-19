@@ -103,6 +103,10 @@ builder.Services.AddSingleton<Krissvia.Core.Overview.RoomAverageEntities>();   /
 builder.Services.AddSingleton<DeviceScheduleEngine>();
 builder.Services.AddSingleton<DeviceScheduleService>();
 
+// Automatismes : déclencheur (bouton, horaire, changement d'état), conditions, actions.
+builder.Services.AddSingleton<Krissvia.Climate.Automations.AutomationEngine>();
+builder.Services.AddSingleton<Krissvia.Climate.Automations.AutomationService>();
+
 // Ordre de démarrage : schéma et états d'abord (les hosted services démarrent avant que Kestrel accepte un
 // plugin), puis la configuration des thermostats, qui lit la base.
 builder.Services.AddHostedService<StateStoreLifetime>();
@@ -110,6 +114,7 @@ builder.Services.AddHostedService<CommandJournal>();
 builder.Services.AddHostedService<ThermostatLoop>();
 builder.Services.AddHostedService<LoadSheddingLoop>();
 builder.Services.AddHostedService<DeviceScheduleLoop>();
+builder.Services.AddHostedService<AutomationLoop>();
 builder.Services.AddHostedService<AlertLoop>();
 builder.Services.AddHostedService<PresenceLoop>();
 builder.Services.AddHostedService<RoomAverageLoop>();
@@ -177,6 +182,7 @@ api.MapThermostatApi();
 api.MapLoadSheddingApi();
 api.MapAbsenceApi();
 api.MapDeviceScheduleApi();
+api.MapAutomationApi();
 api.MapEntityApi();
 api.MapWidgetApi();
 

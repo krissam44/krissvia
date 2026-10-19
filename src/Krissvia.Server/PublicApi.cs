@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Krissvia.Climate.Automations;
 using Krissvia.Climate.DeviceSchedules;
 using Krissvia.Climate.LoadShedding;
 using Krissvia.Climate.Presence;
@@ -150,6 +151,57 @@ internal static class PublicApi
             return Json(absence.Current);
         });
     }
+
+    /// <summary>
+    /// Automatismes (<c>/api/automations</c>) : configuration, dernière exécution, journal ; exécution à la main
+    /// (<c>POST /{id}/run</c>, conditions évaluées comme pour un vrai déclenchement).
+    /// </summary>
+    public static void MapAutomationApi(this RouteGroupBuilder api)
+    {
+        var groupe = api.MapGroup("/automations");
+
+        groupe.MapGet("/", (AutomationService service, AutomationEngine moteur) =>
+            Json(service.List().Select(a => new { settings = a, last_run = moteur.LastRun(a.Id) })));
+
+        groupe.MapGet("/journal", (AutomationEngine moteur) => Json(moteur.Journal));
+
+        groupe.MapGet("/{id}", (string id, AutomationService service, AutomationEngine moteur) =>
+            service.Get(id) is { } a ? Json(new { settings = a, last_run = moteur.LastRun(id) }) : AutomatismeInconnu(id));
+
+        groupe.MapPut("/{id}", async (string id, HttpRequest requete, AutomationService service, CancellationToken ct) =>
+        {
+            Automation? corps;
+            try
+            {
+                if (await JsonNode.ParseAsync(requete.Body, cancellationToken: ct) is not JsonObject objet) return Refus("objet JSON attendu");
+                objet["id"] = id;
+                corps = objet.Deserialize<Automation>(ThermostatService.Json);
+            }
+            catch (JsonException ex)
+            {
+                return Refus($"JSON invalide : {ex.Message}");
+            }
+
+            if (corps is null) return Refus("corps vide");
+            try
+            {
+                return Json(await service.SaveAsync(corps, ct));
+            }
+            catch (AutomationValidationException ex)
+            {
+                return Refus(ex.Message);
+            }
+        });
+
+        groupe.MapDelete("/{id}", async (string id, AutomationService service, CancellationToken ct) =>
+            await service.DeleteAsync(id, ct) ? Results.NoContent() : AutomatismeInconnu(id));
+
+        groupe.MapPost("/{id}/run", async (string id, AutomationService service, AutomationEngine moteur, CancellationToken ct) =>
+            service.Get(id) is { } a ? Json(await moteur.RunNowAsync(a, ct)) : AutomatismeInconnu(id));
+    }
+
+    private static IResult AutomatismeInconnu(string id) =>
+        Results.Json(new { error = $"automatisme « {id} » inconnu" }, ThermostatService.Json, statusCode: StatusCodes.Status404NotFound);
 
     /// <summary>Programmations des équipements (<c>/api/schedules</c>) : configuration et état du moment.</summary>
     public static void MapDeviceScheduleApi(this RouteGroupBuilder api)
