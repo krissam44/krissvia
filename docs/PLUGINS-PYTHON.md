@@ -107,3 +107,19 @@ lieu), traduction d'une réponse d'Open-Meteo, instantané.
   qu'un thermostat prend comme température extérieure, et qu'un graphique suivra.
 - L'identifiant d'un lieu est tiré de son nom s'il est vide ; il fixe les identifiants des entités, donc ne plus
   le changer. Sans aucun lieu, le plugin relit l'ancien réglage d'un seul lieu (appareil `meteo`).
+
+## 7. Anticipation météo des thermostats
+
+L'entité météo porte aussi `hourly` : la température prévue heure par heure sur 48 h, heures en UTC
+(`[{"time": "2026-10-19T12:00:00Z", "temperature": 6.4}]`). Un thermostat peut la choisir comme **prévision
+météo** (écran de configuration, onglet Général) :
+
+- Le feed-forward `Ki × (consigne − extérieur)` prend alors la **moyenne prévue sur les 2 prochaines heures**
+  (échantillonnée toutes les 30 min, interpolée) au lieu de la température mesurée : une maison réagit au froid
+  avec des heures de retard, la mesure arrive quand le refroidissement a déjà commencé. C'est le « palier ③ »
+  de DomoMud, sauf qu'ici chaque thermostat choisit son lieu au lieu d'un lieu unique « qui pilote le chauffage ».
+- La mesure reste celle qu'on affiche ; la carte du thermostat montre « (prév. x) » quand l'écart atteint 0,5 °C.
+- Une prévision indisponible, plus vieille que 3 h, ou qui ne couvre pas les 2 h à venir est ignorée : le moteur
+  reprend la sonde extérieure (`OutdoorForecast`, fonction pure couverte par les tests).
+- L'interrupteur « Anticiper avec la prévision » garde l'entité choisie mais revient à la mesure seule, pour
+  comparer avec et sans.

@@ -123,8 +123,13 @@ class KvThermostat extends KvWidget {
         const mode = MODES[v.mode] ?? MODE_INCONNU;
         const pas = (sens, icone, libelle) =>
             `<button class="pas" data-pas="${sens}" aria-label="${libelle}" ${attente}>${ms(icone)}</button>`;
-        const exterieure = typeof v.outdoor_temperature === "number"
-            ? `<div class="annexe" style="color:#42a5f5">${ms("cloudy")} ${nombre(v.outdoor_temperature)}°C ext.</div>` : "";
+        // La prévision n'est montrée que si elle compte : sans sonde extérieure, ou à 0,5 °C ou plus de la mesure.
+        const prevue = typeof v.outdoor_forecast === "number" ? v.outdoor_forecast : null;
+        const ext = typeof v.outdoor_temperature === "number" ? v.outdoor_temperature : null;
+        const mention = prevue === null ? "" : ext === null ? `prév. ${nombre(prevue)}°C ext.`
+            : Math.abs(prevue - ext) >= 0.5 ? ` (prév. ${nombre(prevue)})` : "";
+        const exterieure = ext !== null || prevue !== null
+            ? `<div class="annexe" style="color:#42a5f5" title="${prevue !== null ? "Moyenne prévue sur 2 h, utilisée pour anticiper" : ""}">${ms("cloudy")} ${ext !== null ? `${nombre(ext)}°C ext.` : ""}${mention}</div>` : "";
         const humidite = typeof v.humidity === "number"
             ? `<div class="annexe" style="color:var(--kv-text-secondary, #777)">${ms("humidity_percentage")} ${nombre(v.humidity, 0)} %</div>` : "";
         const fenetre = v.window_open ? `<div class="annexe" style="color:#42a5f5">${ms("sensor_door")} Fenêtre ouverte</div>` : "";

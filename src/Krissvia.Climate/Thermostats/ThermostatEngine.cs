@@ -43,7 +43,8 @@ public sealed record ThermostatSnapshot(
     bool Heating,
     double Integral,
     IReadOnlyCollection<string> InhibitionReasons,
-    IReadOnlyList<string> UnknownSwitches);
+    IReadOnlyList<string> UnknownSwitches,
+    double? OutdoorForecast = null);
 
 /// <summary>
 /// Moteur des thermostats : régulation TPI de DomoMud (terme proportionnel, feed-forward extérieur, intégrale,
@@ -168,11 +169,16 @@ public sealed class ThermostatEngine(
         var sonde = states.Get(t.TemperatureEntityId);
         double? interieur = sonde is not null && sonde.TryGetNumber(out var ti) ? ti : null;
         double? exterieur = t.OutdoorTemperatureEntityId is { } ext && states.Get(ext) is { } se && se.TryGetNumber(out var te) ? te : null;
+        // Anticipation météo : la moyenne prévue sur 2 h remplace la mesure dans le feed-forward, la mesure reste
+        // celle qu'on affiche. Sans prévision utilisable, on retombe sur la mesure.
+        double? prevue = t.ForecastAnticipation && t.ForecastEntityId is { } prevision
+            ? OutdoorForecast.Anticipated(states.Get(prevision), maintenant)
+            : null;
         var inconnus = await RadiateursInconnusAsync(t, ct);
 
         ThermostatSnapshot Instantane(ThermostatStatus statut) => new(
             t.Id, statut, mode, cible, interieur, exterieur, rt.Puissance, rt.RelaisConnu == true, rt.Integrale,
-            inhibitor.GetReasons(t.Id), inconnus);
+            inhibitor.GetReasons(t.Id), inconnus, prevue);
 
         void Arreter()
         {
@@ -255,7 +261,7 @@ public sealed class ThermostatEngine(
             rt.CibleCycle is not { } cc || Math.Abs(cible - cc) > 0.01)
         {
             // L'erreur s'intègre au prorata du temps réellement écoulé : un cycle interrompu ne compte pas pour 10 min.
-            var cycle = Tpi.ComputeCycle(t.Tpi, cible, tint, exterieur, rt.Integrale, ecoule);
+            var cycle = Tpi.ComputeCycle(t.Tpi, cible, tint, prevue ?? exterieur, rt.Integrale, ecoule);
             rt.Integrale = cycle.Integral;
             rt.Puissance = cycle.Power;
             rt.SecondesMarche = cycle.OnSeconds;

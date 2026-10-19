@@ -176,7 +176,8 @@ Ce dont un tableau de bord ou un widget a besoin (WIDGETS.md §8) : les entités
 **Thermostats** : chaque thermostat est aussi l'entité `climate.{nom}` (intégration `coeur.thermostats`).
 `extra` porte `modes` (`[{"id": "comfort", "label": "Confort"}, …]`, à afficher tels quels), `min_target`,
 `max_target`, `target_step`, `radiators` et `configuration` (chemin de l'écran de réglage, `/thermostats/{id}`) ;
-l'état est un objet : `temperature`, `humidity` (si l'appareil de la sonde en mesure une), `outdoor_temperature`,
+l'état est un objet : `temperature`, `humidity` (si l'appareil de la sonde en mesure une), `outdoor_temperature`
+(mesurée), `outdoor_forecast` (moyenne prévue sur 2 h quand l'anticipation météo est active, voir PLUGINS-PYTHON.md §7),
 `target`, `target_adjusted`, `mode`, `schedule_active`, `heating`, `power` (part de chauffe du cycle TPI, 0 à 1),
 `cycle_seconds`, `coasting_high` et `coasting_low` (seuils d'inertie, en °C au-dessus de la consigne),
 `window_open`, `status` et `status_label` (« Chauffe », « Inertie », « Délesté »…, calculé par le cœur : à

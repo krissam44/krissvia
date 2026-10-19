@@ -22,6 +22,9 @@ internal sealed class FakeStateReader : IEntityStateReader
     public void Set(string entityId, string valeur, DateTimeOffset a) =>
         _etats[entityId] = new EntityStateSnapshot(JsonSerializer.SerializeToElement(valeur), a);
 
+    public void Set(string entityId, JsonElement valeur, DateTimeOffset a, bool disponible = true) =>
+        _etats[entityId] = new EntityStateSnapshot(valeur, a, disponible);
+
     public EntityStateSnapshot? Get(string entityId) => _etats.GetValueOrDefault(entityId);
 }
 
