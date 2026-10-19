@@ -1,3 +1,4 @@
+using Krissvia.Climate.Presence;
 using Krissvia.Climate.Thermostats;
 using Krissvia.Contracts;
 using Krissvia.Core.Registry;
@@ -28,12 +29,13 @@ public class ThermostatEngineTests
         public ThermostatInhibitor Inhibiteur { get; }
         public ThermostatEngine Moteur { get; }
         public MemoryHeatingSlopeStore Pentes { get; }
+        public Foyer Foyer { get; } = new();
 
         public Banc(MemoryHeatingSlopeStore? pentes = null)
         {
             Pentes = pentes ?? new MemoryHeatingSlopeStore();
             Inhibiteur = new ThermostatInhibitor(Commandes);
-            Moteur = new ThermostatEngine(Etats, Registre, Commandes, Inhibiteur, Horloge, Pentes);
+            Moteur = new ThermostatEngine(Etats, Registre, Commandes, Inhibiteur, Horloge, Pentes, Foyer);
             Registre.RegisterAsync("test",
             [
                 new DeviceDescriptor
@@ -88,6 +90,103 @@ public class ThermostatEngineTests
     }
 
     // ── Régulation ───────────────────────────────────────────────────────────
+
+    // ── Absence ──────────────────────────────────────────────────────────────
+
+    private sealed class Foyer : IHomeAbsence
+    {
+        public HomeAbsenceState Current { get; set; } = HomeAbsenceState.Home;
+    }
+
+    private static ThermostatSettings SuitAbsence(ThermostatSettings t) => t with { FollowAbsence = true };
+
+    [Fact]
+    public async Task Maison_vide_le_thermostat_qui_suit_l_absence_passe_dans_son_mode_d_absence()
+    {
+        var b = new Banc();
+        b.Mesurer(18);
+        b.Foyer.Current = new HomeAbsenceState(true, AbsenceSource.Detection, null);
+
+        var s = await b.DemarrerAsync(Banc.Salon(t => SuitAbsence(t) with { TargetOverride = 21 }));
+
+        Assert.True(s.Away);
+        Assert.Equal(ThermostatMode.FrostProtection, s.Mode);
+        Assert.Equal(7, s.Target);   // la consigne ajustée avant le départ ne chauffe pas la maison vide
+        Assert.Equal(0, b.Ordres(StandardCommands.TurnOn));
+        Assert.Equal(1, b.Ordres(StandardCommands.TurnOff));
+    }
+
+    [Fact]
+    public async Task Un_thermostat_qui_ne_suit_pas_l_absence_garde_son_mode()
+    {
+        var b = new Banc();
+        b.Mesurer(18);
+        b.Foyer.Current = new HomeAbsenceState(true, AbsenceSource.Detection, null);
+
+        var s = await b.DemarrerAsync(Banc.Salon());
+
+        Assert.False(s.Away);
+        Assert.Equal(20, s.Target);
+        Assert.Equal(1, b.Ordres(StandardCommands.TurnOn));
+    }
+
+    [Fact]
+    public async Task Pendant_l_absence_le_planning_ne_prechauffe_pas()
+    {
+        // Sans absence, 18,5 °C à 30 min d'un créneau Confort déclencherait le préchauffage (voir plus bas).
+        var b = new Banc();
+        b.Mesurer(18.5);
+        b.Foyer.Current = new HomeAbsenceState(true, AbsenceSource.Scheduled, T0.AddDays(3));
+
+        var s = await b.DemarrerAsync(Banc.Salon(t => SuitAbsence(AvecPlanning(t))));
+
+        Assert.NotEqual(ThermostatStatus.Preheating, s.Status);
+        Assert.Equal(7, s.Target);
+    }
+
+    [Fact]
+    public async Task Une_absence_en_arret_remonte_quand_meme_avant_le_retour()
+    {
+        // 2 °C à gagner × 30 min/°C = 60 min ; retour dans 50 min : on chauffe vers le Confort de l'arrivée.
+        var b = new Banc();
+        b.Mesurer(18);
+        b.Foyer.Current = new HomeAbsenceState(true, AbsenceSource.Scheduled, T0.AddMinutes(50));
+
+        var s = await b.DemarrerAsync(Banc.Salon(t => SuitAbsence(t) with { AwayMode = ThermostatMode.Off }));
+
+        Assert.Equal(ThermostatStatus.Preheating, s.Status);
+        Assert.Equal(20, s.Target);
+        Assert.Equal(1, b.Ordres(StandardCommands.TurnOn));
+    }
+
+    [Fact]
+    public async Task Une_absence_en_arret_reste_ferme_tant_que_le_retour_est_loin()
+    {
+        var b = new Banc();
+        b.Mesurer(18);
+        b.Foyer.Current = new HomeAbsenceState(true, AbsenceSource.Scheduled, T0.AddHours(5));
+
+        var s = await b.DemarrerAsync(Banc.Salon(t => SuitAbsence(t) with { AwayMode = ThermostatMode.Off }));
+
+        Assert.Equal(ThermostatStatus.Off, s.Status);
+        Assert.Equal(0, b.Ordres(StandardCommands.TurnOn));
+        Assert.Equal(1, b.Ordres(StandardCommands.TurnOff));
+    }
+
+    [Fact]
+    public async Task La_remontee_vise_le_mode_du_planning_a_l_heure_du_retour_sans_plafond_de_trois_heures()
+    {
+        // Hors-gel → Confort : 13 °C × 30 min/°C = 6 h 30. Retour à 18 h, il est 12 h : il est temps. Le planning
+        // donne Confort à 18 h (créneau 12 h 30 - 23 h) : c'est sa consigne qui est visée, pas celle de midi.
+        var b = new Banc();
+        b.Mesurer(7);
+        b.Foyer.Current = new HomeAbsenceState(true, AbsenceSource.Scheduled, T0.AddHours(6));
+
+        var s = await b.DemarrerAsync(Banc.Salon(t => SuitAbsence(AvecPlanning(t))));
+
+        Assert.Equal(ThermostatStatus.Preheating, s.Status);
+        Assert.Equal(20, s.Target);
+    }
 
     // ── Préchauffage anticipé ────────────────────────────────────────────────
 

@@ -168,6 +168,8 @@ public partial class ThermostatConfiguration
         public string Prevision { get; set; } = Aucune;
         public bool Anticipation { get; set; } = Defaut.ForecastAnticipation;
         public bool Prechauffage { get; set; } = Defaut.PreheatEnabled;
+        public bool SuitAbsence { get; set; } = Defaut.FollowAbsence;
+        public ThermostatMode ModeAbsence { get; set; } = Defaut.AwayMode;
         public double Confort { get; set; } = Defaut.ComfortTemperature;
         public double Eco { get; set; } = Defaut.EcoTemperature;
         public double HorsGel { get; set; } = Defaut.FrostProtectionTemperature;
@@ -195,6 +197,8 @@ public partial class ThermostatConfiguration
             Prevision = t.ForecastEntityId ?? Aucune,
             Anticipation = t.ForecastAnticipation,
             Prechauffage = t.PreheatEnabled,
+            SuitAbsence = t.FollowAbsence,
+            ModeAbsence = t.AwayMode,
             Confort = t.ComfortTemperature,
             Eco = t.EcoTemperature,
             HorsGel = t.FrostProtectionTemperature,
@@ -224,6 +228,8 @@ public partial class ThermostatConfiguration
             ForecastEntityId = string.IsNullOrEmpty(Prevision) ? null : Prevision,
             ForecastAnticipation = Anticipation,
             PreheatEnabled = Prechauffage,
+            FollowAbsence = SuitAbsence,
+            AwayMode = ModeAbsence,
             ComfortTemperature = Confort,
             EcoTemperature = Eco,
             FrostProtectionTemperature = HorsGel,

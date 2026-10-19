@@ -32,6 +32,7 @@ public sealed class MenuService
         new("actionneurs", "Actionneurs", "/actionneurs", Icons.Material.Filled.Lightbulb),
         new("programmations", "Programmations", "/programmations", Icons.Material.Filled.Schedule),
         new("delestage", "Délestage", "/delestage", Icons.Material.Filled.Bolt),
+        new("absence", "Absence", "/absence", Icons.Material.Filled.Luggage),
         new("entites", "Entités", "/entites", Icons.Material.Filled.Devices),
         new("services", "Services", "/parametres/services", Icons.Material.Filled.Extension, Exact: true),
         new("notifications", "Notifications", "/parametres/notifications", Icons.Material.Filled.NotificationsActive),

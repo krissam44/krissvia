@@ -65,6 +65,30 @@ public static class Preheat
     }
 
     /// <summary>
+    /// Remontée avant un retour d'absence programmé : la consigne qui s'appliquera À L'ARRIVÉE (mode du planning à
+    /// cette heure-là, ou mode manuel), dès qu'il est temps de partir pour l'atteindre. Null si rien à faire :
+    /// préchauffage désactivé, arrivée en Off, pièce déjà au niveau, retour passé, ou encore trop tôt.
+    /// </summary>
+    /// <remarks>
+    /// Pas de plafond <see cref="MaxMinutes"/> : remonter du hors-gel au confort demande légitimement bien plus que
+    /// les 3 h prévues pour un créneau. C'est tout l'intérêt d'un retour annoncé à l'avance.
+    /// </remarks>
+    public static double? ReturnTarget(ThermostatSettings t, double ambiante, DateTime heureLocale, DateTime retourLocal,
+        Func<double, TimeSpan, double> penteFenetre)
+    {
+        if (!t.PreheatEnabled || retourLocal <= heureLocale) return null;
+        var mode = t.ModeAt(retourLocal);
+        if (mode == ThermostatMode.Off) return null;
+
+        var cible = t.TargetFor(mode);
+        if (ambiante >= cible - 0.1) return null;
+
+        var avant = retourLocal - heureLocale;
+        var requises = (cible - ambiante) * penteFenetre(cible, avant);
+        return avant.TotalMinutes > requises ? null : cible;
+    }
+
+    /// <summary>
     /// La pente corrigée par la température extérieure prévue pendant la montée (méthode de DomoMud). Aucune
     /// constante arbitraire : <c>Ki × (consigne − extérieur)</c> est la part de puissance qui sert à TENIR la
     /// consigne ; le reste est le surplus qui sert à MONTER, et la durée est inversement proportionnelle au surplus.

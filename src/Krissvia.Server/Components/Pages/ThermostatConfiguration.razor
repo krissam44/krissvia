@@ -108,6 +108,27 @@ else if (_m is not null && _planning is not null)
                         </span>
                     }
                 </div>
+
+                <MudText Typo="Typo.subtitle2" Class="mud-text-secondary mt-6 mb-2">Absence</MudText>
+                <MudGrid>
+                    <MudItem xs="12" md="6" Class="d-flex align-center">
+                        <MudSwitch T="bool" @bind-Value="_m.SuitAbsence" Color="Color.Primary" Label="Suivre l'absence de la maison" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSelect Dense="true" T="ThermostatMode" @bind-Value="_m.ModeAbsence" Label="Mode pendant l'absence" Disabled="@(!_m.SuitAbsence)"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Hors-gel conseillé ; même en Arrêt, la pièce remonte avant le retour">
+                            @foreach (var mode in LibellesThermostat.Modes)
+                            {
+                                <MudSelectItem Value="mode">@LibellesThermostat.Mode(mode)</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2">
+                    Maison vide (détection de présence, <MudLink Href="/absence">absence programmée</MudLink> ou forçage) : ce mode
+                    remplace planning et consigne. Avant un retour programmé, le préchauffage anticipé remonte la pièce à la
+                    consigne de l'heure d'arrivée.
+                </MudText>
             </MudTabPanel>
 
             <MudTabPanel Text="Régulation" Icon="@Icons.Material.Filled.Tune">

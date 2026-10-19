@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Krissvia.Climate.Presence;
 using Krissvia.Contracts;
 using Krissvia.Core.Commands;
 using Krissvia.Core.Registry;
@@ -48,7 +49,8 @@ public sealed record ThermostatSnapshot(
     IReadOnlyCollection<string> InhibitionReasons,
     IReadOnlyList<string> UnknownSwitches,
     double? OutdoorForecast = null,
-    HeatingSlope? Slope = null);
+    HeatingSlope? Slope = null,
+    bool Away = false);
 
 /// <summary>
 /// Moteur des thermostats : régulation TPI de DomoMud (terme proportionnel, feed-forward extérieur, intégrale,
@@ -68,8 +70,8 @@ public sealed record ThermostatSnapshot(
 /// <item>C7 : sous inhibition extérieure (délestage), l'intégrale est conservée ; fenêtre ouverte, elle repart
 /// de zéro ; sonde perdue, conservée.</item>
 /// </list>
-/// Portés depuis : prévision météo dans le feed-forward, préchauffage anticipé et apprentissage de la pente.
-/// Pas encore : absence programmée et auto-TPI.
+/// Portés depuis : prévision météo dans le feed-forward, préchauffage anticipé et apprentissage de la pente,
+/// absence (mode d'absence, remontée avant le retour programmé). Pas encore : auto-TPI.
 /// </remarks>
 public sealed class ThermostatEngine(
     IEntityStateReader states,
@@ -77,7 +79,8 @@ public sealed class ThermostatEngine(
     ICommandBus commands,
     ThermostatInhibitor inhibitor,
     TimeProvider clock,
-    IHeatingSlopeStore? slopes = null)
+    IHeatingSlopeStore? slopes = null,
+    IHomeAbsence? absence = null)
 {
     private readonly IHeatingSlopeStore _magasinPentes = slopes ?? new MemoryHeatingSlopeStore();
 
@@ -187,9 +190,14 @@ public sealed class ThermostatEngine(
     private async Task<ThermostatSnapshot> TraiterAsync(ThermostatSettings t, Runtime rt, CancellationToken ct)
     {
         var maintenant = clock.GetUtcNow();
-        var mode = t.ModeAt(clock.GetLocalNow().DateTime);
-        // En Off, la consigne ajustée ne s'applique pas (Off est ferme) : on montre celle qui l'est réellement.
-        var cible = mode == ThermostatMode.Off ? t.TargetFor(mode) : t.TargetOverride ?? t.TargetFor(mode);
+        var heureLocale = clock.GetLocalNow().DateTime;
+        // Absence : le mode d'absence remplace planning et mode manuel, pour les thermostats qui la suivent.
+        var foyer = t.FollowAbsence ? absence?.Current : null;
+        var absent = foyer is { Away: true };
+        var mode = absent ? t.AwayMode : t.ModeAt(heureLocale);
+        // En Off, la consigne ajustée ne s'applique pas (Off est ferme) : on montre celle qui l'est réellement. En
+        // absence non plus : un « +0,5 » laissé avant de partir chaufferait la maison vide toutes les vacances.
+        var cible = mode == ThermostatMode.Off || absent ? t.TargetFor(mode) : t.TargetOverride ?? t.TargetFor(mode);
 
         var sonde = states.Get(t.TemperatureEntityId);
         double? interieur = sonde is not null && sonde.TryGetNumber(out var ti) ? ti : null;
@@ -201,9 +209,20 @@ public sealed class ThermostatEngine(
             : null;
         var inconnus = await RadiateursInconnusAsync(t, ct);
 
+        var pente = _pentes.GetValueOrDefault(t.Id) ?? new HeatingSlope(Preheat.DefaultMinutesPerDegree, null);
+        double PenteFenetre(double future, TimeSpan avant) =>
+            Preheat.CorrectedMinutesPerDegree(pente, t.Tpi.Ki, future, MoyennePrevue(t, maintenant, avant));
+
+        // Remontée avant le retour programmé : calculée AVANT la sortie « Off », qu'elle doit pouvoir lever — sinon un
+        // mode d'absence Off ferait rentrer de vacances dans une maison froide, ce qui ôte tout son sens à l'absence
+        // programmée (le piège de DomoMud). Un Off choisi hors absence reste ferme.
+        var remontee = absent && foyer!.Return is { } retour && interieur is { } ambiante
+            ? Preheat.ReturnTarget(t, ambiante, heureLocale, TimeZoneInfo.ConvertTime(retour, clock.LocalTimeZone).DateTime, PenteFenetre)
+            : null;
+
         ThermostatSnapshot Instantane(ThermostatStatus statut) => new(
             t.Id, statut, mode, cible, interieur, exterieur, rt.Puissance, rt.RelaisConnu == true, rt.Integrale,
-            inhibitor.GetReasons(t.Id), inconnus, prevue, _pentes.GetValueOrDefault(t.Id));
+            inhibitor.GetReasons(t.Id), inconnus, prevue, _pentes.GetValueOrDefault(t.Id), absent);
 
         void Arreter()
         {
@@ -240,7 +259,7 @@ public sealed class ThermostatEngine(
         }
 
         // ── 4. Mode Off : arrêt sans condition, intégrale remise à zéro. Ferme, même avec une consigne ajustée.
-        if (mode == ThermostatMode.Off)
+        if (mode == ThermostatMode.Off && remontee is null)
         {
             // C4 : à l'entrée en Off, l'arrêt part même si le moteur croit le radiateur éteint (allumé à la main ?).
             if (!rt.EnArret) rt.RelaisConnu = null;
@@ -261,10 +280,9 @@ public sealed class ThermostatEngine(
             return Instantane(inconnus.Count > 0 ? ThermostatStatus.UnknownSwitch : ThermostatStatus.Idle);
         }
 
-        // ── 5 bis. Préchauffage anticipé : la consigne du prochain créneau, assez tôt pour l'atteindre à l'heure ─
-        var pente = _pentes.GetValueOrDefault(t.Id) ?? new HeatingSlope(Preheat.DefaultMinutesPerDegree, null);
-        var prechauffe = Preheat.Target(t, tint, clock.GetLocalNow().DateTime, cible, (future, avant) =>
-            Preheat.CorrectedMinutesPerDegree(pente, t.Tpi.Ki, future, MoyennePrevue(t, maintenant, avant)));
+        // ── 5 bis. Préchauffage : la consigne de l'arrivée, ou celle du prochain créneau, assez tôt pour l'atteindre à
+        // l'heure. Pas de créneau pendant l'absence : le planning ne s'applique pas à une maison vide.
+        var prechauffe = remontee ?? (absent ? null : Preheat.Target(t, tint, heureLocale, cible, PenteFenetre));
         if (prechauffe is { } cibleFuture) cible = cibleFuture;
 
         // ── 6. Inertie : double seuil, pour absorber l'inertie du radiateur ──

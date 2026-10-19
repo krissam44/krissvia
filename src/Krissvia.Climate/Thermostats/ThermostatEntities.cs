@@ -155,6 +155,8 @@ public sealed class ThermostatEntities(
             ["window_open"] = s.InhibitionReasons.Contains(InhibitionReasons.FenetreOuverte),
             ["status"] = JsonSerializer.SerializeToNode(s.Status, ThermostatService.Json),
             ["status_label"] = ThermostatLabels.Status(s.Status),
+            // En mode d'absence (le thermostat suit l'absence de la maison et elle est vide).
+            ["away"] = s.Away,
         };
         return JsonSerializer.SerializeToElement(etat);
     }

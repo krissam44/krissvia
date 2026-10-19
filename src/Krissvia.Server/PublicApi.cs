@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Krissvia.Climate.DeviceSchedules;
 using Krissvia.Climate.LoadShedding;
+using Krissvia.Climate.Presence;
 using Krissvia.Climate.Thermostats;
 
 namespace Krissvia.Server;
@@ -14,6 +15,8 @@ internal sealed record ThermostatView(ThermostatSettings Settings, ThermostatSna
 internal sealed record ModeRequest(ThermostatMode Mode);
 internal sealed record TargetRequest(double? Temperature);
 internal sealed record ScheduleRequest(bool Active);
+internal sealed record AbsencePeriodRequest(DateTimeOffset Departure, DateTimeOffset Return, bool CancelOnPresence = true);
+internal sealed record AbsenceForceRequest(bool? Away);
 
 /// <summary>
 /// API publique : thermostats (<c>/api/thermostats</c>) et délestage. JSON en snake_case, énumérations en texte
@@ -105,6 +108,46 @@ internal static class PublicApi
             {
                 return Refus(ex.Message);
             }
+        });
+    }
+
+    /// <summary>
+    /// Absence (<c>/api/absence</c>) : l'état qui s'applique aux thermostats, la période programmée, le forçage et la
+    /// présence détectée.
+    /// </summary>
+    public static void MapAbsenceApi(this RouteGroupBuilder api)
+    {
+        var groupe = api.MapGroup("/absence");
+
+        groupe.MapGet("/", (AbsenceService absence, HomePresence presence) =>
+            Json(new { state = absence.Current, period = absence.Period, forced = absence.Forced, presence = presence.Current }));
+
+        groupe.MapPut("/period", async (HttpRequest requete, AbsenceService absence, CancellationToken ct) =>
+        {
+            if (await Lire<AbsencePeriodRequest>(requete, ct) is not { } r)
+                return Refus("attendu : {\"departure\": \"2026-12-20T08:00:00+01:00\", \"return\": \"2026-12-27T18:00:00+01:00\", \"cancel_on_presence\": true}");
+            try
+            {
+                await absence.ScheduleAsync(r.Departure, r.Return, r.CancelOnPresence, ct);
+                return Json(absence.Period!);
+            }
+            catch (AbsenceValidationException ex)
+            {
+                return Refus(ex.Message);
+            }
+        });
+
+        groupe.MapDelete("/period", async (AbsenceService absence, CancellationToken ct) =>
+        {
+            await absence.ClearAsync(ct);
+            return Results.NoContent();
+        });
+
+        groupe.MapPut("/forced", async (HttpRequest requete, AbsenceService absence, CancellationToken ct) =>
+        {
+            if (await Lire<AbsenceForceRequest>(requete, ct) is not { } r) return Refus("attendu : {\"away\": true | false | null}");
+            await absence.ForceAsync(r.Away, ct);
+            return Json(absence.Current);
         });
     }
 
