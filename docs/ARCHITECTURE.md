@@ -180,6 +180,8 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
   d'entités, hôte `kv` pour les ordres vérifiés, choix par carte > par entité > par défaut.
 - **Notifications et alertes : `NOTIFICATIONS.md`** (19/10/2026) — ntfy, une alerte par incident avec quarantaine,
   alerte gel par lieu du plugin Météo.
+- **Présence et supervision : `PRESENCE.md`** (19/10/2026) — présence du foyer calculée par le cœur sur les capteurs
+  `presence` de n'importe quelle source ; classes standard de supervision, indépendantes de la box.
 
 ## 11. Feuille de route
 

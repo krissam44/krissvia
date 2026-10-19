@@ -24,10 +24,11 @@ internal static class Categories
     public static readonly Categorie Thermostat = new("thermostat", "Thermostat", Icons.Material.Filled.DeviceThermostat, "#ef5350");
     public static readonly Categorie Radiateur = new("radiateur", "Radiateur", Icons.Material.Filled.Whatshot, "#ff7043");
     public static readonly Categorie Meteo = new("meteo", "Météo", Icons.Material.Filled.WbSunny, "#ffb300");
+    public static readonly Categorie Presence = new("presence", "Présence", Icons.Material.Filled.Person, "#4caf50");
     public static readonly Categorie Autre = new("autre", "Autre mesure", Icons.Material.Filled.Sensors, "#78909c");
 
     /// <summary>L'ordre des pastilles de filtre.</summary>
-    public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Meteo, Autre];
+    public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Presence, Meteo, Autre];
 
     public static Categorie De(RegisteredEntity e) => e.Kind switch
     {
@@ -37,6 +38,7 @@ internal static class Categories
         EntityKind.Event => Evenement,
         EntityKind.Climate => Thermostat,
         EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Occupancy => Mouvement,
+        EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Presence => Presence,
         EntityKind.BinarySensor => Ouverture,
         _ => e.DeviceClass switch
         {
@@ -46,6 +48,7 @@ internal static class Categories
                 or DeviceClasses.Voltage or DeviceClasses.Current or DeviceClasses.LoadShedding => Puissance,
             DeviceClasses.Battery => Batterie,
             DeviceClasses.Weather => Meteo,
+            DeviceClasses.HomePresence => Presence,
             _ => Autre,
         },
     };
@@ -62,11 +65,15 @@ internal static class Categories
             {
                 EntityKind.Switch => b ? "Allumé" : "Éteint",
                 EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Occupancy => b ? "Présence" : "Rien",
+                EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Presence => b ? "Présent" : "Absent",
                 EntityKind.BinarySensor => b ? "Ouvert" : "Fermé",
                 _ => b ? "Oui" : "Non",
             };
         if (etat.TryGetNumber(out var n))
             return n.ToString(Math.Abs(n) >= 100 ? "#,0" : "0.##", CultureInfo.GetCultureInfo("fr-FR")) + (e.Unit is { Length: > 0 } u ? $" {u}" : "");
+        if (e.DeviceClass == DeviceClasses.HomePresence && v.ValueKind == JsonValueKind.Object)
+            return Vrai(v, "detection_lost") ? "occupée (détection perdue)"
+                : Vrai(v, "occupied") ? "occupée" : "vide";
         if (e.DeviceClass == DeviceClasses.LoadShedding && v.ValueKind == JsonValueKind.Object)
             return string.Join(" · ", new[]
             {
@@ -87,6 +94,9 @@ internal static class Categories
         objet.TryGetProperty(propriete, out var p) && p.ValueKind == JsonValueKind.Number
             ? p.GetDouble().ToString("0.0", CultureInfo.GetCultureInfo("fr-FR")) + unite
             : null;
+
+    private static bool Vrai(JsonElement objet, string propriete) =>
+        objet.TryGetProperty(propriete, out var v) && v.ValueKind == JsonValueKind.True;
 
     private static string? Texte(JsonElement objet, string propriete) =>
         objet.TryGetProperty(propriete, out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;

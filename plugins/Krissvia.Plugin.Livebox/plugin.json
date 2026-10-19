@@ -1,0 +1,36 @@
+{
+  "id": "livebox",
+  "name": "Livebox",
+  "description": "Présence des téléphones suivis (connectés à la box) et supervision de la connexion Internet, par l'API locale de la Livebox. Les deux sont indépendants. Lecture seule.",
+  "executable": "Krissvia.Plugin.Livebox",
+  "settings": {
+    "type": "object",
+    "properties": {
+      "Livebox": {
+        "type": "object",
+        "title": "Box",
+        "required": [ "Host", "Password" ],
+        "properties": {
+          "Host": { "type": "string", "title": "Adresse IP", "default": "192.168.1.1" },
+          "Username": { "type": "string", "title": "Identifiant", "default": "admin" },
+          "Password": { "type": "string", "title": "Mot de passe administrateur", "format": "password", "description": "Celui de l'interface de la box (souvent les 8 premiers caractères de la clé Wi-Fi d'origine)." },
+          "PollSeconds": { "type": "integer", "title": "Relevé toutes les (s)", "default": 60, "minimum": 15, "maximum": 600 },
+          "GraceMinutes": { "type": "integer", "title": "Absent après (min)", "default": 20, "minimum": 0, "maximum": 240, "description": "Un téléphone en veille quitte le Wi-Fi sans quitter la maison." },
+          "Supervision": { "type": "boolean", "title": "Superviser la connexion Internet", "default": true, "description": "État du lien, IP publique et débits. Indépendant de la présence." }
+        }
+      },
+      "Suivis": {
+        "type": "array",
+        "title": "Appareils suivis",
+        "items": {
+          "type": "object",
+          "required": [ "Mac", "Name" ],
+          "properties": {
+            "Mac": { "type": "string", "title": "Adresse MAC", "description": "Le journal ci-dessous liste les appareils que voit la box, avec leur adresse." },
+            "Name": { "type": "string", "title": "Nom", "description": "Par exemple « Téléphone de Christian »." }
+          }
+        }
+      }
+    }
+  }
+}

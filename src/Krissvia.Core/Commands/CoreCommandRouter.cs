@@ -23,6 +23,8 @@ public static class CoreIntegrations
 
     public const string LoadShedding = Prefix + "delestage";
 
+    public const string Presence = Prefix + "presence";
+
     public static bool IsCore(string integrationId) => integrationId.StartsWith(Prefix, StringComparison.Ordinal);
 }
 

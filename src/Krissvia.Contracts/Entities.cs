@@ -121,6 +121,30 @@ public static class DeviceClasses
     /// <summary>binary_sensor : true = OUVERT (le plugin inverse les conventions contraires).</summary>
     public const string Opening = "opening";
 
+    /// <summary>
+    /// binary_sensor : true = la personne (son téléphone) est à la maison. Distinct d'<see cref="Occupancy"/>, qui dit
+    /// qu'un détecteur voit du mouvement dans une pièce : la présence du foyer se calcule sur ceux-ci.
+    /// </summary>
+    public const string Presence = "presence";
+
+    /// <summary>
+    /// sensor dont la valeur est un OBJET : la présence du foyer, calculée par le cœur sur les capteurs
+    /// <see cref="Presence"/> (maison occupée, qui est là, détection perdue).
+    /// </summary>
+    public const string HomePresence = "home_presence";
+
+    // Supervision de la connexion Internet : les mêmes classes quelle que soit la box (Livebox, Freebox…), pour que la
+    // supervision du cœur ne dépende pas du fournisseur.
+
+    /// <summary>binary_sensor : true = la connexion Internet est établie.</summary>
+    public const string Connectivity = "connectivity";
+
+    /// <summary>sensor dont la valeur est une chaîne : l'adresse IP publique.</summary>
+    public const string PublicIp = "public_ip";
+
+    /// <summary>sensor : un débit, en kbit/s (synchronisation descendante ou montante).</summary>
+    public const string DataRate = "data_rate";
+
     /// <summary>binary_sensor : true = présence détectée.</summary>
     public const string Occupancy = "occupancy";
 
@@ -151,6 +175,7 @@ public static class Units
     public const string Lux = "lx";
     public const string PartsPerMillion = "ppm";
     public const string KilometerPerHour = "km/h";
+    public const string KilobitPerSecond = "kbit/s";
 }
 
 /// <summary>Commandes standard par famille. Un plugin peut en déclarer d'autres.</summary>
