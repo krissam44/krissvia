@@ -93,7 +93,8 @@ builder.Services.AddSingleton<DesiredSwitchStates>();
 builder.Services.AddSingleton<LoadShedder>();
 builder.Services.AddSingleton<LoadSheddingService>();
 builder.Services.AddSingleton<LoadSheddingEntities>();
-builder.Services.AddSingleton<Krissvia.Climate.Presence.HomePresence>();   // présence du foyer (capteurs « presence »)   // le délesteur en entité, pour sa carte
+builder.Services.AddSingleton<Krissvia.Climate.Presence.HomePresence>();
+builder.Services.AddSingleton<Krissvia.Core.Overview.RoomAverageEntities>();   // moyennes par pièce, sondes à part entière   // présence du foyer (capteurs « presence »)   // le délesteur en entité, pour sa carte
 
 // Programmations des équipements (prises, chauffe-eau…) : même règle de créneaux que les thermostats.
 builder.Services.AddSingleton<DeviceScheduleEngine>();
@@ -108,6 +109,7 @@ builder.Services.AddHostedService<LoadSheddingLoop>();
 builder.Services.AddHostedService<DeviceScheduleLoop>();
 builder.Services.AddHostedService<AlertLoop>();
 builder.Services.AddHostedService<PresenceLoop>();
+builder.Services.AddHostedService<RoomAverageLoop>();
 
 // Services : les plugins installés sur cette machine, lancés et surveillés par le cœur.
 builder.Services.AddSingleton<IPluginLauncher, ProcessPluginLauncher>();

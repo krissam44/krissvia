@@ -48,7 +48,9 @@ public partial class ThermostatConfiguration
     {
         _entites = await Registre.ListAsync();
         var actives = _entites.Where(e => e.Enabled && !e.Missing).OrderBy(e => e.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToList();
-        _sondes = actives.Where(e => e.Kind == EntityKind.Sensor && e.DeviceClass == DeviceClasses.Temperature).ToList();
+        // Les moyennes de pièce en tête : c'est souvent sur elles qu'un thermostat doit réguler.
+        _sondes = [.. actives.Where(e => e.Kind == EntityKind.Sensor && e.DeviceClass == DeviceClasses.Temperature)
+            .OrderByDescending(e => e.IntegrationId == Krissvia.Core.Commands.CoreIntegrations.RoomAverages)];
         // Les interrupteurs déclarés « Radiateur » dans l'écran Entités viennent en tête.
         _interrupteurs = [.. actives.Where(e => e.Kind == EntityKind.Switch).OrderByDescending(EntityUsages.IsRadiator)];
         _ouvertures = actives.Where(e => e.Kind == EntityKind.BinarySensor).ToList();
