@@ -1,6 +1,7 @@
 using Krissvia.Climate.LoadShedding;
 using Krissvia.Climate.Thermostats;
 using Krissvia.Contracts;
+using Krissvia.Core.Commands;
 using Krissvia.Core.Configuration;
 using Krissvia.Core.Registry;
 using Krissvia.Core.Tests;
@@ -268,5 +269,45 @@ public class LoadSheddingServiceTests
 
         Assert.Equal("salon", c.Devices[0].ThermostatId);
         Assert.Contains(InhibitionReasons.Delestage, b.Inhibiteur.GetReasons("salon"));
+    }
+
+    /// <summary>Note ce qui est publié, sans rien d'autre.</summary>
+    private sealed class Ecrivain : Krissvia.Core.States.IEntityStateWriter
+    {
+        public List<(string Id, System.Text.Json.JsonElement Valeur)> Publies { get; } = [];
+
+        public void Update(string entityId, System.Text.Json.JsonElement value, DateTimeOffset? measuredAt = null) => Publies.Add((entityId, value));
+
+        public void SetAvailability(string entityId, bool available) { }
+    }
+
+    [Fact]
+    public async Task Le_delesteur_publie_son_etat_en_entite_apres_chaque_passage_s_il_a_change()
+    {
+        var b = new Banc();
+        await b.Service.SaveAsync(Config());
+        var ecrivain = new Ecrivain();
+        var entites = new LoadSheddingEntities(b.Service, b.Registre, ecrivain);
+
+        await entites.PublishAsync();   // pas encore de passage : déclarée, rien de publié
+        var entite = Assert.Single(b.Registre.Loaded, e => e.DeviceClass == DeviceClasses.LoadShedding);
+        Assert.Equal(CoreIntegrations.LoadShedding, entite.IntegrationId);
+        Assert.Equal(("sensor.maison_delesteur", "Maison Délesteur"), (entite.EntityId, entite.DisplayName));
+        Assert.Empty(ecrivain.Publies);
+
+        b.Etats.Set(Linky, 5200.0, T0);
+        var tick = await b.Delesteur.TickAsync(b.Service.ReadPower(T0));
+        b.Service.RecordTick(b.Service.ReadPower(T0), tick, T0);
+        await entites.PublishAsync();
+        await entites.PublishAsync();   // rien n'a changé : pas de seconde publication
+
+        var (id, v) = Assert.Single(ecrivain.Publies);
+        Assert.Equal(entite.EntityId, id);
+        Assert.Equal(5200, v.GetProperty("power").GetDouble());
+        Assert.Equal(6000, v.GetProperty("subscription_va").GetDouble());
+        Assert.Equal(4800, v.GetProperty("alert_threshold").GetDouble());
+        Assert.True(v.GetProperty("shedding").GetBoolean());
+        Assert.Equal("Chauffe-eau", v.GetProperty("shed")[0].GetProperty("name").GetString());
+        Assert.Equal("Linky", v.GetProperty("source").GetString());
     }
 }

@@ -18,6 +18,8 @@ export const STYLE = `
     .erreur { font-size: .75rem; color: var(--kv-error, #d33); }
     .bas { margin-top: auto; }
     button { font: inherit; cursor: pointer; }
+    .ms { font-family: 'Material Symbols Outlined'; font-weight: normal; font-style: normal; line-height: 1; letter-spacing: normal;
+          text-transform: none; white-space: nowrap; direction: ltr; font-feature-settings: 'liga'; display: inline-block; vertical-align: middle; }
 `;
 
 export class KvWidget extends HTMLElement {
@@ -45,6 +47,16 @@ export class KvWidget extends HTMLElement {
 
     /** À écrire par chaque widget : le HTML de la carte. */
     rendu() { return ""; }
+}
+
+/** Une icône Material Symbols (la police est chargée par la page hôte, comme pour les cartes de DomoMud). */
+export function icone(nom, style = "") {
+    return `<span class="ms" aria-hidden="true"${style ? ` style="${style}"` : ""}>${nom}</span>`;
+}
+
+/** Couleur d'une jauge selon sa part : vert, orange à 75 %, rouge à 90 % (cartes Linky et Délesteur de DomoMud). */
+export function couleurCharge(part) {
+    return part >= 0.9 ? "#f44336" : part >= 0.75 ? "#ff9800" : "#66bb6a";
 }
 
 /** Échappe un texte avant de le mettre dans du HTML : un nom d'entité vient de l'utilisateur ou d'un plugin. */

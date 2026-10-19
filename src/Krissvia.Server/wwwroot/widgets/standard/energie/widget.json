@@ -1,0 +1,16 @@
+{
+  "contract": 2,
+  "id": "energie",
+  "name": "Compteur d'énergie",
+  "description": "Puissance, tension, courant et index d'une prise ou d'une pince mesurée, en tuiles : la carte compteur de DomoMud.",
+  "version": "1.0.0",
+  "element": "kv-energie",
+  "script": "energie.js",
+  "slots": [
+    { "name": "puissance", "kinds": ["sensor"], "device_classes": ["power"], "required": true },
+    { "name": "tension", "kinds": ["sensor"], "device_classes": ["voltage"], "required": false },
+    { "name": "courant", "kinds": ["sensor"], "device_classes": ["current"], "required": false },
+    { "name": "energie", "kinds": ["sensor"], "device_classes": ["energy"], "required": false }
+  ],
+  "size": { "cols": 3, "rows": 2 }
+}

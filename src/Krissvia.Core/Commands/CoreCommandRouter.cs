@@ -21,6 +21,8 @@ public static class CoreIntegrations
 
     public const string Thermostats = Prefix + "thermostats";
 
+    public const string LoadShedding = Prefix + "delestage";
+
     public static bool IsCore(string integrationId) => integrationId.StartsWith(Prefix, StringComparison.Ordinal);
 }
 

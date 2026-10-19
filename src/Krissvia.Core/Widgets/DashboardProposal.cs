@@ -27,7 +27,7 @@ public static class DashboardProposal
         new("interrupteurs", "Interrupteurs et lumières", e => e.Kind is EntityKind.Switch or EntityKind.Light && !EntityUsages.IsRadiator(e)),
         new("capteurs", "Capteurs", e => e.Kind == EntityKind.BinarySensor),
         new("energie", "Énergie", e => e.Kind == EntityKind.Sensor
-            && e.DeviceClass is DeviceClasses.Power or DeviceClasses.ApparentPower or DeviceClasses.Energy),
+            && e.DeviceClass is DeviceClasses.Power or DeviceClasses.ApparentPower or DeviceClasses.Energy or DeviceClasses.LoadShedding),
     ];
 
     public static IReadOnlyList<DashboardSection> Propose(

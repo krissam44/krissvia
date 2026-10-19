@@ -89,6 +89,7 @@ builder.Services.AddSingleton<ThermostatEntities>();   // les thermostats en ent
 builder.Services.AddSingleton<DesiredSwitchStates>();
 builder.Services.AddSingleton<LoadShedder>();
 builder.Services.AddSingleton<LoadSheddingService>();
+builder.Services.AddSingleton<LoadSheddingEntities>();   // le délesteur en entité, pour sa carte
 
 // Programmations des équipements (prises, chauffe-eau…) : même règle de créneaux que les thermostats.
 builder.Services.AddSingleton<DeviceScheduleEngine>();

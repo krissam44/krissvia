@@ -237,6 +237,9 @@ public static partial class WidgetCatalog
             // À égalité, un widget installé exprès l'emporte sur un standard (WIDGETS.md §6).
             .OrderByDescending(x => x.Score)
             .ThenBy(x => x.Widget.IsStandard)
+            // Puis le plus spécifique : un slot qui n'accepte que la puissance apparente (Linky) passe devant celui
+            // qui accepte toute mesure électrique.
+            .ThenBy(x => x.Widget.Manifest.Slots[0].DeviceClasses.Count is var n && n > 0 ? n : int.MaxValue)
             .ThenBy(x => x.Widget.Manifest.Id, StringComparer.Ordinal)
             .Select(x => x.Widget),
     ];

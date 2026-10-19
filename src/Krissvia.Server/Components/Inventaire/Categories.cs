@@ -43,7 +43,7 @@ internal static class Categories
             DeviceClasses.Temperature => Temperature,
             DeviceClasses.Humidity => Humidite,
             DeviceClasses.Power or DeviceClasses.ApparentPower or DeviceClasses.Energy
-                or DeviceClasses.Voltage or DeviceClasses.Current => Puissance,
+                or DeviceClasses.Voltage or DeviceClasses.Current or DeviceClasses.LoadShedding => Puissance,
             DeviceClasses.Battery => Batterie,
             DeviceClasses.Weather => Meteo,
             _ => Autre,
@@ -67,6 +67,12 @@ internal static class Categories
             };
         if (etat.TryGetNumber(out var n))
             return n.ToString(Math.Abs(n) >= 100 ? "#,0" : "0.##", CultureInfo.GetCultureInfo("fr-FR")) + (e.Unit is { Length: > 0 } u ? $" {u}" : "");
+        if (e.DeviceClass == DeviceClasses.LoadShedding && v.ValueKind == JsonValueKind.Object)
+            return string.Join(" · ", new[]
+            {
+                Nombre(v, "power", " VA"),
+                v.TryGetProperty("shedding", out var d) && d.ValueKind == JsonValueKind.True ? "délestage en cours" : null,
+            }.Where(x => x is not null));
         if (e.DeviceClass == DeviceClasses.Weather && v.ValueKind == JsonValueKind.Object)
             return string.Join(" · ", new[] { Nombre(v, "temperature", " °C"), Texte(v, "condition") }.Where(x => x is not null));
         if (e.Kind == EntityKind.Climate && v.ValueKind == JsonValueKind.Object)
