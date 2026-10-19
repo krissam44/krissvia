@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "presence",
+  "name": "Présence",
+  "description": "Maison occupée ou vide, et qui est là, d'après les appareils suivis (Livebox) ; détection perdue signalée.",
+  "version": "1.0.0",
+  "element": "kv-presence",
+  "script": "presence.js",
+  "slots": [ { "name": "presence", "kinds": ["sensor"], "device_classes": ["home_presence"], "required": true } ],
+  "size": { "cols": 3, "rows": 2 }
+}

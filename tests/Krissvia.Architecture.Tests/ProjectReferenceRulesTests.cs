@@ -27,6 +27,7 @@ public class ProjectReferenceRulesTests
             "Krissvia.Persistence", "Krissvia.PluginHost", "Krissvia.Widgets.Blazor"
         ],
         ["Krissvia.Plugin.Zigbee2Mqtt"] = ["Krissvia.Contracts", "Krissvia.Sdk", "Krissvia.Sdk.Mqtt"],
+        ["Krissvia.Plugin.Livebox"] = ["Krissvia.Contracts", "Krissvia.Sdk"],
         ["Krissvia.Plugin.Shelly"] = ["Krissvia.Contracts", "Krissvia.Sdk"],
         ["Krissvia.Plugin.Teleinfo"] = ["Krissvia.Contracts", "Krissvia.Sdk", "Krissvia.Sdk.Mqtt"],
     };
