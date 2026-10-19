@@ -7,7 +7,7 @@
 
         <MudAutocomplete T="RegisteredEntity" Label="Entité" Value="_principale" ValueChanged="ChoisirEntite"
                          SearchFunc="ChercherAsync" ToStringFunc="@(e => e is null ? "" : $"{e.DisplayName} ({e.EntityId})")"
-                         Variant="Variant.Outlined" Clearable="true" MaxItems="50" ResetValueOnEmptyText="true"
+                         Variant="Variant.Outlined" Clearable="true" MaxItems="null" ResetValueOnEmptyText="true"
                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                          HelperText="Ce que la carte montre. Tapez une partie du nom ou de l'identifiant." />
 
