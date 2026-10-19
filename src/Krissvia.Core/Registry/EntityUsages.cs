@@ -14,6 +14,12 @@ public static class EntityUsages
     /// <summary>Un interrupteur qui alimente un éclairage ; une entité <c>light</c> l'est d'elle-même.</summary>
     public const string Lighting = "eclairage";
 
+    /// <summary>Une prise commandée (ce qu'on y branche change ; elle reste une prise).</summary>
+    public const string Plug = "prise";
+
+    /// <summary>Le relais d'un compteur d'énergie (Shelly EM, Pro 3EM…).</summary>
+    public const string Meter = "compteur";
+
     public static bool IsRadiator(RegisteredEntity e) => e.Kind == EntityKind.Switch && e.Usage == Radiator;
 
     /// <summary>L'usage d'une entité : celui choisi par l'utilisateur, sinon celui de sa famille (une lumière éclaire).</summary>

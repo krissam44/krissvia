@@ -16,6 +16,8 @@ internal static class Categories
     public static readonly Categorie Humidite = new("humidite", "Humidité", Icons.Material.Filled.WaterDrop, "#26c6da");
     public static readonly Categorie Interrupteur = new("switch", "Interrupteur", Icons.Material.Filled.ToggleOn, "#ffa726");
     public static readonly Categorie Lumiere = new("lumiere", "Lumière", Icons.Material.Filled.Lightbulb, "#ffd60a");
+    public static readonly Categorie Prise = new("prise", "Prise", Icons.Material.Filled.Power, "#29b6f6");
+    public static readonly Categorie Compteur = new("compteur", "Compteur", Icons.Material.Filled.ElectricMeter, "#ffb300");
     public static readonly Categorie Ouverture = new("ouverture", "Ouverture", Icons.Material.Filled.DoorFront, "#42a5f5");
     public static readonly Categorie Mouvement = new("mouvement", "Mouvement", Icons.Material.Filled.DirectionsRun, "#ab47bc");
     public static readonly Categorie Puissance = new("puissance", "Puissance / énergie", Icons.Material.Filled.Bolt, "#ffb300");
@@ -29,12 +31,14 @@ internal static class Categories
     public static readonly Categorie Autre = new("autre", "Autre mesure", Icons.Material.Filled.Sensors, "#78909c");
 
     /// <summary>L'ordre des pastilles de filtre.</summary>
-    public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Presence, Reseau, Meteo, Autre];
+    public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Prise, Compteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Presence, Reseau, Meteo, Autre];
 
     public static Categorie De(RegisteredEntity e) => e.Kind switch
     {
         EntityKind.Switch when e.Usage == EntityUsages.Radiator => Radiateur,
         EntityKind.Switch when e.Usage == EntityUsages.Lighting => Lumiere,
+        EntityKind.Switch when e.Usage == EntityUsages.Plug => Prise,
+        EntityKind.Switch when e.Usage == EntityUsages.Meter => Compteur,
         EntityKind.Switch => Interrupteur,
         EntityKind.Light => Lumiere,
         EntityKind.Event => Evenement,
