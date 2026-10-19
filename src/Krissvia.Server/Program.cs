@@ -61,7 +61,10 @@ builder.Services.AddSingleton<IEntityStateReader>(sp => sp.GetRequiredService<En
 builder.Services.AddSingleton<IEntityStateWriter>(sp => sp.GetRequiredService<EntityStateStore>());
 builder.Services.AddSingleton<LiveFeed>();   // flux en direct de /api/live
 
-builder.Services.AddSingleton(builder.Configuration.GetSection("PluginHost").Get<PluginHostOptions>() ?? new PluginHostOptions());
+var optionsPlugins = builder.Configuration.GetSection("PluginHost").Get<PluginHostOptions>() ?? new PluginHostOptions();
+// Les données des plugins vivent à côté de la base : sauvegardées avec elle, jamais dans le dossier du programme.
+optionsPlugins.DataDirectory ??= Path.Combine(Path.GetDirectoryName(cheminBase)!, "plugins-data");
+builder.Services.AddSingleton(optionsPlugins);
 builder.Services.AddSingleton<PluginHub>();
 
 // Bus de commandes : passage unique de tous les ordres ; le PluginHost n'en est que le transport.

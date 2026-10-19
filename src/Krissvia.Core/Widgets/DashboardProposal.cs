@@ -23,6 +23,7 @@ public static class DashboardProposal
         new("thermostats", "Thermostats", e => e.Kind == EntityKind.Climate),
         new("meteo", "Météo", e => e.Kind == EntityKind.Sensor && e.DeviceClass == DeviceClasses.Weather),
         new("presence", "Présence", e => e.Kind == EntityKind.Sensor && e.DeviceClass == DeviceClasses.HomePresence),
+        new("reseau", "Internet", e => e.Kind == EntityKind.Sensor && e.DeviceClass is DeviceClasses.InternetConnection or DeviceClasses.NetworkHosts),
         new("temperatures", "Températures", e => e.Kind == EntityKind.Sensor && e.DeviceClass == DeviceClasses.Temperature),
         new("radiateurs", "Radiateurs", EntityUsages.IsRadiator),
         new("interrupteurs", "Interrupteurs et lumières", e => e.Kind is EntityKind.Switch or EntityKind.Light && !EntityUsages.IsRadiator(e)),

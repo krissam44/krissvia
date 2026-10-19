@@ -269,6 +269,13 @@ public sealed partial class PluginSupervisor(
                 ["Krissvia__Token"] = jeton,
                 ["Krissvia__PluginId"] = service.Id,
             };
+            if (options.DataDirectory is { Length: > 0 } donnees)
+            {
+                var dossier = Path.Combine(donnees, service.Id);
+                Directory.CreateDirectory(dossier);
+                environnement["Krissvia__DataDirectory"] = dossier;
+            }
+
             var processus = launcher.Start(fiche, environnement, ligne => Noter(service, ligne));
 
             service.Processus = processus;

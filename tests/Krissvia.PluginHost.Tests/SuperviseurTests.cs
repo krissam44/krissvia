@@ -111,6 +111,28 @@ public class SuperviseurTests
         Assert.Equal(ServiceStatus.Starting, Statut(s, "shelly"));
         Assert.Contains("\"enabled\":true", magasin.Documents[(PluginSupervisor.Collection, "shelly")]);
         Assert.Contains("info: démarré", s.GetSnapshot("shelly")!.Logs);
+        Assert.False(env.ContainsKey("Krissvia__DataDirectory"));   // aucun dossier de données réglé
+    }
+
+    [Fact]
+    public async Task Chaque_plugin_recoit_son_dossier_de_donnees_cree_a_l_avance()
+    {
+        var (s, lanceur, _, banc) = await MonterAsync();
+        await using var _b = banc;
+        var racine = Path.Combine(Path.GetTempPath(), $"krissvia-donnees-{Guid.NewGuid():N}");
+        banc.Options.DataDirectory = racine;
+        try
+        {
+            await s.SetEnabledAsync("shelly", true);
+
+            var (_, env, _) = Assert.Single(lanceur.Lancements);
+            Assert.Equal(Path.Combine(racine, "shelly"), env["Krissvia__DataDirectory"]);
+            Assert.True(Directory.Exists(Path.Combine(racine, "shelly")));
+        }
+        finally
+        {
+            if (Directory.Exists(racine)) Directory.Delete(racine, recursive: true);
+        }
     }
 
     [Fact]

@@ -46,9 +46,17 @@ public class LiveboxParserTests
     public void La_connexion_se_lit_meme_incomplete()
     {
         const string wan = """{"result":{"status":true,"data":{"LinkType":"vdsl","LinkState":"up","IPAddress":"90.1.2.3","ConnectionState":"Bound"}}}""";
-        const string dsl = """{"result":{"status":{"dsl":{"dsl0":{"DownstreamCurrRate":52344,"UpstreamCurrRate":8156}}}}}""";
+        const string dsl = """
+            {"result":{"status":{"dsl":{"dsl0":{"DownstreamCurrRate":34200,"UpstreamCurrRate":5300,"DownstreamMaxRate":34900,"UpstreamMaxRate":5300,
+            "DownstreamNoiseMargin":64,"UpstreamNoiseMargin":64,"DownstreamAttenuation":316,"UpstreamAttenuation":532,"CurrentProfile":"8b"}}}}}
+            """;
 
-        Assert.Equal(new WanStatus(true, "90.1.2.3", "vdsl", 52344, 8156), LiveboxParser.Wan(wan, dsl));
+        // Marges et atténuations en dixièmes de dB côté box : 64 → 6,4 dB, comme les affichait DomoMud.
+        Assert.Equal(new WanStatus(true, "90.1.2.3", "vdsl", 34200, 5300)
+        {
+            DownMaxKbps = 34900, UpMaxKbps = 5300, NoiseMarginDown = 6.4, NoiseMarginUp = 6.4,
+            AttenuationDown = 31.6, AttenuationUp = 53.2, Profile = "8b",
+        }, LiveboxParser.Wan(wan, dsl));
         Assert.Equal(new WanStatus(true, "90.1.2.3", "vdsl", null, null), LiveboxParser.Wan(wan, null));   // fibre : pas de DSL
         Assert.Null(LiveboxParser.Wan("""{"result":{"data":{}}}""", null));
     }
@@ -165,7 +173,7 @@ public class LiveboxPluginTests
         await plugin.CycleAsync(default);
 
         Assert.DoesNotContain(plugin.Snapshot().OfType<Declare>().Single().Devices, d => d.UniqueId == LiveboxPlugin.BoxDeviceId);
-        Assert.Equal([Presence], Valeurs(plugin).Keys);
+        Assert.Equal([Presence, LiveboxPlugin.NetworkId], Valeurs(plugin).Keys.Order());
     }
 
     [Fact]
@@ -174,7 +182,7 @@ public class LiveboxPluginTests
         var (plugin, _, _) = Banc();
 
         var box = plugin.Snapshot().OfType<Declare>().Single().Devices.Single(d => d.UniqueId == LiveboxPlugin.BoxDeviceId);
-        Assert.Equal([DeviceClasses.Connectivity, DeviceClasses.PublicIp, DeviceClasses.DataRate, DeviceClasses.DataRate],
+        Assert.Equal([DeviceClasses.InternetConnection, DeviceClasses.Connectivity, DeviceClasses.PublicIp, DeviceClasses.DataRate, DeviceClasses.DataRate],
             box.Entities.Select(e => e.DeviceClass));
     }
 
@@ -187,5 +195,90 @@ public class LiveboxPluginTests
         var telephone = Assert.Single(declare.Devices, d => d.UniqueId == Presence);
         Assert.Equal("Téléphone de Christian", telephone.Name);
         Assert.Equal(DeviceClasses.Presence, Assert.Single(telephone.Entities).DeviceClass);
+    }
+}
+
+/// <summary>La grille « Appareils du réseau » et le suivi qu'on y coche.</summary>
+public class LiveboxReseauTests : IDisposable
+{
+    private static readonly DateTimeOffset T0 = new(2026, 10, 19, 18, 0, 0, TimeSpan.Zero);
+    private readonly string _dossier = Path.Combine(Path.GetTempPath(), $"krissvia-livebox-{Guid.NewGuid():N}");
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_dossier)) Directory.Delete(_dossier, recursive: true);
+    }
+
+    private sealed class Box : ILiveboxApi
+    {
+        public List<LiveboxHost> Appareils { get; } =
+        [
+            new("AA:BB:CC:DD:EE:01", "Pixel", true, "192.168.1.20", "Mobile"),
+            new("AA:BB:CC:DD:EE:02", "iPhone", false, null, null),
+        ];
+
+        public Task<IReadOnlyList<LiveboxHost>> HostsAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<LiveboxHost>>([.. Appareils]);
+        public Task<WanStatus?> WanAsync(CancellationToken ct) => Task.FromResult<WanStatus?>(null);
+    }
+
+    private string Fichier => Path.Combine(_dossier, "suivis.json");
+
+    private LiveboxPlugin Plugin(IReadOnlyList<TrackedDevice>? depart = null) =>
+        new(depart ?? [], new Box(), new FakeTimeProvider(T0), NullLogger<LiveboxPlugin>.Instance, TimeSpan.FromMinutes(20),
+            supervision: false, stockage: new TrackingStore(Fichier));
+
+    private static CommandRequest Suivre(string mac, bool oui) => new()
+    {
+        Id = "c1", EntityUniqueId = LiveboxPlugin.NetworkId, Command = LiveboxPlugin.SetTracked,
+        Args = JsonSerializer.SerializeToElement(new { mac, tracked = oui }),
+    };
+
+    private static JsonElement Hotes(LiveboxPlugin p) =>
+        p.Snapshot().OfType<StateBatch>().SelectMany(b => b.States).Single(s => s.EntityUniqueId == LiveboxPlugin.NetworkId).Value.GetProperty("hosts");
+
+    [Fact]
+    public async Task La_grille_liste_tout_ce_que_voit_la_box_et_ce_qui_est_suivi()
+    {
+        var p = Plugin([new TrackedDevice { Mac = "AA:BB:CC:DD:EE:09", Name = "Vieux téléphone" }]);
+        await p.CycleAsync(default);
+
+        var hotes = Hotes(p).EnumerateArray().ToList();
+        Assert.Equal(["Pixel", "iPhone", "Vieux téléphone"], hotes.Select(h => h.GetProperty("name").GetString()));
+        Assert.Equal([false, false, true], hotes.Select(h => h.GetProperty("tracked").GetBoolean()));   // le suivi absent figure aussi
+        Assert.Equal("192.168.1.20", hotes[0].GetProperty("ip").GetString());
+    }
+
+    [Fact]
+    public async Task Cocher_un_appareil_le_suit_aussitot_et_le_garde_apres_un_redemarrage()
+    {
+        var p = Plugin();
+        await p.CycleAsync(default);
+
+        var r = await p.ExecuteAsync(Suivre("aa-bb-cc-dd-ee-01", true), default);
+
+        Assert.Equal(CommandOutcome.Accepted, r.Outcome);
+        var presence = LiveboxPlugin.PresenceId("AA:BB:CC:DD:EE:01");
+        var appareil = Assert.Single(p.Snapshot().OfType<Declare>().Single().Devices, d => d.UniqueId == presence);
+        Assert.Equal("Pixel", appareil.Name);   // le nom que lui donne la box
+        Assert.True(p.Snapshot().OfType<StateBatch>().SelectMany(b => b.States).Single(s => s.EntityUniqueId == presence).Value.GetBoolean());
+
+        // Un plugin neuf (redémarrage) relit le fichier, et ne repart pas des réglages.
+        var apres = Plugin([new TrackedDevice { Mac = "AA:BB:CC:DD:EE:02", Name = "ignoré" }]);
+        Assert.Contains(apres.Snapshot().OfType<Declare>().Single().Devices, d => d.UniqueId == presence);
+        Assert.DoesNotContain(apres.Snapshot().OfType<Declare>().Single().Devices, d => d.UniqueId == LiveboxPlugin.PresenceId("AA:BB:CC:DD:EE:02"));
+    }
+
+    [Fact]
+    public async Task Decocher_retire_l_appareil_et_une_commande_mal_formee_est_refusee()
+    {
+        var p = Plugin([new TrackedDevice { Mac = "AA:BB:CC:DD:EE:01", Name = "Pixel" }]);
+        await p.CycleAsync(default);
+
+        await p.ExecuteAsync(Suivre("AA:BB:CC:DD:EE:01", false), default);
+
+        Assert.DoesNotContain(p.Snapshot().OfType<Declare>().Single().Devices, d => d.UniqueId == LiveboxPlugin.PresenceId("AA:BB:CC:DD:EE:01"));
+        Assert.Equal("[]", File.ReadAllText(Fichier).Trim());
+        var refus = await p.ExecuteAsync(new CommandRequest { Id = "c2", EntityUniqueId = LiveboxPlugin.NetworkId, Command = LiveboxPlugin.SetTracked }, default);
+        Assert.Equal(CommandOutcome.Failed, refus.Outcome);
     }
 }

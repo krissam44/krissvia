@@ -8,8 +8,20 @@ namespace Krissvia.Plugin.Livebox;
 /// <summary>Un appareil du réseau tel que la box le voit.</summary>
 public sealed record LiveboxHost(string Mac, string Name, bool Active, string? Ip, string? Type);
 
-/// <summary>La connexion Internet : chaque champ est facultatif, un firmware peut ne pas l'exposer.</summary>
-public sealed record WanStatus(bool? Up, string? PublicIp, string? LinkType, int? DownKbps, int? UpKbps);
+/// <summary>
+/// La connexion Internet : chaque champ est facultatif, un firmware peut ne pas l'exposer (pas de DSL sur la fibre).
+/// Marges de bruit et atténuations en dB.
+/// </summary>
+public sealed record WanStatus(bool? Up, string? PublicIp, string? LinkType, int? DownKbps, int? UpKbps)
+{
+    public int? DownMaxKbps { get; init; }
+    public int? UpMaxKbps { get; init; }
+    public double? NoiseMarginDown { get; init; }
+    public double? NoiseMarginUp { get; init; }
+    public double? AttenuationDown { get; init; }
+    public double? AttenuationUp { get; init; }
+    public string? Profile { get; init; }
+}
 
 /// <summary>Ce que le plugin demande à la box : de quoi la simuler dans les tests.</summary>
 public interface ILiveboxApi
@@ -192,15 +204,32 @@ public static class LiveboxParser
             up = Texte(wan, "LinkState") is { } etat ? string.Equals(etat, "up", StringComparison.OrdinalIgnoreCase) : null;
         }
 
-        int? descendant = null, montant = null;
+        int? descendant = null, montant = null, maxDescendant = null, maxMontant = null;
+        double? margeDescendante = null, margeMontante = null, attenuationDescendante = null, attenuationMontante = null;
+        string? profil = null;
         if (dslJson is not null)
         {
             using var doc = JsonDocument.Parse(dslJson);
-            descendant = Nombre(doc.RootElement, "DownstreamCurrRate", 0);
-            montant = Nombre(doc.RootElement, "UpstreamCurrRate", 0);
+            var r = doc.RootElement;
+            descendant = Nombre(r, "DownstreamCurrRate", 0);
+            montant = Nombre(r, "UpstreamCurrRate", 0);
+            maxDescendant = Nombre(r, "DownstreamMaxRate", 0);
+            maxMontant = Nombre(r, "UpstreamMaxRate", 0);
+            // La box les donne en dixièmes de dB (64 = 6,4 dB), comme les affichait DomoMud.
+            margeDescendante = Nombre(r, "DownstreamNoiseMargin", 0) / 10.0;
+            margeMontante = Nombre(r, "UpstreamNoiseMargin", 0) / 10.0;
+            attenuationDescendante = Nombre(r, "DownstreamAttenuation", 0) / 10.0;
+            attenuationMontante = Nombre(r, "UpstreamAttenuation", 0) / 10.0;
+            profil = TexteProfond(r, "CurrentProfile", 0);
         }
 
-        return up is null && ip is null && descendant is null ? null : new WanStatus(up, ip, lien, descendant, montant);
+        return up is null && ip is null && descendant is null ? null : new WanStatus(up, ip, lien, descendant, montant)
+        {
+            DownMaxKbps = maxDescendant, UpMaxKbps = maxMontant,
+            NoiseMarginDown = margeDescendante, NoiseMarginUp = margeMontante,
+            AttenuationDown = attenuationDescendante, AttenuationUp = attenuationMontante,
+            Profile = profil,
+        };
     }
 
     /// <summary>{"result":{"data":{…}}} pour les services, {"data":{…}} pour l'authentification, parfois sous « status ».</summary>
@@ -223,6 +252,28 @@ public static class LiveboxParser
 
     private static string? Texte(JsonElement e, string nom) =>
         e.TryGetProperty(nom, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
+    private static string? TexteProfond(JsonElement e, string nom, int profondeur)
+    {
+        if (profondeur > 8) return null;
+        switch (e.ValueKind)
+        {
+            case JsonValueKind.Object:
+                foreach (var p in e.EnumerateObject())
+                {
+                    if (p.NameEquals(nom) && p.Value.ValueKind == JsonValueKind.String) return p.Value.GetString();
+                    if (TexteProfond(p.Value, nom, profondeur + 1) is { } r) return r;
+                }
+
+                break;
+            case JsonValueKind.Array:
+                foreach (var item in e.EnumerateArray())
+                    if (TexteProfond(item, nom, profondeur + 1) is { } r) return r;
+                break;
+        }
+
+        return null;
+    }
 
     private static int? Nombre(JsonElement e, string nom, int profondeur)
     {

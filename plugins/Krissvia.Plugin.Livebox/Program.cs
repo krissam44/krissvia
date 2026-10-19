@@ -27,6 +27,9 @@ var suivis = builder.Configuration.GetSection("Suivis").Get<List<TrackedDevice>>
 var periode = TimeSpan.FromSeconds(Math.Max(15, box.GetValue("PollSeconds", 60)));
 var grace = TimeSpan.FromMinutes(Math.Max(0, box.GetValue("GraceMinutes", 20)));
 var supervision = box.GetValue("Supervision", true);
+// Les appareils suivis se cochent dans la carte « Appareils du réseau » ; le plugin les garde dans son dossier de
+// données (posé par le cœur), ou à côté de l'exécutable s'il est lancé à la main.
+var suivisJson = Path.Combine(coeur.DataDirectory is { Length: > 0 } donnees ? donnees : AppContext.BaseDirectory, "suivis.json");
 
 if (string.IsNullOrWhiteSpace(hote) || string.IsNullOrEmpty(motDePasse) || coeur.Url is null)
 {
@@ -37,7 +40,8 @@ if (string.IsNullOrWhiteSpace(hote) || string.IsNullOrEmpty(motDePasse) || coeur
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ILiveboxApi>(_ => new SysbusClient(hote, box["Username"] is { Length: > 0 } u ? u : "admin", motDePasse));
 builder.Services.AddSingleton(sp => new LiveboxPlugin(suivis, sp.GetRequiredService<ILiveboxApi>(),
-    sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<ILogger<LiveboxPlugin>>(), grace, periode, supervision));
+    sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<ILogger<LiveboxPlugin>>(), grace, periode, supervision,
+    new TrackingStore(suivisJson)));
 builder.Services.AddSingleton(sp =>
 {
     var plugin = sp.GetRequiredService<LiveboxPlugin>();

@@ -25,10 +25,11 @@ internal static class Categories
     public static readonly Categorie Radiateur = new("radiateur", "Radiateur", Icons.Material.Filled.Whatshot, "#ff7043");
     public static readonly Categorie Meteo = new("meteo", "Météo", Icons.Material.Filled.WbSunny, "#ffb300");
     public static readonly Categorie Presence = new("presence", "Présence", Icons.Material.Filled.Person, "#4caf50");
+    public static readonly Categorie Reseau = new("reseau", "Réseau / Internet", Icons.Material.Filled.Router, "#26a69a");
     public static readonly Categorie Autre = new("autre", "Autre mesure", Icons.Material.Filled.Sensors, "#78909c");
 
     /// <summary>L'ordre des pastilles de filtre.</summary>
-    public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Presence, Meteo, Autre];
+    public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Presence, Reseau, Meteo, Autre];
 
     public static Categorie De(RegisteredEntity e) => e.Kind switch
     {
@@ -39,6 +40,7 @@ internal static class Categories
         EntityKind.Climate => Thermostat,
         EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Occupancy => Mouvement,
         EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Presence => Presence,
+        EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Connectivity => Reseau,
         EntityKind.BinarySensor => Ouverture,
         _ => e.DeviceClass switch
         {
@@ -49,6 +51,7 @@ internal static class Categories
             DeviceClasses.Battery => Batterie,
             DeviceClasses.Weather => Meteo,
             DeviceClasses.HomePresence => Presence,
+            DeviceClasses.PublicIp or DeviceClasses.DataRate or DeviceClasses.InternetConnection or DeviceClasses.NetworkHosts => Reseau,
             _ => Autre,
         },
     };
@@ -66,11 +69,22 @@ internal static class Categories
                 EntityKind.Switch => b ? "Allumé" : "Éteint",
                 EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Occupancy => b ? "Présence" : "Rien",
                 EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Presence => b ? "Présent" : "Absent",
+                EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Connectivity => b ? "En ligne" : "Hors ligne",
                 EntityKind.BinarySensor => b ? "Ouvert" : "Fermé",
                 _ => b ? "Oui" : "Non",
             };
         if (etat.TryGetNumber(out var n))
             return n.ToString(Math.Abs(n) >= 100 ? "#,0" : "0.##", CultureInfo.GetCultureInfo("fr-FR")) + (e.Unit is { Length: > 0 } u ? $" {u}" : "");
+        if (e.DeviceClass == DeviceClasses.NetworkHosts && v.ValueKind == JsonValueKind.Object
+            && v.TryGetProperty("hosts", out var hotes) && hotes.ValueKind == JsonValueKind.Array)
+            return $"{hotes.GetArrayLength()} appareils, {hotes.EnumerateArray().Count(h => Vrai(h, "active"))} connectés";
+        if (e.DeviceClass == DeviceClasses.InternetConnection && v.ValueKind == JsonValueKind.Object)
+            return string.Join(" · ", new[]
+            {
+                Vrai(v, "up") ? "en ligne" : "hors ligne",
+                Texte(v, "public_ip"),
+                v.TryGetProperty("down_kbps", out var d) && d.ValueKind == JsonValueKind.Number ? $"↓ {d.GetDouble() / 1000:0.#} Mbit/s" : null,
+            }.Where(x => x is not null));
         if (e.DeviceClass == DeviceClasses.HomePresence && v.ValueKind == JsonValueKind.Object)
             return Vrai(v, "detection_lost") ? "occupée (détection perdue)"
                 : Vrai(v, "occupied") ? "occupée" : "vide";
