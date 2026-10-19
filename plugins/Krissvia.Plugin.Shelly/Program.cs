@@ -41,6 +41,8 @@ builder.Services.AddSingleton(sp =>
     return client;
 });
 builder.Services.AddHostedService<PluginWorker>();
+// Lancé par la page Services : s'arrêter avec le cœur (Krissvia:ParentPid).
+builder.Services.AddParentProcessWatch(coeur);
 
 await builder.Build().RunAsync();
 return 0;

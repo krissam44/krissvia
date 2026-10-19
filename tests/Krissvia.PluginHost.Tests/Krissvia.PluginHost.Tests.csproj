@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\src\Krissvia.Persistence\Krissvia.Persistence.csproj" />
     <ProjectReference Include="..\..\src\Krissvia.Core\Krissvia.Core.csproj" />
     <ProjectReference Include="..\..\src\Krissvia.Contracts\Krissvia.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Krissvia.Sdk\Krissvia.Sdk.csproj" />
   </ItemGroup>
 
 </Project>

@@ -169,6 +169,51 @@ class Plugin:
         return failed(f"commande « {command.get('command')} » non prise en charge")
 
 
+# ── Processus parent ─────────────────────────────────────────────────────────
+
+
+def _parent_pid() -> int | None:
+    """Le PID du cœur qui a lancé le plugin (``Krissvia__ParentPid``), ou None : lancé à la main."""
+    brut = os.environ.get("Krissvia__ParentPid")
+    if not brut:
+        return None
+    try:
+        return int(brut)
+    except ValueError:
+        log.warning("Krissvia__ParentPid illisible (« %s ») : pas de surveillance du cœur.", brut)
+        return None
+
+
+def process_alive(pid: int) -> bool:
+    """Vrai si le processus ``pid`` existe encore. Sans dépendance (pas de psutil)."""
+    if sys.platform == "win32":
+        # Surtout pas os.kill(pid, 0) : sous Windows, il TUE le processus (TerminateProcess, code 0).
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+        kernel32.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+        kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+        synchronize, interrogation_limitee, wait_timeout, acces_refuse = 0x00100000, 0x1000, 0x102, 5
+        handle = kernel32.OpenProcess(synchronize | interrogation_limitee, False, pid)
+        if not handle:
+            # Introuvable : disparu. Refusé : il existe, mais pas à nous ; dans le doute, rester.
+            return ctypes.get_last_error() == acces_refuse
+        try:
+            return kernel32.WaitForSingleObject(handle, 0) == wait_timeout
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)  # POSIX : signal 0, rien n'est envoyé, seule l'existence est vérifiée
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
 # ── Connexion au cœur ────────────────────────────────────────────────────────
 
 
@@ -178,12 +223,17 @@ class CoreClient:
     Adresse, jeton et identifiant viennent par défaut des variables que pose le cœur au lancement
     (``Krissvia__Url``, ``Krissvia__Token``, ``Krissvia__PluginId``) : un plugin lancé depuis la page
     Services n'a rien à configurer pour se connecter.
+
+    Le cœur pose aussi ``Krissvia__ParentPid`` : ``run()`` rend alors la main dès que ce processus a
+    disparu (cœur tué, planté, arrêté au débogueur), au lieu de frapper sans fin à la porte du cœur
+    suivant avec un jeton périmé. Sans la variable (plugin lancé à la main), rien ne change.
     """
 
     def __init__(self, plugin: Plugin, *, plugin_version: str = "0.0.0", url: str | None = None,
                  plugin_id: str | None = None, token: str | None = None,
                  reconnect_delays: tuple[float, ...] = (1, 2, 5, 10, 30), rejected_delay: float = 60,
-                 welcome_timeout: float = 10) -> None:
+                 welcome_timeout: float = 10, parent_pid: int | None = None,
+                 parent_check: float = 5, parent_alive=process_alive) -> None:
         self.plugin = plugin
         self.plugin_version = plugin_version
         self.url = url or os.environ.get("Krissvia__Url")
@@ -192,6 +242,9 @@ class CoreClient:
         self.reconnect_delays = reconnect_delays
         self.rejected_delay = rejected_delay
         self.welcome_timeout = welcome_timeout
+        self.parent_pid = parent_pid if parent_pid is not None else _parent_pid()
+        self.parent_check = parent_check
+        self.parent_alive = parent_alive
         self._envoi = asyncio.Lock()
         self._session = None
         self._derniere_reception = 0.0
@@ -216,9 +269,32 @@ class CoreClient:
                 return False  # la réception constatera la coupure et reconnectera
 
     async def run(self) -> None:
-        """Se connecte, et se reconnecte, jusqu'à l'annulation de la tâche."""
+        """Se connecte, et se reconnecte, jusqu'à l'annulation de la tâche ou la disparition du cœur
+        qui a lancé le plugin (``parent_pid``)."""
         if not self.url:
             raise ValueError("Adresse du cœur non configurée (variable Krissvia__Url).")
+        if self.parent_pid is None:
+            await self._connexions()
+            return
+
+        connexions = asyncio.ensure_future(self._connexions())
+        surveillance = asyncio.ensure_future(self._attendre_disparition_parent())
+        try:
+            await asyncio.wait({connexions, surveillance}, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            for tache in (connexions, surveillance):
+                tache.cancel()
+            await asyncio.gather(connexions, surveillance, return_exceptions=True)
+        if surveillance.done() and not surveillance.cancelled():
+            log.warning("Le cœur qui a lancé ce plugin (processus %d) a disparu : arrêt du plugin.", self.parent_pid)
+        elif connexions.done() and not connexions.cancelled() and connexions.exception():
+            raise connexions.exception()
+
+    async def _attendre_disparition_parent(self) -> None:
+        while self.parent_alive(self.parent_pid):
+            await asyncio.sleep(self.parent_check)
+
+    async def _connexions(self) -> None:
         tentative = 0
         while True:
             fin = "echec"
@@ -334,10 +410,18 @@ def run(plugin: Plugin, *tasks, plugin_version: str = "0.0.0", **options) -> Non
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s : %(message)s", stream=sys.stdout)
     client = CoreClient(plugin, plugin_version=plugin_version, **options)
 
+    async def connexion() -> None:
+        await client.run()
+        raise _CoeurDisparu  # interrompt le gather ; asyncio.run annule alors les tâches du plugin
+
     async def principal() -> None:
-        await asyncio.gather(client.run(), *(tache(plugin, client) for tache in tasks))
+        await asyncio.gather(connexion(), *(tache(plugin, client) for tache in tasks))
 
     try:
         asyncio.run(principal())
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, _CoeurDisparu):
         pass
+
+
+class _CoeurDisparu(Exception):
+    """``CoreClient.run`` a rendu la main : le cœur parent a disparu, le plugin s'arrête."""

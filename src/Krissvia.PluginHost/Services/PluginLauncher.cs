@@ -1,5 +1,8 @@
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace Krissvia.PluginHost.Services;
 
@@ -36,8 +39,26 @@ public static class PluginRuntimes
             : OperatingSystem.IsWindows() ? "python" : "python3";
 }
 
-public sealed class ProcessPluginLauncher(PluginHostOptions options) : IPluginLauncher
+/// <summary>Lance chaque plugin dans un vrai processus, qui ne doit pas survivre au cœur.</summary>
+/// <remarks>
+/// Deux garde-fous, parce qu'un plugin orphelin continue d'interroger ses services extérieurs et de frapper à la
+/// porte du cœur suivant avec un jeton périmé :
+/// <list type="bullet">
+/// <item>Windows : chaque plugin entre dans un Job Object (<see cref="TravailWindows"/>) que le système ferme à la
+/// mort du cœur, même brutale.</item>
+/// <item>Partout : le PID du cœur part dans <c>Krissvia__ParentPid</c>, et les deux SDK arrêtent le plugin quand ce
+/// processus disparaît. Sous Linux, systemd tue déjà le cgroup du service ; c'est la ceinture en plus.</item>
+/// </list>
+/// </remarks>
+public sealed partial class ProcessPluginLauncher(PluginHostOptions options, ILogger<ProcessPluginLauncher>? logger = null) : IPluginLauncher, IDisposable
 {
+    /// <summary>Variable d'environnement portant le PID du cœur, lue par les SDK.</summary>
+    public const string ParentPidVariable = "Krissvia__ParentPid";
+
+    private readonly Lock _verrou = new();
+    private object? _travail;   // TravailWindows, créé au premier lancement ; vit autant que le cœur
+    private bool _travailImpossible;
+
     /// <summary>
     /// Comment lancer un plugin : son exécutable, ou l'interpréteur de son runtime avec le script en argument.
     /// </summary>
@@ -70,6 +91,8 @@ public sealed class ProcessPluginLauncher(PluginHostOptions options) : IPluginLa
         }
 
         foreach (var (cle, valeur) in environnement) demarrage.Environment[cle] = valeur;
+        // Après les réglages : aucun ne peut faire croire au plugin qu'il dépend d'un autre processus.
+        demarrage.Environment[ParentPidVariable] = Environment.ProcessId.ToString(CultureInfo.InvariantCulture);
         return demarrage;
     }
 
@@ -81,10 +104,58 @@ public sealed class ProcessPluginLauncher(PluginHostOptions options) : IPluginLa
         processus.OutputDataReceived += (_, e) => { if (e.Data is { } l) ligne(l); };
         processus.ErrorDataReceived += (_, e) => { if (e.Data is { } l) ligne(l); };
         processus.Start();
+        if (OperatingSystem.IsWindows()) AttacherAuTravail(processus);
         processus.BeginOutputReadLine();
         processus.BeginErrorReadLine();
         return new Processus(processus);
     }
+
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private void AttacherAuTravail(Process processus)
+    {
+        lock (_verrou)
+        {
+            if (_travail is null && !_travailImpossible)
+            {
+                try
+                {
+                    _travail = new TravailWindows();
+                }
+                catch (Win32Exception ex)
+                {
+                    _travailImpossible = true;   // un seul avertissement, pas un par lancement
+                    if (logger is not null) TravailImpossible(logger, ex.Message);
+                }
+            }
+
+            if (_travail is not TravailWindows travail) return;
+            try
+            {
+                travail.Ajouter(processus);
+            }
+            catch (Win32Exception ex)
+            {
+                // Le plugin tourne quand même ; il ne survivrait simplement pas au cœur que grâce au SDK.
+                if (logger is not null) AffectationImpossible(logger, processus.Id, ex.Message);
+            }
+        }
+    }
+
+    /// <summary>Arrêt du cœur : fermer le job tue les plugins qui y sont encore.</summary>
+    public void Dispose()
+    {
+        lock (_verrou)
+        {
+            (_travail as IDisposable)?.Dispose();
+            _travail = null;
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Job Object Windows impossible ({Erreur}) : un plugin pourra survivre à une mort brutale du cœur.")]
+    private static partial void TravailImpossible(ILogger logger, string erreur);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Processus {Pid} hors du Job Object ({Erreur}) : il pourra survivre à une mort brutale du cœur.")]
+    private static partial void AffectationImpossible(ILogger logger, int pid, string erreur);
 
     private sealed class Processus(Process processus) : IPluginProcess
     {

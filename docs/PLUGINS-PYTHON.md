@@ -50,7 +50,7 @@ comme les lieux du plugin Météo) arrive en `Lieux__0__Nom`, `Lieux__0__Latitud
 `krissvia.settings_list("Lieux")` la rend en `[{"nom": …, "latitude": …}, …]`, noms de champs en minuscules
 (Windows met en majuscules les noms des variables qu'on parcourt). L'adresse du cœur, le jeton et l'identifiant
 (`Krissvia__Url`, `Krissvia__Token`, `Krissvia__PluginId`) sont posés par le cœur : `CoreClient` les lit
-seul.
+seul. `Krissvia__ParentPid` aussi : le PID du cœur, pour s'arrêter avec lui (§ 4).
 
 ## 4. Le SDK
 
@@ -84,6 +84,13 @@ krissvia.run(Cave(), Cave.surveiller, plugin_version="1.0.0")
 - Un ordre « accepté » ne prouve pas l'effet : publier ensuite l'état résultant de l'entité.
 - Quand une source est injoignable, publier `availability(False, …)` : le cœur rend les entités
   indisponibles au lieu de garder la dernière valeur.
+- Un plugin lancé par le cœur **ne lui survit pas** : `CoreClient` vérifie toutes les 5 s que le processus
+  `Krissvia__ParentPid` existe encore ; s'il a disparu (cœur tué, planté, arrêté au débogueur), `run()` rend
+  la main et `krissvia.run()` annule les tâches du plugin, puis le processus sort. Sous Windows le Job Object
+  du cœur le tue de toute façon ; c'est la ceinture pour le reste (docs/TRANSPORT.md § 5). Lancé à la main,
+  sans la variable, rien n'est surveillé. Les paramètres `parent_pid`, `parent_check` et `parent_alive`
+  (fonction `pid → bool`) servent aux tests. Ne jamais tester l'existence d'un processus avec
+  `os.kill(pid, 0)` sous Windows : il le **tue** ; `krissvia.process_alive` passe par `OpenProcess`.
 
 ## 5. Tests
 
@@ -94,7 +101,7 @@ python -m unittest discover -s plugins/Krissvia.Plugin.Meteo
 
 Contre un faux cœur WebSocket sur la boucle locale : poignée de main et resynchronisation, ordres réussis et
 en échec, refus suivi d'une attente, cœur muet suivi d'une reconnexion, messages sans champs vides, lecture des
-réglages. Ceux du plugin Météo n'appellent pas le réseau : lecture des lieux (et de l'ancien réglage d'un seul
+réglages, arrêt à la disparition du cœur parent (et pas sans la variable). Ceux du plugin Météo n'appellent pas le réseau : lecture des lieux (et de l'ancien réglage d'un seul
 lieu), traduction d'une réponse d'Open-Meteo, instantané.
 
 ## 6. Le plugin Météo

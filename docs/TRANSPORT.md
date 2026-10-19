@@ -78,7 +78,29 @@ plugin                                  cœur
 Les jetons ne vont pas dans un fichier versionné : `appsettings.Local.json`, variable d'environnement
 (`PluginHost__Tokens__zigbee2mqtt`) ou fichier d'environnement du service systemd.
 
-## 5. Ce qui reste ouvert
+## 5. Un plugin lancé par le cœur ne lui survit pas
+
+Constaté le 19/10/2026 : après un arrêt brutal du cœur (débogueur, kill, plantage), les plugins lancés par la
+page Services tournaient encore, parent mort. Le `Kill(entireProcessTree)` du superviseur ne sert qu'aux
+arrêts **voulus**. Un orphelin continue d'interroger ses appareils et ses API extérieures, et frappe à la porte
+du cœur suivant avec un jeton périmé (refusé, nouvel essai toutes les minutes). Deux garde-fous :
+
+| Où | Quoi | Pourquoi ça tient |
+|---|---|---|
+| Windows | `ProcessPluginLauncher` met chaque plugin dans un **Job Object** `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` (`TravailWindows`), dont il garde le handle autant que le cœur vit | à la mort du cœur, même brutale, c'est Windows qui ferme ses handles : le job se ferme et tue ce qu'il contient |
+| Linux | systemd tue le cgroup du service | rien à faire côté cœur en production |
+| Partout | le cœur pose `Krissvia__ParentPid` (son PID, après les réglages : aucun ne peut l'écraser) ; les deux SDK vérifient toutes les 5 s que ce processus existe et **arrêtent le plugin** sinon | couvre ce qui reste : cœur lancé à la main sous Linux, job refusé par le système |
+
+Côté C#, `CoreClientOptions.ParentPid` se lit de la section `Krissvia` comme le reste ; chaque `Program.cs`
+de plugin appelle `builder.Services.AddParentProcessWatch(coeur)`, qui arrête l'hôte proprement
+(`StopApplication`). Côté Python, `CoreClient.run()` rend la main et `krissvia.run()` annule les tâches du
+plugin. **Sans la variable** (plugin lancé à la main, depuis Visual Studio ou une autre machine), rien n'est
+surveillé : le comportement est celui d'avant.
+
+Limite connue : un processus que le plugin lancerait lui-même entre son démarrage et son entrée dans le job
+échapperait au job ; aucun plugin ne lance de processus.
+
+## 6. Ce qui reste ouvert
 
 - **`configure`** : le message existe, mais le cœur n'a pas encore de configuration de plugin à
   envoyer (ni stockage, ni validation par JSON Schema). D'ici là, un plugin lit sa configuration
