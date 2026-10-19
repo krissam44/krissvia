@@ -24,13 +24,16 @@
                         {
                             @* Le plugin voit un relais ; l'utilisateur sait ce qu'il alimente. *@
                             @* Pas d'icône de champ : la valeur choisie affiche déjà la sienne, en couleur. *@
-                            <MudSelect T="string" @bind-Value="_usage" Label="Type" Variant="Variant.Outlined"
+                            <MudSelect Dense="true" T="string" @bind-Value="_usage" Label="Type" Variant="Variant.Outlined"
                                        HelperText="Ce que commande cet interrupteur">
                                 <MudSelectItem Value="@SansUsage">
                                     <div class="d-flex align-center gap-2"><MudIcon Icon="@Categories.Interrupteur.Icone" Size="Size.Small" Style="@($"color:{Categories.Interrupteur.Couleur}")" />Interrupteur</div>
                                 </MudSelectItem>
                                 <MudSelectItem Value="@EntityUsages.Radiator">
                                     <div class="d-flex align-center gap-2"><MudIcon Icon="@Categories.Radiateur.Icone" Size="Size.Small" Style="@($"color:{Categories.Radiateur.Couleur}")" />Radiateur</div>
+                                </MudSelectItem>
+                                <MudSelectItem Value="@EntityUsages.Lighting">
+                                    <div class="d-flex align-center gap-2"><MudIcon Icon="@Categories.Lumiere.Icone" Size="Size.Small" Style="@($"color:{Categories.Lumiere.Couleur}")" />Éclairage</div>
                                 </MudSelectItem>
                             </MudSelect>
                         }
@@ -47,7 +50,7 @@
                                       HelperText="@(AutresEntites.Count == 0 ? "Ex : Salon, Chambre…" : $"Celle de l'appareil : commune à ses {AutresEntites.Count + 1} entités")" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
-                        <MudSelect T="string" @bind-Value="_widget" Label="Widget" Variant="Variant.Outlined"
+                        <MudSelect Dense="true" T="string" @bind-Value="_widget" Label="Widget" Variant="Variant.Outlined"
                                    Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Widgets"
                                    HelperText="Celui des cartes « automatiques » du tableau de bord.">
                             <MudSelectItem Value="@Automatique">@LibelleAutomatique</MudSelectItem>
