@@ -49,6 +49,12 @@ public sealed record Dashboard
 
     public IReadOnlyList<DashboardSection> Sections { get; init; } = [];
 
+    /// <summary>
+    /// Nombre de colonnes dans lequel les largeurs sont comptées : toujours <see cref="DashboardService.GridColumns"/>
+    /// à l'enregistrement. Absent d'une page écrite avant le passage à 12 colonnes : ses largeurs sont en sixièmes.
+    /// </summary>
+    public int? Grid { get; init; }
+
     [JsonIgnore]
     public IEnumerable<DashboardCard> AllCards => Sections.SelectMany(s => s.Cards);
 }
@@ -64,6 +70,12 @@ public sealed partial class DashboardService(IConfigurationStore store)
 {
     public const string Collection = "tableaux";
     public const string MainId = "principal";
+
+    /// <summary>La grille de 12 colonnes de MudGrid et de DomoMud (une carte de 3 = quatre par ligne).</summary>
+    public const int GridColumns = 12;
+
+    /// <summary>La grille d'avant (2, 4 ou 6 colonnes selon l'écran) : ses largeurs valent le double en douzièmes.</summary>
+    private const int AncienneGrille = 6;
 
     public static JsonSerializerOptions Json { get; } = new()
     {
@@ -84,7 +96,7 @@ public sealed partial class DashboardService(IConfigurationStore store)
         {
             try
             {
-                if (JsonSerializer.Deserialize<Dashboard>(document.Json, Json) is { } page) pages.Add(page with { Id = document.Id });
+                if (JsonSerializer.Deserialize<Dashboard>(document.Json, Json) is { } page) pages.Add(EnDouziemes(page) with { Id = document.Id });
             }
             catch (JsonException)
             {
@@ -96,6 +108,18 @@ public sealed partial class DashboardService(IConfigurationStore store)
             ? [new Dashboard { Id = MainId }]
             : [.. pages.OrderBy(p => p.Order).ThenBy(p => p.Id, StringComparer.Ordinal)];
     }
+
+    /// <summary>
+    /// Une page enregistrée en sixièmes, lue en douzièmes : chaque carte garde exactement sa largeur. Elle sera
+    /// réécrite en douzièmes au prochain enregistrement.
+    /// </summary>
+    private static Dashboard EnDouziemes(Dashboard page) => page.Grid is null or AncienneGrille
+        ? page with
+        {
+            Grid = GridColumns,
+            Sections = [.. page.Sections.Select(s => s with { Cards = [.. s.Cards.Select(c => c with { Cols = c.Cols * 2 })] })],
+        }
+        : page;
 
     /// <summary>Une page, ou null si elle n'existe pas.</summary>
     public async Task<Dashboard?> GetAsync(string id, CancellationToken ct = default) =>
@@ -116,7 +140,7 @@ public sealed partial class DashboardService(IConfigurationStore store)
         }
 
         Changed?.Invoke();
-        return page;
+        return page with { Grid = GridColumns };
     }
 
     /// <summary>
@@ -145,7 +169,7 @@ public sealed partial class DashboardService(IConfigurationStore store)
         }
 
         Changed?.Invoke();
-        return numerotees;
+        return [.. numerotees.Select(p => p with { Grid = GridColumns })];
     }
 
     /// <summary>Supprime une page ; jamais la dernière. Faux si elle n'existait pas.</summary>
@@ -184,6 +208,8 @@ public sealed partial class DashboardService(IConfigurationStore store)
     {
         if (!PageId().IsMatch(d.Id)) throw new DashboardValidationException("identifiant de page : minuscules, chiffres et « - »");
         if (string.IsNullOrWhiteSpace(d.Name)) throw new DashboardValidationException("une page doit avoir un nom");
+        if (d.Grid is not (null or GridColumns))
+            throw new DashboardValidationException($"grid : {GridColumns} (largeurs en douzièmes), ou absent");
 
         var sections = new HashSet<string>(StringComparer.Ordinal);
         var cartes = new HashSet<string>(StringComparer.Ordinal);
@@ -208,7 +234,7 @@ public sealed partial class DashboardService(IConfigurationStore store)
 
     // Sous le verrou.
     private Task EcrireAsync(Dashboard page, CancellationToken ct) =>
-        store.SaveAsync(Collection, new ConfigurationDocument(page.Id, JsonSerializer.Serialize(page, Json)), ct);
+        store.SaveAsync(Collection, new ConfigurationDocument(page.Id, JsonSerializer.Serialize(page with { Grid = GridColumns }, Json)), ct);
 
     [GeneratedRegex("^[a-z0-9][a-z0-9-]{0,63}$")]
     private static partial Regex PageId();

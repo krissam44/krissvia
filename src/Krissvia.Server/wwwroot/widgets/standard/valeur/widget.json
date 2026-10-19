@@ -1,5 +1,5 @@
 {
-  "contract": 1,
+  "contract": 2,
   "id": "valeur",
   "name": "Valeur",
   "description": "Affiche n'importe quelle entité : le widget de dernier recours.",
@@ -7,5 +7,5 @@
   "element": "kv-valeur",
   "script": "valeur.js",
   "slots": [ { "name": "entite", "required": true } ],
-  "size": { "cols": 1, "rows": 1 }
+  "size": { "cols": 2, "rows": 1 }
 }

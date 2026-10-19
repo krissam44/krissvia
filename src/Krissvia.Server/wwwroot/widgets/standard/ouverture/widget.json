@@ -1,5 +1,5 @@
 {
-  "contract": 1,
+  "contract": 2,
   "id": "ouverture",
   "name": "Capteur",
   "description": "Ouverture, présence, fuite, fumée : un capteur tout-ou-rien, en couleur quand il est actif.",
@@ -7,5 +7,5 @@
   "element": "kv-ouverture",
   "script": "ouverture.js",
   "slots": [ { "name": "capteur", "kinds": ["binary_sensor"], "required": true } ],
-  "size": { "cols": 1, "rows": 1 }
+  "size": { "cols": 2, "rows": 1 }
 }

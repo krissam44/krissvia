@@ -1,5 +1,5 @@
 {
-  "contract": 1,
+  "contract": 2,
   "id": "puissance",
   "name": "Puissance",
   "description": "Puissance, énergie, tension ou courant ; en rouge au-dessus d'un seuil.",
@@ -9,7 +9,7 @@
   "slots": [
     { "name": "mesure", "kinds": ["sensor"], "device_classes": ["power", "apparent_power", "energy", "voltage", "current"], "required": true }
   ],
-  "size": { "cols": 1, "rows": 1 },
+  "size": { "cols": 2, "rows": 1 },
   "settings": {
     "type": "object",
     "properties": {

@@ -29,7 +29,8 @@ public partial class CarteDialog
 
     // Une liste et non une boucle for : le contenu d'un élément de liste est rendu plus tard, et capturerait le
     // compteur de boucle à sa dernière valeur.
-    private static readonly int[] Largeurs = [.. Enumerable.Range(1, WidgetCatalog.MaxCols)];
+    /// <summary>Les largeurs usuelles, et celle de la carte si elle n'en est pas (une page convertie des sixièmes).</summary>
+    private IEnumerable<int> ChoixLargeurs => Largeurs.Usuelles.Append(_cols).Where(n => n is >= 1 and <= WidgetCatalog.MaxCols).Distinct().Order();
     private static readonly int[] Hauteurs = [.. Enumerable.Range(1, WidgetCatalog.MaxRows)];
 
     /// <summary>Valeur de la liste pour « la carte suit son entité ».</summary>

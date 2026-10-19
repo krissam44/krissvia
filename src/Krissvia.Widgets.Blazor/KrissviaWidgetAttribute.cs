@@ -6,7 +6,7 @@ namespace Krissvia.Widgets;
 /// </summary>
 /// <example>
 /// <code>
-/// [KrissviaWidget("jauge-cuve", "Jauge de cuve", Cols = 2)]
+/// [KrissviaWidget("jauge-cuve", "Jauge de cuve", Cols = 3)]
 /// [WidgetSlot("niveau", Kinds = ["sensor"], DeviceClasses = ["moisture"], Required = true)]
 /// public partial class JaugeCuve { [Parameter] public WidgetContext Context { get; set; } = default!; }
 /// </code>
@@ -23,8 +23,10 @@ public sealed class KrissviaWidgetAttribute(string id, string name) : Attribute
 
     public string? Version { get; init; }
 
-    /// <summary>Largeur par défaut, en colonnes de la grille (1 à 6).</summary>
-    public int Cols { get; init; } = 1;
+    /// <summary>
+    /// Largeur par défaut, en douzièmes de la largeur d'un grand écran (1 à 12 : 3 = un quart, comme <c>lg="3"</c>).
+    /// </summary>
+    public int Cols { get; init; } = 2;
 
     /// <summary>Hauteur par défaut, en lignes (1 à 4).</summary>
     public int Rows { get; init; } = 1;

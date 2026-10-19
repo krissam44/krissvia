@@ -73,7 +73,7 @@ MudBlazor, déjà dans Krissvia). Le manifeste s'écrit en attributs :
 
 ```json
 {
-  "contract": 1,
+  "contract": 2,
   "id": "jauge-cuve",
   "name": "Jauge de cuve",
   "description": "Niveau d'une cuve en pourcentage, avec seuil d'alerte.",
@@ -84,7 +84,7 @@ MudBlazor, déjà dans Krissvia). Le manifeste s'écrit en attributs :
     { "name": "niveau", "type": "entity", "kinds": ["sensor"], "device_classes": ["moisture", "enum"], "required": true },
     { "name": "pompe",  "type": "entity", "kinds": ["switch"], "required": false }
   ],
-  "size": { "cols": 2, "rows": 2 },
+  "size": { "cols": 3, "rows": 2 },
   "settings": {
     "type": "object",
     "properties": {
@@ -98,7 +98,10 @@ MudBlazor, déjà dans Krissvia). Le manifeste s'écrit en attributs :
 - `slots` : les entités attendues, chacune avec un rôle. Un widget simple n'a qu'un slot ; une carte « prise
   avec mesure » en a deux (le switch, sa puissance). Un slot vise une entité (`"type": "entity"`) filtrée par
   `kinds`, `device_classes`, `usages` — ou un objet de module (`"type": "thermostat"`, et plus tard d'autres).
-- `size` : taille par défaut d'une carte, en colonnes et lignes de la grille du tableau de bord.
+- `size` : taille par défaut d'une carte. `cols` en douzièmes de la largeur d'un grand écran (1 à 12 : 3 = un quart,
+  quatre cartes par ligne, comme un `lg="3"` de MudGrid), `rows` en lignes (1 à 4). Contrat 2 ; un manifeste du
+  contrat 1 comptait en sixièmes (1 à 6) : il est encore lu, sa largeur doublée. Même unité pour l'attribut
+  `Cols` d'un widget Blazor (2 par défaut).
 - `settings` : options propres à chaque carte, décrites avec le même sous-ensemble de JSON Schema que les réglages
   des plugins — le tableau de bord en tire le formulaire.
 
@@ -212,8 +215,10 @@ Organisation reprise de DomoMud : des **pages** (« Confort », « Technique »�
 chaque section une grille de cartes. Mode édition sur une copie : « Enregistrer » écrit tout, « Annuler » ne
 laisse rien ; replier une section hors édition s'enregistre aussitôt.
 
-- Grille : 2 colonnes sur téléphone, 4 sur tablette, 6 sur grand écran ; largeur d'une carte de 1 à 6 (6 = pleine
-  largeur, ramenée à l'écran), hauteur de 1 à 4.
+- Grille : 12 colonnes sur grand écran, comme MudGrid et DomoMud ; largeur d'une carte de 1 à 12 (le menu propose
+  1/6, 1/4, 1/3, 1/2, 2/3, 3/4 et pleine largeur), hauteur de 1 à 4. Sur tablette, 4 colonnes (une carte y prend
+  la moitié de sa largeur, arrondie au-dessus) ; sur téléphone, 2 (une demi-ligne jusqu'à 2/12, puis la ligne).
+  Les pages écrites avant la grille de 12 (sans `grid`) sont relues en doublant leurs largeurs.
 - Cartes : glisser-déposer, y compris d'une section à l'autre ; flèches ◀ ▶ pour le téléphone ; menu de taille.
 - **Proposer** (mode édition) : ajoute une section par famille (thermostats, températures, interrupteurs et
   lumières, capteurs, énergie), chaque entité avec son meilleur widget ; les slots secondaires prennent les entités
