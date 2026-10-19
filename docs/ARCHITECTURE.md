@@ -178,6 +178,8 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
 - Modèle de confiance des widgets : code de confiance installé par l'administrateur.
 - **Contrat des widgets : `WIDGETS.md`** (proposition du 16/10/2026) — Web Component ou composant Blazor, slots
   d'entités, hôte `kv` pour les ordres vérifiés, choix par carte > par entité > par défaut.
+- **Notifications et alertes : `NOTIFICATIONS.md`** (19/10/2026) — ntfy, une alerte par incident avec quarantaine,
+  alerte gel par lieu du plugin Météo.
 
 ## 11. Feuille de route
 

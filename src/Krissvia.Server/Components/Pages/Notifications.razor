@@ -1,0 +1,82 @@
+@page "/parametres/notifications"
+@using Krissvia.Core.Notifications
+
+<PageTitle>Notifications · Krissvia</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">Notifications</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="6">
+        <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
+                <MudText Typo="Typo.h6">Téléphone (ntfy)</MudText>
+                <MudSwitch T="bool" @bind-Value="_ntfy.Enabled" Color="Color.Primary" Label="Activées" />
+            </MudStack>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">
+                Installez l'application ntfy sur le téléphone et abonnez-la au même sujet. Sur le serveur public, toute
+                personne qui connaît le sujet le lit : choisissez-le difficile à deviner.
+            </MudText>
+            <MudTextField @bind-Value="_ntfy.Serveur" Label="Serveur" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2"
+                          HelperText="https://ntfy.sh, ou l'adresse de votre serveur" />
+            <MudTextField @bind-Value="_ntfy.Sujet" Label="Sujet" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2"
+                          HelperText="Lettres, chiffres, « - » et « _ »" />
+            <MudTextField @bind-Value="_ntfy.Jeton" Label="Jeton d'accès (facultatif)" InputType="InputType.Password"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Pour un serveur protégé" />
+            <MudStack Row="true" Class="mt-3" Spacing="2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save"
+                           OnClick="EnregistrerNtfyAsync">Enregistrer</MudButton>
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Send" Disabled="_envoi"
+                           OnClick="EssayerAsync">Envoyer un essai</MudButton>
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
+            <MudText Typo="Typo.h6" Class="mb-2">Alertes</MudText>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudText Typo="Typo.subtitle1"><MudIcon Icon="@Icons.Material.Filled.AcUnit" Size="Size.Small" Style="color:#42a5f5; vertical-align: middle" /> Gel annoncé</MudText>
+                <MudSwitch T="bool" @bind-Value="_gel.Actif" Color="Color.Primary" Label="Active" />
+            </MudStack>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">
+                Pour chaque lieu du plugin Météo : une alerte quand le minimum prévu atteint le seuil, une autre quand le
+                risque est écarté.
+            </MudText>
+            <MudGrid Spacing="2">
+                <MudItem xs="6">
+                    <MudNumericField @bind-Value="_gel.Seuil" Label="Seuil (°C)" Step="0.5" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudNumericField @bind-Value="_gel.Horizon" Label="Dans les (h)" Min="1" Max="48" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+            </MudGrid>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-3" StartIcon="@Icons.Material.Filled.Save"
+                       OnClick="EnregistrerAlertesAsync">Enregistrer</MudButton>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12">
+        <MudPaper Elevation="1" Class="pa-4 rounded-lg">
+            <MudText Typo="Typo.h6" Class="mb-2">Alertes en cours</MudText>
+            @if (Alertes.Active.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Aucune. L'analyse passe toutes les 15 minutes.</MudText>
+            }
+            else
+            {
+                <MudSimpleTable Dense="true" Elevation="0">
+                    <tbody>
+                        @foreach (var a in Alertes.Active)
+                        {
+                            <tr @key="a.Key">
+                                <td style="white-space: nowrap">@a.Since.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                                <td><b>@a.Title</b><br /><span class="mud-text-secondary">@a.Message</span></td>
+                                <td style="white-space: nowrap">@Remise(a.Delivery)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>

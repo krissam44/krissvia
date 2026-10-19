@@ -77,6 +77,12 @@ builder.Services.AddSingleton<IEntityCommander>(sp => sp.GetRequiredService<Comm
 builder.Services.AddSingleton<IConfigurationStore, SqliteConfigurationStore>();
 builder.Services.AddSingleton(sp => new ThermostatInhibitor(sp.GetRequiredService<ICommandBus>()));
 builder.Services.AddSingleton<IHeatingSlopeStore, HeatingSlopeStore>();
+// Notifications ntfy et alertes. Un seul client HTTP, recyclé toutes les 5 min (le DNS du serveur peut changer).
+builder.Services.AddSingleton(sp => new Krissvia.Core.Notifications.NotificationService(
+    sp.GetRequiredService<IConfigurationStore>(),
+    new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) })));
+builder.Services.AddSingleton<Krissvia.Core.Notifications.AlertService>();
+builder.Services.AddSingleton<Krissvia.Climate.Alerts.FrostWatch>();
 builder.Services.AddSingleton<ThermostatEngine>();
 builder.Services.AddSingleton<ThermostatService>();
 builder.Services.AddSingleton<ThermostatEntities>();   // les thermostats en entités climate
@@ -95,6 +101,7 @@ builder.Services.AddHostedService<CommandJournal>();
 builder.Services.AddHostedService<ThermostatLoop>();
 builder.Services.AddHostedService<LoadSheddingLoop>();
 builder.Services.AddHostedService<DeviceScheduleLoop>();
+builder.Services.AddHostedService<AlertLoop>();
 
 // Services : les plugins installés sur cette machine, lancés et surveillés par le cœur.
 builder.Services.AddSingleton<IPluginLauncher, ProcessPluginLauncher>();
