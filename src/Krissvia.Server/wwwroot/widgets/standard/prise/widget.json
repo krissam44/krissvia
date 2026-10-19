@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "prise",
+  "name": "Prise",
+  "description": "Allume et éteint une prise commandée, fiche bleue quand elle est alimentée ; l'état affiché est celui que l'appareil confirme.",
+  "version": "1.0.0",
+  "element": "kv-prise",
+  "script": "prise.js",
+  "slots": [ { "name": "interrupteur", "kinds": ["switch"], "usages": ["prise"], "required": true } ],
+  "size": { "cols": 2, "rows": 1 }
+}

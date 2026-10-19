@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "compteur",
+  "name": "Compteur",
+  "description": "Commande le relais d'un compteur d'énergie, icône de compteur ambre quand il est fermé ; l'état affiché est celui que l'appareil confirme.",
+  "version": "1.0.0",
+  "element": "kv-compteur",
+  "script": "compteur.js",
+  "slots": [ { "name": "interrupteur", "kinds": ["switch"], "usages": ["compteur"], "required": true } ],
+  "size": { "cols": 2, "rows": 1 }
+}

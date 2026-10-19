@@ -35,6 +35,12 @@
                                 <MudSelectItem Value="@EntityUsages.Lighting">
                                     <div class="d-flex align-center gap-2"><MudIcon Icon="@Categories.Lumiere.Icone" Size="Size.Small" Style="@($"color:{Categories.Lumiere.Couleur}")" />Éclairage</div>
                                 </MudSelectItem>
+                                <MudSelectItem Value="@EntityUsages.Plug">
+                                    <div class="d-flex align-center gap-2"><MudIcon Icon="@Categories.Prise.Icone" Size="Size.Small" Style="@($"color:{Categories.Prise.Couleur}")" />Prise</div>
+                                </MudSelectItem>
+                                <MudSelectItem Value="@EntityUsages.Meter">
+                                    <div class="d-flex align-center gap-2"><MudIcon Icon="@Categories.Compteur.Icone" Size="Size.Small" Style="@($"color:{Categories.Compteur.Couleur}")" />Compteur</div>
+                                </MudSelectItem>
                             </MudSelect>
                         }
                         else
