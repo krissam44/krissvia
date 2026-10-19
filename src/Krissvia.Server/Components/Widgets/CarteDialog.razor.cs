@@ -23,6 +23,9 @@ public partial class CarteDialog
     private string? _widget;
     private readonly Dictionary<string, string?> _liens = new(StringComparer.Ordinal);
     private int _cols = 1;
+
+    /// <summary>Nom propre à la carte ; vide : celui de l'entité.</summary>
+    private string? _titre;
     private int _rows = 1;
     private SettingField? _schema;
     private JsonObject? _reglages;
@@ -56,6 +59,7 @@ public partial class CarteDialog
     protected override void OnInitialized()
     {
         if (Carte is null) return;
+        _titre = Carte.Title;
 
         if (Carte.Widget is null)
         {
@@ -146,12 +150,21 @@ public partial class CarteDialog
                 if (entite is not null) liens[slot] = entite;
         }
 
+        var titre = _titre?.Trim();
+        if (titre is { Length: > DashboardService.MaxTitleLength })
+        {
+            _erreur = $"Nom de {DashboardService.MaxTitleLength} caractères au plus.";
+            return;
+        }
+
         Dialogue.Close(DialogResult.Ok(new DashboardCard
         {
             Id = Carte?.Id ?? Guid.NewGuid().ToString("N")[..12],
             Widget = EstAuto ? null : widget.Manifest.Id,
             Entity = EstAuto ? _principale.EntityId : null,
             Entities = liens,
+            // Vide ou identique au nom de l'entité : la carte suit ce nom, y compris s'il change ensuite.
+            Title = string.IsNullOrEmpty(titre) || titre == _principale.DisplayName ? null : titre,
             Settings = _reglages is null ? null : JsonSerializer.SerializeToElement(_reglages),
             // La taille du manifeste n'est pas recopiée : si le widget change de taille par défaut, la carte suit.
             Cols = _cols == widget.Manifest.Size.Cols ? null : _cols,

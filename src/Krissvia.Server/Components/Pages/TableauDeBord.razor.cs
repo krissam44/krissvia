@@ -103,7 +103,11 @@ public partial class TableauDeBord
                 await _module.InvokeVoidAsync("appliquer", Page.Sections.Where(s => !s.Collapsed).SelectMany(s => s.Cards)
                     .Select(Resoudre)
                     .Where(r => r.Widget?.IsBlazor != true)
-                    .Select(r => new { id = r.Card.Id, widget = r.WidgetId, entities = r.Entities, settings = r.Card.Settings }));
+                    .Select(r => new
+                    {
+                        id = r.Card.Id, widget = r.WidgetId, entities = r.Entities, settings = r.Card.Settings,
+                        title = r.Card.Title, principal = r.Widget?.Manifest.Slots[0].Name,
+                    }));
             }
         }
         catch (JSException ex)
@@ -148,6 +152,11 @@ public partial class TableauDeBord
                     e.ExtraJson is { Length: > 0 } extra ? JsonSerializer.Deserialize<JsonElement>(extra) : null);
             etats[slot] = Etats.Get(id) is { } etat ? new WidgetState(etat.Value, etat.Available, etat.MeasuredAt) : null;
         }
+
+        // Le nom propre à la carte remplace celui de l'entité principale, comme pour un Web Component.
+        if (carte.Card.Title is { Length: > 0 } titre && carte.Widget?.Manifest.Slots[0].Name is { } principal
+            && entites.TryGetValue(principal, out var e0))
+            entites[principal] = e0 with { Name = titre };
 
         var reglages = carte.Card.Settings ?? JsonSerializer.SerializeToElement(new { });
         var widget = carte.WidgetId;

@@ -35,7 +35,10 @@ export function arreter() {
     hote.cartes.clear();
 }
 
-/** Les cartes à afficher : [{ id, widget, entities: { slot: entity_id }, settings }]. Rappelé après chaque rendu. */
+/**
+ * Les cartes à afficher : [{ id, widget, entities: { slot: entity_id }, settings, title, principal }]. Rappelé après
+ * chaque rendu. `title` : nom propre à la carte, donné à l'entité du slot `principal` à la place du sien.
+ */
 export async function appliquer(cartes) {
     const vues = new Set();
     for (const carte of cartes) {
@@ -43,7 +46,7 @@ export async function appliquer(cartes) {
         const corps = hote.racine?.querySelector(`[data-carte="${CSS.escape(carte.id)}"] .kv-carte-corps`);
         if (!corps) continue;
 
-        const cle = JSON.stringify([carte.widget, carte.entities, carte.settings ?? null]);
+        const cle = JSON.stringify([carte.widget, carte.entities, carte.settings ?? null, carte.title ?? null]);
         const connue = hote.cartes.get(carte.id);
         if (connue && connue.cle === cle && corps.contains(connue.element)) continue;
 
@@ -146,6 +149,10 @@ function alimenter(carte) {
         entities[slot] = hote.entites.get(id) ?? { entity_id: id, name: id, unknown: true };
         states[slot] = hote.etats.get(id) ?? null;
     }
+    // Le nom propre à la carte remplace celui de l'entité principale (le premier slot, ou l'unique du widget de secours).
+    const titre = carte.carte.title;
+    const principal = carte.carte.principal in carte.liens ? carte.carte.principal : Object.keys(carte.liens)[0];
+    if (titre && entities[principal]) entities[principal] = { ...entities[principal], name: titre };
     try {
         carte.element.settings = carte.carte.settings ?? {};
         carte.element.entities = entities;

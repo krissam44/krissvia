@@ -23,6 +23,13 @@ public sealed record DashboardCard
     public string? Entity { get; init; }
 
     public IReadOnlyDictionary<string, string> Entities { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Nom montré par la carte à la place de celui de son entité principale ; null : le nom de l'entité. Propre à la
+    /// carte : la même sonde peut s'appeler « Salon » ici et « Sonde du buffet » dans l'écran Entités.
+    /// </summary>
+    public string? Title { get; init; }
+
     public JsonElement? Settings { get; init; }
     public int? Cols { get; init; }
     public int? Rows { get; init; }
@@ -73,6 +80,9 @@ public sealed partial class DashboardService(IConfigurationStore store)
 
     /// <summary>La grille de 12 colonnes de MudGrid et de DomoMud (une carte de 3 = quatre par ligne).</summary>
     public const int GridColumns = 12;
+
+    /// <summary>Longueur maximale du nom propre à une carte.</summary>
+    public const int MaxTitleLength = 80;
 
     /// <summary>La grille d'avant (2, 4 ou 6 colonnes selon l'écran) : ses largeurs valent le double en douzièmes.</summary>
     private const int AncienneGrille = 6;
@@ -226,6 +236,8 @@ public sealed partial class DashboardService(IConfigurationStore store)
                     throw new DashboardValidationException($"carte « {carte.Id} » : il faut un widget, ou une entité dont suivre le widget");
                 if (carte.Cols is < 1 or > WidgetCatalog.MaxCols || carte.Rows is < 1 or > WidgetCatalog.MaxRows)
                     throw new DashboardValidationException($"carte « {carte.Id} » : de 1 à {WidgetCatalog.MaxCols} colonnes et de 1 à {WidgetCatalog.MaxRows} lignes");
+                if (carte.Title is { Length: > MaxTitleLength })
+                    throw new DashboardValidationException($"carte « {carte.Id} » : nom de {MaxTitleLength} caractères au plus");
                 if (carte.Entities.Any(kv => string.IsNullOrWhiteSpace(kv.Key) || string.IsNullOrWhiteSpace(kv.Value)))
                     throw new DashboardValidationException($"carte « {carte.Id} » : slot ou entité vide");
             }

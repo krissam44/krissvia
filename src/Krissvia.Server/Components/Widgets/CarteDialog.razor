@@ -24,6 +24,9 @@
 
         @if (_principale is not null)
         {
+            <MudTextField T="string" @bind-Value="_titre" Immediate="true" Label="Nom sur la carte" Placeholder="@_principale.DisplayName"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-4" Clearable="true" MaxLength="@DashboardService.MaxTitleLength"
+                          HelperText="Facultatif : remplace, sur cette carte seulement, le nom de l'entité" />
             <MudSelect T="string" Label="Widget" Value="_widget" ValueChanged="ChoisirWidget" Variant="Variant.Outlined" Class="mt-4"
                        HelperText="@(EstAuto ? "La carte suit le widget de l'entité : le changer dans l'écran Entités changera cette carte." : Widget?.Manifest.Description ?? "")">
                 <MudSelectItem Value="@Auto">@LibelleAuto</MudSelectItem>
