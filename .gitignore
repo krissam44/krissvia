@@ -11,3 +11,4 @@ TestResults/
 appsettings.Local.json
 # Widgets de l'installation (dossier à côté de la base), propres à chaque machine
 src/Krissvia.Server/widgets/
+__pycache__/

@@ -22,11 +22,28 @@ public interface IPluginLauncher
     IPluginProcess Start(PluginManifest plugin, IReadOnlyDictionary<string, string> environnement, Action<string> ligne);
 }
 
-public sealed class ProcessPluginLauncher : IPluginLauncher
+/// <summary>Les interpréteurs connus pour <see cref="PluginManifest.Runtime"/>.</summary>
+public static class PluginRuntimes
 {
-    public IPluginProcess Start(PluginManifest plugin, IReadOnlyDictionary<string, string> environnement, Action<string> ligne)
+    public const string Python = "python";
+
+    public static readonly IReadOnlyList<string> Known = [Python];
+
+    /// <summary>L'interpréteur configuré, sinon celui du PATH.</summary>
+    public static string Interpreter(string runtime, PluginHostOptions options) =>
+        options.Runtimes.TryGetValue(runtime, out var chemin) && !string.IsNullOrWhiteSpace(chemin)
+            ? chemin
+            : OperatingSystem.IsWindows() ? "python" : "python3";
+}
+
+public sealed class ProcessPluginLauncher(PluginHostOptions options) : IPluginLauncher
+{
+    /// <summary>
+    /// Comment lancer un plugin : son exécutable, ou l'interpréteur de son runtime avec le script en argument.
+    /// </summary>
+    public static ProcessStartInfo StartInfo(PluginManifest plugin, PluginHostOptions options, IReadOnlyDictionary<string, string> environnement)
     {
-        var demarrage = new ProcessStartInfo(plugin.ExecutablePath)
+        var demarrage = new ProcessStartInfo(plugin.Runtime is { } runtime ? PluginRuntimes.Interpreter(runtime, options) : plugin.ExecutablePath)
         {
             WorkingDirectory = plugin.Directory,
             UseShellExecute = false,
@@ -36,7 +53,29 @@ public sealed class ProcessPluginLauncher : IPluginLauncher
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8,
         };
+
+        if (plugin.Runtime == PluginRuntimes.Python)
+        {
+            // -u : chaque ligne du plugin arrive aussitôt dans le journal de la page Services, pas par blocs.
+            demarrage.ArgumentList.Add("-u");
+            demarrage.ArgumentList.Add(plugin.ExecutablePath);
+            // Le journal est lu en UTF-8 ; un Windows réglé en cp1252 écrirait sinon « Ã© » pour « é ».
+            demarrage.Environment["PYTHONIOENCODING"] = "utf-8";
+            // Pas de __pycache__ dans le dossier du plugin : il peut être en lecture seule, ou dans le dépôt.
+            demarrage.Environment["PYTHONDONTWRITEBYTECODE"] = "1";
+            var sdk = Path.Combine(options.SdkDirectory, "python");
+            demarrage.Environment["PYTHONPATH"] = demarrage.Environment.TryGetValue("PYTHONPATH", out var existant) && !string.IsNullOrEmpty(existant)
+                ? sdk + Path.PathSeparator + existant
+                : sdk;
+        }
+
         foreach (var (cle, valeur) in environnement) demarrage.Environment[cle] = valeur;
+        return demarrage;
+    }
+
+    public IPluginProcess Start(PluginManifest plugin, IReadOnlyDictionary<string, string> environnement, Action<string> ligne)
+    {
+        var demarrage = StartInfo(plugin, options, environnement);
 
         var processus = new Process { StartInfo = demarrage, EnableRaisingEvents = true };
         processus.OutputDataReceived += (_, e) => { if (e.Data is { } l) ligne(l); };

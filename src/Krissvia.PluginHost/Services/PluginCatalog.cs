@@ -16,8 +16,17 @@ public sealed record PluginManifest
     public required string Name { get; init; }
     public string Description { get; init; } = "";
 
-    /// <summary>Nom de l'exécutable, sans extension (<c>.exe</c> ajouté sous Windows).</summary>
+    /// <summary>
+    /// Nom de l'exécutable, sans extension (<c>.exe</c> ajouté sous Windows). Avec un <see cref="Runtime"/>, le
+    /// script à lui donner, extension comprise (<c>meteo.py</c>).
+    /// </summary>
     public required string Executable { get; init; }
+
+    /// <summary>
+    /// Interpréteur qui lance <see cref="Executable"/> : <c>python</c>, ou rien pour un exécutable natif. Le
+    /// chemin de l'interpréteur se règle dans <c>PluginHost:Runtimes</c>.
+    /// </summary>
+    public string? Runtime { get; init; }
 
     /// <summary>Description des réglages (voir <see cref="SettingsSchema"/>), d'où la page tire son formulaire.</summary>
     public JsonElement? Settings { get; init; }
@@ -29,7 +38,7 @@ public sealed record PluginManifest
     /// <summary>Chemin complet de l'exécutable sur cette machine.</summary>
     [JsonIgnore]
     public string ExecutablePath =>
-        Path.Combine(Directory, OperatingSystem.IsWindows() ? Executable + ".exe" : Executable);
+        Path.Combine(Directory, Runtime is null && OperatingSystem.IsWindows() ? Executable + ".exe" : Executable);
 }
 
 /// <summary>
@@ -63,6 +72,8 @@ public static partial class PluginCatalog
                     var fiche = JsonSerializer.Deserialize<PluginManifest>(File.ReadAllText(fichier), Json)
                                 ?? throw new JsonException("fiche vide");
                     if (!IdentifiantValide().IsMatch(fiche.Id)) throw new JsonException($"identifiant « {fiche.Id} » invalide");
+                    if (fiche.Runtime is { } runtime && !PluginRuntimes.Known.Contains(runtime))
+                        throw new JsonException($"runtime « {runtime} » inconnu (connus : {string.Join(", ", PluginRuntimes.Known)})");
 
                     fiche = fiche with { Directory = Path.GetDirectoryName(Path.GetFullPath(fichier))! };
                     if (!File.Exists(fiche.ExecutablePath)) throw new FileNotFoundException($"exécutable absent : {fiche.ExecutablePath}");

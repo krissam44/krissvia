@@ -103,4 +103,72 @@ public sealed class CataloguePluginsTests : IDisposable
     {
         Assert.Empty(PluginCatalog.Scan([Path.Combine(_racine, "absent")]).Plugins);
     }
+
+    private string InstallerPython(string id, string runtime = "python")
+    {
+        var dossier = Path.Combine(_racine, id);
+        Directory.CreateDirectory(dossier);
+        File.WriteAllText(Path.Combine(dossier, "plugin.json"),
+            $$"""{"id":"{{id}}","name":"Météo","runtime":"{{runtime}}","executable":"meteo.py"}""");
+        File.WriteAllText(Path.Combine(dossier, "meteo.py"), "");
+        return dossier;
+    }
+
+    [Fact]
+    public void Un_plugin_python_est_trouve_avec_son_script_tel_quel()
+    {
+        var dossier = InstallerPython("meteo");
+
+        var (plugins, erreurs) = PluginCatalog.Scan([_racine]);
+
+        var p = Assert.Single(plugins);
+        Assert.Equal(PluginRuntimes.Python, p.Runtime);
+        Assert.Equal(Path.GetFullPath(Path.Combine(dossier, "meteo.py")), p.ExecutablePath);   // pas de « .exe » ajouté
+        Assert.Empty(erreurs);
+    }
+
+    [Fact]
+    public void Un_runtime_inconnu_est_refuse()
+    {
+        InstallerPython("meteo", runtime: "cobol");
+
+        var (plugins, erreurs) = PluginCatalog.Scan([_racine]);
+
+        Assert.Empty(plugins);
+        Assert.Contains("runtime « cobol » inconnu", Assert.Single(erreurs));
+    }
+
+    [Fact]
+    public void Un_plugin_python_est_lance_par_l_interpreteur_avec_le_sdk_du_coeur()
+    {
+        var fiche = new PluginManifest { Id = "meteo", Name = "Météo", Runtime = "python", Executable = "meteo.py", Directory = _racine };
+        var options = new PluginHostOptions { SdkDirectory = Path.Combine(_racine, "sdk"), Runtimes = { ["python"] = "/opt/py/bin/python3" } };
+
+        var demarrage = ProcessPluginLauncher.StartInfo(fiche, options, new Dictionary<string, string> { ["Krissvia__Token"] = "abc" });
+
+        Assert.Equal("/opt/py/bin/python3", demarrage.FileName);
+        Assert.Equal(["-u", Path.Combine(_racine, "meteo.py")], demarrage.ArgumentList);
+        Assert.StartsWith(Path.Combine(_racine, "sdk", "python"), demarrage.Environment["PYTHONPATH"]);
+        Assert.Equal("utf-8", demarrage.Environment["PYTHONIOENCODING"]);
+        Assert.Equal("abc", demarrage.Environment["Krissvia__Token"]);
+        Assert.Equal(_racine, demarrage.WorkingDirectory);
+    }
+
+    [Fact]
+    public void Un_plugin_natif_est_lance_directement_et_sans_arguments()
+    {
+        var fiche = new PluginManifest { Id = "shelly", Name = "Shelly", Executable = "Krissvia.Plugin.Shelly", Directory = _racine };
+
+        var demarrage = ProcessPluginLauncher.StartInfo(fiche, new PluginHostOptions(), new Dictionary<string, string>());
+
+        Assert.Equal(fiche.ExecutablePath, demarrage.FileName);
+        Assert.Empty(demarrage.ArgumentList);
+        Assert.False(demarrage.Environment.ContainsKey("PYTHONIOENCODING"));
+    }
+
+    [Fact]
+    public void Sans_reglage_l_interpreteur_python_est_celui_du_path()
+    {
+        Assert.Equal(OperatingSystem.IsWindows() ? "python" : "python3", PluginRuntimes.Interpreter("python", new PluginHostOptions()));
+    }
 }

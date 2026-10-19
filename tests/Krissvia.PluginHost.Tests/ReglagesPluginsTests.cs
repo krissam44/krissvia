@@ -49,6 +49,7 @@ public class ReglagesPluginsTests
     [InlineData("Krissvia.Plugin.Shelly")]
     [InlineData("Krissvia.Plugin.Zigbee2Mqtt")]
     [InlineData("Krissvia.Plugin.Teleinfo")]
+    [InlineData("Krissvia.Plugin.Meteo")]
     public void Chaque_plugin_du_depot_decrit_ses_reglages(string projet)
     {
         var schema = Schema(projet);
