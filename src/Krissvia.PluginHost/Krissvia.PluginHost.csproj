@@ -1,5 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <!-- Code généré par [LibraryImport] (Job Object Windows, TravailWindows). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Krissvia.Core\Krissvia.Core.csproj" />
     <ProjectReference Include="..\Krissvia.Contracts\Krissvia.Contracts.csproj" />

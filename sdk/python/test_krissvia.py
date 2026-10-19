@@ -6,6 +6,9 @@
 import asyncio
 import json
 import os
+import subprocess
+import sys
+import threading
 import unittest
 from unittest import mock
 
@@ -155,6 +158,70 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
     async def test_rien_ne_part_hors_session(self):
         client = krissvia.CoreClient(Cave(), url="ws://127.0.0.1:1/plugins", plugin_id="cave")
         self.assertFalse(await client.send(krissvia.state(krissvia.value("cave:chauffe_eau", True))))
+
+
+class ParentTests(unittest.IsolatedAsyncioTestCase):
+    """Un plugin lancé par le cœur ne lui survit pas : il surveille le processus Krissvia__ParentPid."""
+
+    async def test_le_client_rend_la_main_quand_le_coeur_parent_disparait(self):
+        verifications = []
+
+        def vivant(pid):
+            verifications.append(pid)
+            return len(verifications) < 4
+
+        async with FauxCoeur() as coeur:
+            client = krissvia.CoreClient(Cave(), url=coeur.url, plugin_id="cave", parent_pid=4242,
+                                         parent_check=0.05, parent_alive=vivant)
+            await asyncio.wait_for(client.run(), 3)
+
+            self.assertEqual([4242] * 4, verifications)
+            self.assertEqual(1, coeur.sessions)  # connecté pendant ce temps, comme d'habitude
+            self.assertFalse(client.connected)
+
+    async def test_un_plugin_lance_a_la_main_ne_surveille_rien(self):
+        interroge = []
+        with mock.patch.dict(os.environ, {}, clear=True):
+            client = krissvia.CoreClient(Cave(), url="ws://127.0.0.1:1/plugins", plugin_id="cave",
+                                         reconnect_delays=(0.01,), parent_check=0.01,
+                                         parent_alive=lambda pid: interroge.append(pid) or False)
+        with self.assertRaises(asyncio.TimeoutError):
+            await asyncio.wait_for(client.run(), 0.3)
+        self.assertEqual([], interroge)
+
+    def test_le_pid_du_parent_vient_de_l_environnement(self):
+        with mock.patch.dict(os.environ, {"Krissvia__ParentPid": "1234"}):
+            self.assertEqual(1234, krissvia.CoreClient(Cave()).parent_pid)
+        with mock.patch.dict(os.environ, {"Krissvia__ParentPid": "cœur"}):
+            self.assertIsNone(krissvia.CoreClient(Cave()).parent_pid)
+
+    def test_un_processus_vivant_est_reconnu_et_un_processus_sorti_ne_l_est_plus(self):
+        self.assertTrue(krissvia.process_alive(os.getpid()))
+        bref = subprocess.Popen([sys.executable, "-c", "pass"])
+        bref.wait()
+        self.assertFalse(krissvia.process_alive(bref.pid))
+
+
+class RunTests(unittest.TestCase):
+    def test_la_disparition_du_coeur_arrete_aussi_les_taches_du_plugin(self):
+        annulee = []
+
+        async def relever(plugin, client):
+            try:
+                await asyncio.sleep(3600)
+            except asyncio.CancelledError:
+                annulee.append(True)
+                raise
+
+        # Dans un fil à part : si le plugin ne s'arrête pas, le test échoue au lieu de bloquer la suite.
+        fil = threading.Thread(target=krissvia.run, daemon=True, args=(Cave(), relever), kwargs=dict(
+            url="ws://127.0.0.1:1/plugins", plugin_id="cave", reconnect_delays=(0.01,),
+            parent_pid=4242, parent_check=0.01, parent_alive=lambda pid: False))
+        fil.start()
+        fil.join(5)
+
+        self.assertFalse(fil.is_alive(), "le plugin a survécu à la disparition du cœur")
+        self.assertEqual([True], annulee)
 
 
 class MessagesTests(unittest.TestCase):

@@ -37,6 +37,16 @@ public sealed class CoreClientOptions
     public TimeSpan RejectedDelay { get; set; } = TimeSpan.FromMinutes(1);
 
     public TimeSpan WelcomeTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// PID du cœur qui a lancé le plugin (<c>Krissvia__ParentPid</c>, posé par la page Services) : le plugin
+    /// s'arrête quand ce processus disparaît (<see cref="ParentProcessWatch"/>). Absent pour un plugin lancé à
+    /// la main, qui se comporte comme avant.
+    /// </summary>
+    public int? ParentPid { get; set; }
+
+    /// <summary>Période de vérification du processus parent.</summary>
+    public TimeSpan ParentCheckPeriod { get; set; } = TimeSpan.FromSeconds(5);
 }
 
 /// <summary>
