@@ -21,6 +21,11 @@ namespace Krissvia.Contracts;
 [JsonDerivedType(typeof(CommandResult), "command_result")]
 [JsonDerivedType(typeof(Ping), "ping")]
 [JsonDerivedType(typeof(Shutdown), "shutdown")]
+[JsonDerivedType(typeof(Subscribe), "subscribe")]
+[JsonDerivedType(typeof(Subscribed), "subscribed")]
+[JsonDerivedType(typeof(EntityStateUpdate), "entity_state")]
+[JsonDerivedType(typeof(EntityCommandRequest), "entity_command")]
+[JsonDerivedType(typeof(EntityCommandResponse), "entity_command_result")]
 public abstract record Message;
 
 public enum CommandPriority
@@ -170,4 +175,73 @@ public sealed record Ping : Message;
 public sealed record Shutdown : Message
 {
     public string? Reason { get; init; }
+}
+
+// ── Contrat 0.3 : lire et commander d'autres entités (docs/CONTRACT-V0.3.md) ──────────────────────────────────────
+
+/// <summary>
+/// plugin → cœur : les entités à suivre. La liste est COMPLÈTE et remplace la précédente ; l'abonnement ne survit
+/// pas à la session.
+/// </summary>
+public sealed record Subscribe : Message
+{
+    public required IReadOnlyList<string> EntityIds { get; init; }
+}
+
+/// <summary>Pourquoi une entité est refusée à l'abonnement.</summary>
+public enum SubscriptionDenial
+{
+    /// <summary>Pas choisie dans les réglages du plugin : il n'y a pas droit.</summary>
+    NotAllowed,
+
+    /// <summary>Absente du registre.</summary>
+    Unknown,
+}
+
+public sealed record DeniedEntity(string EntityId, SubscriptionDenial Reason);
+
+/// <summary>cœur → plugin : réponse à <see cref="Subscribe"/>. Les entités accordées reçoivent aussitôt leur état.</summary>
+public sealed record Subscribed : Message
+{
+    public required IReadOnlyList<string> Granted { get; init; }
+    public IReadOnlyList<DeniedEntity> Denied { get; init; } = [];
+}
+
+/// <summary>
+/// cœur → plugin : l'état d'une entité suivie, à l'abonnement puis à chaque changement. <see cref="Value"/> et
+/// <see cref="MeasuredAt"/> sont absents si l'entité n'a jamais rien publié.
+/// </summary>
+public sealed record EntityStateUpdate : Message
+{
+    public required string EntityId { get; init; }
+    public required string Name { get; init; }
+    public required EntityKind Kind { get; init; }
+    public string? DeviceClass { get; init; }
+    public string? Unit { get; init; }
+    public required bool Available { get; init; }
+    public JsonElement? Value { get; init; }
+    public DateTimeOffset? MeasuredAt { get; init; }
+}
+
+/// <summary>plugin → cœur : un ordre sur une entité qui n'est pas forcément la sienne. Passe par le bus de commandes.</summary>
+public sealed record EntityCommandRequest : Message
+{
+    /// <summary>Corrélation, reprise dans <see cref="EntityCommandResponse"/>.</summary>
+    public required string Id { get; init; }
+
+    public required string EntityId { get; init; }
+    public required string Command { get; init; }
+    public JsonElement? Args { get; init; }
+}
+
+/// <summary>cœur → plugin : issue d'un <see cref="EntityCommandRequest"/>.</summary>
+public sealed record EntityCommandResponse : Message
+{
+    public required string Id { get; init; }
+    public required CommandOutcome Outcome { get; init; }
+
+    /// <summary>La vérification de l'effet par le bus (<c>confirmed</c>, <c>not_confirmed</c>, <c>not_applicable</c>…).</summary>
+    public string? Verification { get; init; }
+
+    public string? Detail { get; init; }
 }

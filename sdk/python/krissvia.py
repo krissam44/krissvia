@@ -36,7 +36,7 @@ try:
 except ImportError:  # pragma: no cover - dépend de l'installation
     sys.exit("Le SDK Krissvia demande le paquet « websockets » (13 ou plus) : pip install websockets")
 
-CONTRACT_VERSION = "0.2"
+CONTRACT_VERSION = "0.3"
 """Version du contrat parlée par ce SDK : le cœur exige la même mineure tant qu'on est en 0.x."""
 
 MAX_FRAME = 1 << 20
@@ -168,6 +168,11 @@ class Plugin:
         Une exception devient un ``failed``."""
         return failed(f"commande « {command.get('command')} » non prise en charge")
 
+    def on_entity_state(self, message: Message) -> None:
+        """Contrat 0.3 : l'état d'une entité suivie (``client.subscribe``), une fois à l'abonnement puis à chaque
+        changement — ``message["entity_id"]``, ``["name"]``, ``["available"]``, ``["value"]`` (absent si
+        jamais reçue). Appelé sur la boucle de réception : rendre la main vite."""
+
 
 # ── Processus parent ─────────────────────────────────────────────────────────
 
@@ -249,6 +254,9 @@ class CoreClient:
         self._session = None
         self._derniere_reception = 0.0
         self._ordres: set[asyncio.Task] = set()
+        # Contrat 0.3 : entités suivies (renvoyées à chaque session) et ordres en attente de leur résultat.
+        self._abonnements: list[str] = []
+        self._resultats: dict[str, asyncio.Future] = {}
 
     @property
     def connected(self) -> bool:
@@ -338,6 +346,9 @@ class CoreClient:
         async with self._envoi:
             for message in self.plugin.snapshot():
                 await ws.send(json.dumps(message, ensure_ascii=False))
+            # Un abonnement ne survit pas à la session : il repart après la resynchronisation.
+            if self._abonnements:
+                await ws.send(json.dumps({"type": "subscribe", "entity_ids": self._abonnements}))
             self._session = ws
         log.info("Connecté au cœur Krissvia (contrat %s).", premiere.get("contract_version"))
 
@@ -362,6 +373,19 @@ class CoreClient:
                     tache = asyncio.create_task(self._executer(message))
                     self._ordres.add(tache)
                     tache.add_done_callback(self._ordres.discard)
+                elif genre == "entity_state":
+                    try:
+                        self.plugin.on_entity_state(message)
+                    except Exception:  # noqa: BLE001 - une erreur du plugin ne coupe pas la session
+                        log.exception("on_entity_state en échec.")
+                elif genre == "entity_command_result":
+                    futur = self._resultats.get(message.get("id"))
+                    if futur is not None and not futur.done():
+                        futur.set_result(message)
+                elif genre == "subscribed":
+                    for refus in message.get("denied", []):
+                        log.warning("Abonnement à %s refusé (%s) : la choisir dans les réglages du plugin (page Services).",
+                                    refus.get("entity_id"), refus.get("reason"))
                 elif genre == "configure":
                     await self.send({"type": "configure_result", "ok": False,
                                      "error": "configuration locale du plugin uniquement"})
@@ -375,8 +399,40 @@ class CoreClient:
             battement.cancel()
             async with self._envoi:
                 self._session = None
+            # Un ordre dont la session s'est fermée n'aura jamais de résultat : on ne fait pas semblant.
+            for futur in self._resultats.values():
+                if not futur.done():
+                    futur.set_result({"type": "entity_command_result", "outcome": "unreachable",
+                                      "detail": "session avec le cœur fermée"})
             log.warning("Session avec le cœur fermée ; reconnexion.")
         return "normale"
+
+    async def subscribe(self, entity_ids: Iterable[str]) -> None:
+        """Contrat 0.3 : les entités à suivre (la liste COMPLÈTE). Seules celles choisies dans les réglages du
+        plugin sont accordées. Retenue et renvoyée à chaque (re)connexion ; envoyée tout de suite si une session
+        est ouverte. Les états arrivent dans ``Plugin.on_entity_state``."""
+        self._abonnements = list(dict.fromkeys(i for i in entity_ids if i))
+        await self.send({"type": "subscribe", "entity_ids": self._abonnements})
+
+    async def command(self, entity_id: str, command: str, args: dict[str, Any] | None = None,
+                      timeout: float = 15) -> Message:
+        """Contrat 0.3 : un ordre sur une entité (pas forcément la sienne), par le bus de commandes du cœur.
+        Rend ``entity_command_result`` (``outcome``, ``verification``, ``detail``). Hors session ou sans
+        réponse : ``unreachable``, jamais un faux succès."""
+        ident = os.urandom(8).hex()
+        futur = asyncio.get_running_loop().create_future()
+        self._resultats[ident] = futur
+        try:
+            if not await self.send(_sans_vides({"type": "entity_command", "id": ident, "entity_id": entity_id,
+                                                "command": command, "args": args})):
+                return {"type": "entity_command_result", "id": ident, "outcome": "unreachable",
+                        "detail": "pas de session avec le cœur"}
+            return await asyncio.wait_for(futur, timeout)
+        except asyncio.TimeoutError:
+            return {"type": "entity_command_result", "id": ident, "outcome": "unreachable",
+                    "detail": "pas de réponse du cœur"}
+        finally:
+            self._resultats.pop(ident, None)
 
     async def _executer(self, ordre: Message) -> None:
         try:

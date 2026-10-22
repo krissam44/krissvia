@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Krissvia.Core.Registry;
 
 namespace Krissvia.Server.Components;
 
@@ -8,6 +9,29 @@ public partial class SettingsEditor
 {
     [Parameter, EditorRequired] public SettingField Champ { get; set; } = default!;
     [Parameter, EditorRequired] public JsonObject Valeur { get; set; } = default!;
+
+    [Inject] private IEntityRegistry Registre { get; set; } = default!;
+
+    /// <summary>
+    /// Les entités qu'un champ « entité » propose : celles de la famille et de la classe demandées, actives. La valeur
+    /// enregistrée reste proposée même si elle ne correspond plus (renommée, désactivée) : on ne l'efface pas en silence.
+    /// </summary>
+    private IEnumerable<RegisteredEntity> Entites(EntitySetting reference, string? actuelle) =>
+        Registre.Loaded
+            .Where(e => e.EntityId == actuelle
+                        || (e is { Enabled: true, Missing: false }
+                            && (reference.Kinds.Count == 0 || reference.Kinds.Contains(JsonNamingPolicy.SnakeCaseLower.ConvertName(e.Kind.ToString())))
+                            && (reference.DeviceClasses.Count == 0 || (e.DeviceClass is { } c && reference.DeviceClasses.Contains(c)))))
+            .OrderBy(e => e.DisplayName, StringComparer.CurrentCultureIgnoreCase);
+
+    private string NomEntite(string? id) =>
+        id is null ? "" : Registre.Loaded.FirstOrDefault(e => e.EntityId == id)?.DisplayName ?? id;
+
+    private static string AideEntite(SettingField champ, EntitySetting reference)
+    {
+        var droit = reference.Access == EntityAccess.Command ? "le plugin pourra la lire et la commander" : "le plugin pourra la lire";
+        return champ.Description is { Length: > 0 } d ? $"{d} ({droit})" : $"{char.ToUpper(droit[0], System.Globalization.CultureInfo.CurrentCulture)}{droit[1..]}.";
+    }
 
     private string? Texte(SettingField champ) =>
         Valeur[champ.Key] is JsonValue v && v.GetValueKind() == JsonValueKind.String ? v.GetValue<string>() : null;

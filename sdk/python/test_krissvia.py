@@ -114,7 +114,7 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
 
             hello = coeur.recus[0]
             self.assertEqual(
-                {"type": "hello", "plugin_id": "cave", "plugin_version": "1.2.3", "contract_version": "0.2", "token": "secret"},
+                {"type": "hello", "plugin_id": "cave", "plugin_version": "1.2.3", "contract_version": krissvia.CONTRACT_VERSION, "token": "secret"},
                 hello)
             self.assertEqual(["hello", "declare", "state", "availability"], [m["type"] for m in coeur.recus[:4]])
             self.assertTrue(client.connected)
@@ -222,6 +222,65 @@ class RunTests(unittest.TestCase):
 
         self.assertFalse(fil.is_alive(), "le plugin a survécu à la disparition du cœur")
         self.assertEqual([True], annulee)
+
+
+class Contrat03Tests(unittest.IsolatedAsyncioTestCase):
+    """Contrat 0.3 : suivre et commander d'autres entités (docs/CONTRACT-V0.3.md)."""
+
+    async def asyncSetUp(self):
+        self.taches = []
+
+    async def asyncTearDown(self):
+        for t in self.taches:
+            t.cancel()
+        await asyncio.gather(*self.taches, return_exceptions=True)
+
+    async def test_l_abonnement_repart_a_chaque_session_et_les_etats_arrivent_au_plugin(self):
+        recus = []
+
+        class Platine(Cave):
+            def on_entity_state(self, message):
+                recus.append(message)
+
+        async def pousser(ws):
+            await ws.send(json.dumps({"type": "entity_state", "entity_id": "climate.salon", "name": "Salon",
+                                      "kind": "climate", "available": True, "value": {"mode": "eco"}}))
+
+        async with FauxCoeur(apres_welcome=pousser) as coeur:
+            client = krissvia.CoreClient(Platine(), url=coeur.url, plugin_id="openhasp", reconnect_delays=(0.01,))
+            await client.subscribe(["climate.salon", "climate.salon", "switch.lampe"])   # avant toute session
+            self.taches.append(asyncio.create_task(client.run()))
+
+            await coeur.attendre(lambda: coeur.de_type("subscribe") and recus)
+            self.assertEqual([{"type": "subscribe", "entity_ids": ["climate.salon", "switch.lampe"]}], coeur.de_type("subscribe"))
+            self.assertEqual("availability", coeur.recus[coeur.recus.index(coeur.de_type("subscribe")[0]) - 1]["type"])  # après la resynchro
+            self.assertEqual({"mode": "eco"}, recus[0]["value"])
+
+    async def test_un_ordre_rend_son_resultat_et_hors_session_jamais_un_faux_succes(self):
+        hors_session = await krissvia.CoreClient(Cave(), url="ws://127.0.0.1:1/x", plugin_id="openhasp").command("switch.lampe", "turn_on")
+        self.assertEqual("unreachable", hors_session["outcome"])
+
+        socket = {}
+
+        async def garder(ws):
+            socket["ws"] = ws
+
+        async with FauxCoeur(apres_welcome=garder) as coeur:
+            client = krissvia.CoreClient(Cave(), url=coeur.url, plugin_id="openhasp")
+            self.taches.append(asyncio.create_task(client.run()))
+            await coeur.attendre(lambda: client.connected and "ws" in socket)
+
+            ordre = asyncio.create_task(client.command("switch.lampe", "turn_off"))
+            await coeur.attendre(lambda: coeur.de_type("entity_command"))
+            demande = coeur.de_type("entity_command")[0]
+            self.assertEqual({"type": "entity_command", "id": demande["id"], "entity_id": "switch.lampe", "command": "turn_off"}, demande)
+            await socket["ws"].send(json.dumps({"type": "entity_command_result", "id": "un-autre", "outcome": "failed"}))
+            await socket["ws"].send(json.dumps({"type": "entity_command_result", "id": demande["id"], "outcome": "accepted",
+                                                "verification": "confirmed"}))
+
+            resultat = await asyncio.wait_for(ordre, 3)
+            self.assertEqual("accepted", resultat["outcome"])
+            self.assertEqual("confirmed", resultat["verification"])
 
 
 class MessagesTests(unittest.TestCase):

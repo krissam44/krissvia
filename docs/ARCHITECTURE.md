@@ -186,6 +186,9 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
 - **Supervision : `SUPERVISION.md`** (22/10/2026) — plugins arrêtés, connexion Internet, présence perdue, disque,
   capteurs muets et piles faibles, page `/supervision` ; une coupure Internet que ntfy n'a pas pu dire est racontée au
   retour.
+- **Contrat 0.3 : `CONTRACT-V0.3.md`** (22/10/2026) — un plugin suit et commande les entités choisies dans ses
+  réglages (`format: "entity"`), ordres par le bus de commandes signés `plugin:{id}` ; base des platines openHASP et du
+  digicode de l'alarme.
 - **Plugin Proxmox** (22/10/2026, `plugins/Krissvia.Plugin.Proxmox`, C#) — machines virtuelles et conteneurs : état,
   ressources, démarrer / arrêter / redémarrer, arrêt inattendu en classe `problem` (alerte par la supervision),
   relance automatique avec le garde-fou de DomoMud ; carte « Machine virtuelle » livrée par le plugin.

@@ -28,6 +28,9 @@ internal sealed class BancPlugins : IAsyncDisposable
     public EventBus Bus { get; } = new();
     public CommandBus Commandeur { get; }
 
+    /// <summary>Contrat 0.3 : ce que chaque plugin a le droit de lire ou de commander (d'ordinaire, ses réglages).</summary>
+    public Dictionary<(string Plugin, string Entite), Services.EntityAccess> Droits { get; } = [];
+
     private BancPlugins(SqliteDatabase db, string fichier)
     {
         _fichier = fichier;
@@ -35,6 +38,7 @@ internal sealed class BancPlugins : IAsyncDisposable
         Etats = new EntityStateStore(new SqliteEntityStateRepository(db), Horloge, Bus);
         Hub = new PluginHub(Registre, Etats, Options, Horloge, NullLogger<PluginHub>.Instance, Bus);
         Commandeur = new CommandBus(Registre, new PluginCommander(Hub, NullLogger<PluginCommander>.Instance), Bus, Horloge);
+        Hub.Gateway = new PluginGateway(Registre, Etats, Commandeur, Bus, (p, e) => Droits.GetValueOrDefault((p, e), Services.EntityAccess.None));
     }
 
     public static async Task<BancPlugins> CreerAsync()

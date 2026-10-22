@@ -168,6 +168,16 @@ builder.Services.AddMudServices();   // après les thermostats, que sa configura
 
 var app = builder.Build();
 
+// Contrat 0.3 : un plugin lit et commande les entités choisies dans ses réglages (docs/CONTRACT-V0.3.md). Branché ici et
+// non injecté dans le hub : le hub est le transport du bus de commandes, en dépendre formerait un cycle.
+{
+    var services = app.Services;
+    var droits = new PluginEntityAccess(services.GetRequiredService<PluginSupervisor>().GetManifest, services.GetRequiredService<PluginSettingsService>());
+    services.GetRequiredService<PluginHub>().Gateway = new PluginGateway(
+        services.GetRequiredService<IEntityRegistry>(), services.GetRequiredService<IEntityStateReader>(),
+        services.GetRequiredService<ICommandBus>(), services.GetRequiredService<IEventBus>(), droits.AccessFor);
+}
+
 app.UseWebSockets();
 
 // L'interface d'administration lance des programmes sur le serveur : tout y passe par une connexion.

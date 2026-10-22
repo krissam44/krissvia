@@ -50,6 +50,6 @@
   mort à 45 s — voir `TRANSPORT.md`. Implémentés au passage (contrat `0.2`) : `welcome` / `rejected`,
   `configure_result`, `availability` par entité, messages de type inconnu ignorés. Écart avec §1 : un
   second `hello` du même plugin **remplace** la session au lieu d'être refusé (raison dans `TRANSPORT.md`).
-- Plugin à deux sens pour openHASP : entités d'un côté, écran piloté de l'autre. Entité d'affichage
-  ou service sortant ?
+- ~~Plugin à deux sens pour openHASP~~ : **tranché le 22/10/2026**, contrat 0.3 (`CONTRACT-V0.3.md`) — un plugin
+  suit et commande les entités choisies dans ses réglages.
 - Auto-extinction côté appareil (`lease`) pour les radiateurs et chauffe-eau, via `args`.

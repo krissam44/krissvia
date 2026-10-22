@@ -75,6 +75,16 @@ public class MessageSerializationTests
         yield return new CommandResult { Id = "7f3a", Outcome = CommandOutcome.Unreachable, Detail = "timeout" };
         yield return new Ping();
         yield return new Shutdown { Reason = "mise à jour" };
+        yield return new Subscribe { EntityIds = ["climate.salon", "switch.lampe_salon"] };
+        yield return new Subscribed { Granted = ["climate.salon"], Denied = [new DeniedEntity("switch.lampe_salon", SubscriptionDenial.NotAllowed)] };
+        yield return new EntityStateUpdate
+        {
+            EntityId = "climate.salon", Name = "Salon", Kind = EntityKind.Climate, Unit = Units.Celsius, Available = true,
+            Value = Json(new { mode = "comfort", target = 19.5 }), MeasuredAt = new DateTimeOffset(2026, 10, 22, 8, 0, 0, TimeSpan.Zero),
+        };
+        yield return new EntityStateUpdate { EntityId = "sensor.cave", Name = "Cave", Kind = EntityKind.Sensor, Available = false };
+        yield return new EntityCommandRequest { Id = "c1", EntityId = "climate.salon", Command = "set_mode", Args = Json(new { mode = "eco" }) };
+        yield return new EntityCommandResponse { Id = "c1", Outcome = CommandOutcome.Accepted, Verification = "not_applicable" };
     }
 
     [Fact]
@@ -184,12 +194,13 @@ public class MessageSerializationTests
 
     [Theory]
     [InlineData(ContractInfo.Version, true)]
+    [InlineData("0.2", true)]    // la 0.3 n'a fait qu'ajouter : un plugin 0.2 reste accepté
     [InlineData("0.1", false)]
-    [InlineData("0.3", false)]
+    [InlineData("0.4", false)]
     [InlineData("1.0", false)]
     [InlineData("0.2.1", false)]
     [InlineData("", false)]
     [InlineData(null, false)]
-    public void En_0_x_seule_la_meme_version_mineure_est_compatible(string? version, bool compatible) =>
+    public void En_0_x_seules_la_meme_version_mineure_et_celles_comprises_aussi_sont_compatibles(string? version, bool compatible) =>
         Assert.Equal(compatible, ContractInfo.IsCompatible(version));
 }

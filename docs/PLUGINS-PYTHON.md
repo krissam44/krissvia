@@ -95,6 +95,25 @@ krissvia.run(Cave(), Cave.surveiller, plugin_version="1.0.0")
 Un plugin peut livrer ses **cartes de tableau de bord** : un dossier `widgets/` à côté de `plugin.json`, un
 sous-dossier par widget (`widget.json` et son script). Publiées tant que le plugin est activé (WIDGETS.md §13).
 
+### Lire et commander d'autres entités (contrat 0.3)
+
+Une platine, un clavier : un plugin peut suivre et commander des entités qui ne sont pas à lui — seulement celles
+choisies dans **ses réglages** (`"format": "entity"`, `"x-access": "command"` pour commander ; `CONTRACT-V0.3.md`).
+
+```python
+class Platine(krissvia.Plugin):
+    def on_entity_state(self, m):            # à l'abonnement, puis à chaque changement
+        print(m["entity_id"], m.get("value"), m["available"])
+
+async def demarrer(plugin, client):
+    await client.subscribe([krissvia.setting("Platine:Thermostat")])        # renvoyé seul à chaque reconnexion
+    r = await client.command(krissvia.setting("Platine:Thermostat"), "set_mode", {"mode": "eco"})
+    # r["outcome"] : accepted / failed / unreachable ; r["verification"], r["detail"]
+```
+
+Une entité non choisie est refusée (`not_allowed`, dit au journal) ; un ordre hors session ou sans réponse rend
+`unreachable`, jamais un faux succès.
+
 ## 5. Tests
 
 ```bash

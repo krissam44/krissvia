@@ -20,7 +20,8 @@ internal sealed class PluginSession(
     IEntityStateWriter states,
     PluginHostOptions options,
     TimeProvider clock,
-    ILogger logger)
+    ILogger logger,
+    IPluginGateway? gateway = null)
 {
     private readonly CancellationTokenSource _fin = new();
     private readonly ConcurrentDictionary<string, TaskCompletionSource<CommandOutcome>> _enAttente = new(StringComparer.Ordinal);
@@ -38,6 +39,11 @@ internal sealed class PluginSession(
 
     private long _derniereReceptionTicks;
     private volatile bool _terminee;
+
+    // Contrat 0.3 : les entités suivies par le plugin, et l'écoute des changements (ouverte au premier abonnement).
+    private volatile HashSet<string> _abonnements = new(StringComparer.Ordinal);
+    private IDisposable? _ecoute;
+    private readonly Lock _verrouEcoute = new();
 
     public string PluginId => pluginId;
 
@@ -76,6 +82,7 @@ internal sealed class PluginSession(
     {
         _terminee = true;
         foreach (var attente in _enAttente.Values) attente.TrySetResult(CommandOutcome.Unreachable);
+        lock (_verrouEcoute) _ecoute?.Dispose();
 
         using (var delai = new CancellationTokenSource(TimeSpan.FromSeconds(2)))
             await channel.CloseAsync("fin de session", delai.Token);
@@ -194,6 +201,13 @@ internal sealed class PluginSession(
             case Discovered decouverte:
                 Log.Decouverte(logger, pluginId, decouverte.Candidates.Count);   // auto-import : pas encore branché
                 break;
+            case Subscribe abonnement:
+                await AbonnerAsync(abonnement, ct);
+                break;
+            case EntityCommandRequest ordre:
+                // Hors de la boucle de réception : un ordre vérifié attend jusqu'à 10 s l'état qui le confirme.
+                _ = Task.Run(() => CommanderAsync(ordre, ct), CancellationToken.None);
+                break;
             case Ping:
                 break;
             default:
@@ -271,6 +285,88 @@ internal sealed class PluginSession(
         {
             if (!joignabilite.Online) states.SetAvailability(entityId, false);
             else if (_mesurees.ContainsKey(entityId)) states.SetAvailability(entityId, true);
+        }
+    }
+
+    // ── Contrat 0.3 : lire et commander d'autres entités ────────────────────
+
+    /// <summary>
+    /// Remplace la liste suivie, répond <c>subscribed</c>, puis envoie l'état de chaque entité accordée. Le droit se
+    /// vérifie AVANT l'existence : un plugin n'apprend rien d'une entité qu'on ne lui a pas confiée.
+    /// </summary>
+    private async Task AbonnerAsync(Subscribe abonnement, CancellationToken ct)
+    {
+        var accordees = new List<EntityStateUpdate>();
+        var refusees = new List<DeniedEntity>();
+        foreach (var id in abonnement.EntityIds.Distinct(StringComparer.Ordinal))
+        {
+            if (gateway is null || gateway.AccessFor(pluginId, id) == Services.EntityAccess.None)
+                refusees.Add(new DeniedEntity(id, SubscriptionDenial.NotAllowed));
+            else if (await gateway.ReadAsync(id, ct) is { } etat)
+                accordees.Add(etat);
+            else
+                refusees.Add(new DeniedEntity(id, SubscriptionDenial.Unknown));
+        }
+
+        _abonnements = accordees.Select(e => e.EntityId).ToHashSet(StringComparer.Ordinal);
+        if (accordees.Count > 0 && gateway is not null)
+            lock (_verrouEcoute) _ecoute ??= gateway.Watch($"plugin-{pluginId}-{Guid.NewGuid():N}", PousserAsync);
+
+        foreach (var r in refusees) Log.AbonnementRefuse(logger, pluginId, r.EntityId, r.Reason);
+        await channel.SendAsync(ContractJson.Encode(new Subscribed { Granted = [.. accordees.Select(e => e.EntityId)], Denied = refusees }), ct);
+        foreach (var etat in accordees) await channel.SendAsync(ContractJson.Encode(etat), ct);
+    }
+
+    /// <summary>
+    /// Un changement d'état : poussé si l'entité est suivie ET toujours autorisée (des réglages modifiés retirent le
+    /// droit aussitôt, sans attendre un nouvel abonnement).
+    /// </summary>
+    private async Task PousserAsync(string entityId, CancellationToken ct)
+    {
+        if (_terminee || gateway is null || !_abonnements.Contains(entityId)) return;
+        if (gateway.AccessFor(pluginId, entityId) == Services.EntityAccess.None) return;
+        if (await gateway.ReadAsync(entityId, ct) is not { } etat) return;
+        try
+        {
+            await channel.SendAsync(ContractJson.Encode(etat), ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Canal fermé entre-temps : la fin de session s'en occupe.
+        }
+    }
+
+    private async Task CommanderAsync(EntityCommandRequest ordre, CancellationToken ct)
+    {
+        EntityCommandResponse reponse;
+        if (gateway is null || gateway.AccessFor(pluginId, ordre.EntityId) != Services.EntityAccess.Command)
+        {
+            Log.OrdreRefuse(logger, pluginId, ordre.Command, ordre.EntityId);
+            reponse = new EntityCommandResponse
+            {
+                Id = ordre.Id, Outcome = CommandOutcome.Failed, Verification = "not_sent",
+                Detail = "entité non autorisée pour ce plugin (à choisir dans ses réglages, page Services)",
+            };
+        }
+        else
+        {
+            try
+            {
+                reponse = await gateway.CommandAsync(pluginId, ordre, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                reponse = new EntityCommandResponse { Id = ordre.Id, Outcome = CommandOutcome.Failed, Detail = ex.Message };
+            }
+        }
+
+        try
+        {
+            await channel.SendAsync(ContractJson.Encode(reponse), ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.EnvoiImpossible(logger, pluginId, ex);
         }
     }
 
