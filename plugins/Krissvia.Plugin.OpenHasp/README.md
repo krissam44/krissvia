@@ -23,6 +23,9 @@ le planning est arrêté ou que l'absence l'emporte.
 À chaque `online` de la platine (son LWT, retenu par le broker) : la platine est effacée (`clearpage all`), reçoit ses
 pages ligne par ligne (`command/jsonl`), puis tout son affichage. Donc au démarrage du plugin, et à chaque redémarrage
 de la platine — qui repart de rien. Le même `online` relu après une simple reconnexion au broker ne repeint pas.
+Une platine **débranchée et rebranchée en quelques secondes** se reconnecte avant que le broker ait vu sa déconnexion :
+aucun `offline` ne vient. Son `online` arrive pourtant en direct, plusieurs secondes après la connexion du plugin au
+broker, alors que les messages retenus arrivent dans l'instant : c'est ce qui la distingue, et elle est repeinte.
 
 Ensuite, seul ce qui change est envoyé, et ce qui n'a pas changé est renvoyé toutes les deux minutes (une platine peut
 avoir perdu un attribut sans qu'on le sache). Changer les réglages relance le plugin, donc regénère les pages.

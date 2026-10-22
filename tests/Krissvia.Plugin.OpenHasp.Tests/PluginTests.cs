@@ -38,7 +38,11 @@ public class PluginTests
         public Reglages Reglages { get; } = Donnees.Reglages();
         public OpenHaspPlugin Plugin { get; }
 
-        public Banc() => Plugin = new OpenHaspPlugin(Reglages, Broker, Horloge, NullLogger<OpenHaspPlugin>.Instance);
+        public Banc()
+        {
+            Plugin = new OpenHaspPlugin(Reglages, Broker, Horloge, NullLogger<OpenHaspPlugin>.Instance);
+            Plugin.ConnecteAsync().GetAwaiter().GetResult();   // connecté au broker, comme en vrai avant tout message
+        }
 
         /// <summary>Le message arrive, puis on attend que les envois qu'il a déclenchés (sur une autre tâche) soient finis.</summary>
         public async Task<List<(string Topic, string Charge)>> RecevoirAsync(string topic, string charge, int attendus = 1)
@@ -86,6 +90,9 @@ public class PluginTests
         var b = new Banc();
         await b.RecevoirAsync("hasp/appart1/LWT", "online", attendus: 50);
 
+        // Le broker redémarre : le plugin se reconnecte et reçoit aussitôt le « online » retenu.
+        b.Horloge.Advance(TimeSpan.FromMinutes(10));
+        await b.Plugin.ConnecteAsync();
         Assert.Empty(await b.RecevoirAsync("hasp/appart1/LWT", "online", attendus: 0));
 
         await b.RecevoirAsync("hasp/appart1/LWT", "offline", attendus: 0);
@@ -93,6 +100,30 @@ public class PluginTests
         Assert.Equal((Topic("clearpage"), "all"), repeinte[0]);
         // Tout est renvoyé, même ce qui n'a pas changé : la platine est repartie de rien.
         Assert.Contains((Topic("p1b1.text"), "Salon"), repeinte);
+    }
+
+    [Fact]
+    public async Task Une_platine_debranchee_et_rebranchee_en_quelques_secondes_est_repeinte_sans_avoir_ete_vue_hors_ligne()
+    {
+        var b = new Banc();
+        await b.RecevoirAsync("hasp/appart1/LWT", "online", attendus: 50);
+
+        // Aucun « offline » : elle s'est reconnectée avant que le broker voie sa déconnexion. Son « online » arrive en direct.
+        b.Horloge.Advance(TimeSpan.FromMinutes(20));
+        var repeinte = await b.RecevoirAsync("hasp/appart1/LWT", "online", attendus: 50);
+
+        Assert.Equal((Topic("clearpage"), "all"), repeinte[0]);
+    }
+
+    [Theory]
+    [InlineData(null, true, 0, true)]        // premier « online » vu par le plugin
+    [InlineData(false, true, 0, true)]       // retour après un « offline », même juste après la connexion
+    [InlineData(true, true, 2, false)]       // « online » retenu rejoué par le broker après une reconnexion
+    [InlineData(true, true, 5, true)]        // « online » publié en direct : redémarrage rapide
+    [InlineData(true, false, 60, false)]     // « offline » : rien à peindre
+    public void Une_platine_n_est_repeinte_que_si_elle_a_pu_redemarrer(bool? avant, bool enLigne, int secondes, bool attendu)
+    {
+        Assert.Equal(attendu, OpenHaspPlugin.ARepeindre(avant, enLigne, TimeSpan.FromSeconds(secondes)));
     }
 
     [Fact]

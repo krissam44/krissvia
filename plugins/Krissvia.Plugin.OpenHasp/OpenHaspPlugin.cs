@@ -35,6 +35,13 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
     private string? _etatAlarme;
     private readonly SemaphoreSlim _envoi = new(1, 1);
     private volatile bool _brokerConnecte;
+    private DateTimeOffset _connecteLe;
+
+    /// <summary>
+    /// Les messages retenus arrivent dans l'instant qui suit l'abonnement : un « online » reçu plus tard a été publié en
+    /// direct par la platine, donc elle vient de (re)démarrer.
+    /// </summary>
+    public static readonly TimeSpan FenetreRetenus = TimeSpan.FromSeconds(5);
     private CoreClient? _coeur;
 
     public OpenHaspPlugin(Reglages reglages, IMqttLink mqtt, TimeProvider horloge, ILogger<OpenHaspPlugin> logger)
@@ -162,6 +169,7 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
 
     public async Task ConnecteAsync()
     {
+        _connecteLe = _horloge.GetUtcNow();
         _brokerConnecte = true;
         if (Coeur is { } coeur) await coeur.SendAsync(new Availability { Online = true });
     }
@@ -190,9 +198,7 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
             if (avant != enLigne && Coeur is { } coeur)
                 await coeur.SendAsync(new StateBatch { States = [new EntityState { EntityUniqueId = noeud, Value = JsonSerializer.SerializeToElement(enLigne) }] });
 
-            // Une platine qui (re)démarre est repartie de rien ; au démarrage du plugin, on ignore ce qu'elle affiche.
-            // Le même « online » relu après une reconnexion au broker (message retenu) ne repeint pas : rien n'a changé.
-            if (enLigne && avant != true) _ = Task.Run(() => GenererAsync(platine));
+            if (ARepeindre(avant, enLigne, _horloge.GetUtcNow() - _connecteLe)) _ = Task.Run(() => GenererAsync(platine));
             else if (!enLigne && avant == true) PlatineHorsLigne(_logger, noeud);
             return;
         }
@@ -201,6 +207,24 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
             && Evenements.Interpreter(platine, _reglages, morceaux[3], charge, _etats) is { } reaction)
             _ = Task.Run(() => ReagirAsync(platine, reaction));
     }
+
+    /// <summary>
+    /// Faut-il effacer la platine et lui renvoyer ses pages ? Une platine qui (re)démarre affiche le <c>pages.jsonl</c> de
+    /// sa mémoire, plus ce que Krissvia lui avait envoyé.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    /// <item>Premier « online » vu par le plugin : oui, on ignore ce qu'elle affiche.</item>
+    /// <item>Retour après un « offline » : oui.</item>
+    /// <item>« online » alors qu'on la croyait déjà en ligne : seulement s'il arrive après <see cref="FenetreRetenus"/>.
+    /// Dans la fenêtre, c'est le message retenu que le broker rejoue après une reconnexion — rien n'a changé. Après, c'est
+    /// la platine qui le publie : débranchée et rebranchée en quelques secondes, elle s'est reconnectée avant que le
+    /// broker ait vu sa déconnexion, et aucun « offline » n'est jamais venu (vu le 23/10/2026 : la platine gardait son
+    /// ancien écran).</item>
+    /// </list>
+    /// </remarks>
+    internal static bool ARepeindre(bool? avant, bool enLigne, TimeSpan depuisConnexion) =>
+        enLigne && (avant != true || depuisConnexion >= FenetreRetenus);
 
     // ── Platines ─────────────────────────────────────────────────────────────
 
