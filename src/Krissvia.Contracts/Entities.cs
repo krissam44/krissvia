@@ -138,6 +138,12 @@ public static class DeviceClasses
     /// </summary>
     public const string SystemHealth = "system_health";
 
+    /// <summary>
+    /// sensor dont la valeur est un OBJET : une machine virtuelle ou un conteneur (Proxmox) — état, ressources, durée de
+    /// fonctionnement, surveillance et relance automatique. Commandes du plugin : démarrer, arrêter, redémarrer.
+    /// </summary>
+    public const string VirtualMachine = "virtual_machine";
+
     /// <summary>binary_sensor : true = OUVERT (le plugin inverse les conventions contraires).</summary>
     public const string Opening = "opening";
 
