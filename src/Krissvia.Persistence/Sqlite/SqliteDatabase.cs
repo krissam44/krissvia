@@ -9,7 +9,7 @@ namespace Krissvia.Persistence.Sqlite;
 /// </summary>
 public sealed class SqliteDatabase(string connectionString)
 {
-    private const int VersionSchema = 5;
+    private const int VersionSchema = 6;
 
     public async Task<SqliteConnection> OpenAsync(CancellationToken ct = default)
     {
@@ -35,6 +35,7 @@ public sealed class SqliteDatabase(string connectionString)
         if (version < 3) await connexion.ExecuteAsync(SchemaV3, transaction: transaction);
         if (version < 4) await connexion.ExecuteAsync(SchemaV4, transaction: transaction);
         if (version < 5) await connexion.ExecuteAsync(SchemaV5, transaction: transaction);
+        if (version < 6) await connexion.ExecuteAsync(SchemaV6, transaction: transaction);
         await connexion.ExecuteAsync($"PRAGMA user_version = {VersionSchema};", transaction: transaction);
         await transaction.CommitAsync(ct);
     }
@@ -100,6 +101,37 @@ public sealed class SqliteDatabase(string connectionString)
     // Widget choisi pour une entité (champ de l'utilisateur, WIDGETS.md §6).
     private const string SchemaV5 = """
         ALTER TABLE entities ADD COLUMN widget TEXT;
+        """;
+
+    /// <summary>
+    /// v6 : historique. Points bruts (au plus un par minute et par série, gardés 30 jours) et heures consolidées
+    /// (gardées sans limite). WITHOUT ROWID : la clé primaire est l'ordre de lecture, une courbe se lit d'un trait.
+    /// </summary>
+    private const string SchemaV6 = """
+        CREATE TABLE IF NOT EXISTS history_series (
+            id  INTEGER PRIMARY KEY,
+            key TEXT NOT NULL UNIQUE
+        );
+
+        CREATE TABLE IF NOT EXISTS history_points (
+            series_id INTEGER NOT NULL,
+            ts        INTEGER NOT NULL,
+            value     REAL,
+            PRIMARY KEY (series_id, ts)
+        ) WITHOUT ROWID;
+
+        CREATE INDEX IF NOT EXISTS history_points_ts ON history_points (ts);
+
+        CREATE TABLE IF NOT EXISTS history_hourly (
+            series_id INTEGER NOT NULL,
+            hour      INTEGER NOT NULL,
+            min       REAL,
+            max       REAL,
+            avg       REAL,
+            last      REAL,
+            coverage  REAL NOT NULL,
+            PRIMARY KEY (series_id, hour)
+        ) WITHOUT ROWID;
         """;
 
     private const string SchemaV4 = """

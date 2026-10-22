@@ -48,5 +48,6 @@
     <File Path="docs/TRANSPORT.md" />
     <File Path="docs/API.md" />
     <File Path="docs/CONTRACT-V0.3.md" />
+    <File Path="docs/HISTORIQUE.md" />
   </Folder>
 </Solution>
