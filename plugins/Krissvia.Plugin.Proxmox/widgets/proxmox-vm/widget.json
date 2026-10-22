@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "proxmox-vm",
+  "name": "Machine virtuelle",
+  "description": "Une VM ou un conteneur Proxmox : état, processeur, mémoire, disque, durée de fonctionnement ; démarrer, arrêter, redémarrer ; surveillance et relance automatique. Livré par le plugin Proxmox.",
+  "version": "1.0.0",
+  "element": "kv-proxmox-vm",
+  "script": "proxmox-vm.js",
+  "slots": [ { "name": "machine", "kinds": ["sensor"], "device_classes": ["virtual_machine"], "required": true } ],
+  "size": { "cols": 3, "rows": 2 }
+}

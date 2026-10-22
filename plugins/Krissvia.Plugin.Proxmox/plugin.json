@@ -1,0 +1,24 @@
+{
+  "id": "proxmox",
+  "name": "Proxmox",
+  "description": "Machines virtuelles et conteneurs d'un serveur Proxmox VE : état, ressources, démarrage et arrêt ; alerte sur un arrêt inattendu, relance automatique au choix.",
+  "executable": "Krissvia.Plugin.Proxmox",
+  "settings": {
+    "type": "object",
+    "properties": {
+      "Proxmox": {
+        "type": "object",
+        "title": "Serveur Proxmox",
+        "required": [ "Host", "TokenId", "TokenSecret" ],
+        "properties": {
+          "Host": { "type": "string", "title": "Adresse IP", "description": "Celle de l'interface web de Proxmox." },
+          "Port": { "type": "integer", "title": "Port", "default": 8006, "minimum": 1, "maximum": 65535 },
+          "TokenId": { "type": "string", "title": "Identifiant du jeton", "description": "user@realm!nom, par exemple root@pam!krissvia (Datacenter → Permissions → API Tokens)." },
+          "TokenSecret": { "type": "string", "title": "Secret du jeton", "format": "password", "description": "Affiché une seule fois par Proxmox à la création du jeton." },
+          "VerifyTls": { "type": "boolean", "title": "Vérifier le certificat", "default": false, "description": "À laisser décoché avec le certificat auto-signé d'origine de Proxmox." },
+          "PollSeconds": { "type": "integer", "title": "Relevé toutes les (s)", "default": 30, "minimum": 10, "maximum": 600 }
+        }
+      }
+    }
+  }
+}

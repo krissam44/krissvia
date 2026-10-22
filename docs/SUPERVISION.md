@@ -66,8 +66,6 @@ prend 10 s par essai, et la protection électrique ne doit jamais l'attendre.
 
 ## 6. Pas encore
 
-- Proxmox (machines virtuelles) : dans DomoMud un service du cœur ; dans Krissvia ce sera un plugin, qui publiera des
-  entités que cette supervision surveillera comme les autres.
 - MQTT perdu (famille DomoMud) : le MQTT est l'affaire des plugins. Un plugin qui perd son broker reste connecté au
   cœur ; ses capteurs, indisponibles ou simplement silencieux, finissent signalés un par un comme muets. Une alerte
   unique « broker perdu » demanderait que le plugin le publie (une entité `connectivity` à lui, par exemple).
