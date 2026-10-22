@@ -229,7 +229,8 @@ laisse rien ; replier une section hors édition s'enregistre aussitôt.
   n'est écrit avant « Enregistrer » — DomoMud générait ses sections tout seul au premier affichage.
 - Widgets standards : `valeur`, `temperature`, `interrupteur`, `radiateur`, `eclairage`, `prise` et `compteur` (le même bouton, avec la flamme, l'ampoule, la fiche ou le compteur de leur usage ; base commune `bascule.js`), `ouverture`, `puissance`, `thermostat`, `meteo` (entité `weather` du plugin Météo : conditions et prévision sur 7 jours, à la manière de la carte de DomoMud),
   `linky` (puissance apparente et part de l'abonnement, HP/HC, courant, tension, index), `energie` (tuiles d'un compteur :
-  puissance, tension, courant, index) et `delesteur` (entité `load_shedding` publiée par le cœur). À score égal, le widget
+  puissance, tension, courant, index), `delesteur` (entité `load_shedding` publiée par le cœur) et `alarme` (entité `alarm` :
+  état, décomptes, clavier qui arme et désarme avec un code, `ALARME.md` §6). À score égal, le widget
   dont le slot principal accepte le moins de classes l'emporte (Linky devant Puissance), après la règle « installé exprès ».
 - Widgets locaux : dossier `widgets` à côté de la base (ou `Widgets:Directory`), publié sous `/widgets/local`.
 - Pas encore : widgets livrés par un plugin.
