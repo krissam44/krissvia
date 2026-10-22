@@ -57,6 +57,9 @@ builder.Services.AddSingleton(new SqliteDatabase($"Data Source={cheminBase}"));
 builder.Services.AddSingleton<IEntityRepository, SqliteEntityRepository>();
 builder.Services.AddSingleton<IEntityRegistry, EntityRegistry>();
 builder.Services.AddSingleton<IEntityStateRepository, SqliteEntityStateRepository>();
+// Historique : points au plus à la minute, consolidés par heure (Core/History, docs/HISTORIQUE.md).
+builder.Services.AddSingleton<Krissvia.Core.History.IHistoryRepository, SqliteHistoryRepository>();
+builder.Services.AddSingleton<Krissvia.Core.History.HistoryRecorder>();
 builder.Services.AddSingleton<EntityStateStore>();
 builder.Services.AddSingleton<IEntityStateReader>(sp => sp.GetRequiredService<EntityStateStore>());
 builder.Services.AddSingleton<IEntityStateWriter>(sp => sp.GetRequiredService<EntityStateStore>());
@@ -117,6 +120,7 @@ builder.Services.AddSingleton<Krissvia.Climate.Alarm.AlarmEngine>();
 // Ordre de démarrage : schéma et états d'abord (les hosted services démarrent avant que Kestrel accepte un
 // plugin), puis la configuration des thermostats, qui lit la base.
 builder.Services.AddHostedService<StateStoreLifetime>();
+builder.Services.AddHostedService<HistoryLoop>();
 builder.Services.AddHostedService<CommandJournal>();
 builder.Services.AddHostedService<ThermostatLoop>();
 builder.Services.AddHostedService<LoadSheddingLoop>();
@@ -206,6 +210,7 @@ api.MapAutomationApi();
 api.MapAlarmApi();
 api.MapSupervisionApi();
 api.MapEntityApi();
+api.MapHistoryApi();
 api.MapWidgetApi();
 
 // Point d'entrée des plugins : voir docs/TRANSPORT.md.

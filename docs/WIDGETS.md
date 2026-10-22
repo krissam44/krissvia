@@ -145,7 +145,7 @@ les styles du widget ne fuient pas, ceux de la page n'entrent pas.
 
 ```ts
 kv.command(slot: string, command: string, args?: object): Promise<{ outcome, verification }>
-kv.history(slot: string, from: Date, to: Date): Promise<Array<{ value, measured_at }>>   // version 2
+kv.history(slot: string, from: Date, to: Date, options?: { field }): Promise<Array<{ value, measured_at, min?, max? }>>
 kv.openEntity(slot: string): void      // ouvre la fiche de l'entité
 ```
 
@@ -172,7 +172,7 @@ Les listes de choix ne proposent que les widgets dont le slot principal accepte 
 
 Valeur (générique), température/humidité, interrupteur, lumière, ouverture, mouvement, puissance, prise avec
 mesure (deux slots), thermostat (slot `thermostat`), batterie. Courbe et historique en version 2, avec
-`kv.history`.
+`kv.history` — disponible depuis le 22/10/2026 (HISTORIQUE.md) ; les widgets de courbe restent à écrire.
 
 ## 8. Ce qu'il faut côté serveur (préalable)
 
@@ -209,7 +209,8 @@ l'API. La restriction de §5 est une **discipline**, pas une barrière. Donc :
    restent ceux de Krissvia : Arrêt, Hors-gel, Éco, Confort −2, Confort −1, Confort.
 2. **Grille responsive**, comme Gladys, Home Assistant et DomoMud : le nombre de colonnes suit la largeur de
    l'écran, une carte occupe `size.cols` × `size.rows` cellules (ramenée à la largeur disponible sur téléphone).
-3. `kv.history` (courbes, historique) : **plus tard**, pas dans la version 1 du tableau de bord.
+3. `kv.history` (courbes, historique) : **plus tard**, pas dans la version 1 du tableau de bord. Fait le 22/10/2026 :
+   points bruts au plus à la minute sur 3 jours, heures consolidées au-delà (HISTORIQUE.md §4).
 
 ## 11. Tableau de bord, version 1 (18/10/2026)
 

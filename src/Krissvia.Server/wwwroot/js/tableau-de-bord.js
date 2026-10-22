@@ -180,6 +180,21 @@ function hoteDeCarte(carte, liens) {
                 return { outcome: "unreachable", verification: "not_sent", detail: String(e?.message ?? e) };
             }
         },
+        /**
+         * La courbe d'un slot (WIDGETS.md §5) : [{ value, measured_at }], du plus ancien au plus récent. Au-delà de
+         * 3 jours, une valeur par heure (moyenne pondérée par le temps), avec min et max. `options.field` choisit le
+         * champ d'un objet (thermostat : "temperature", "target", "power", "outdoor_temperature"…).
+         */
+        async history(slot, from, to, options = {}) {
+            const id = liens[slot];
+            if (!id) throw new Error(`slot « ${slot} » non lié`);
+            const p = new URLSearchParams({ from: new Date(from).toISOString(), to: new Date(to).toISOString() });
+            if (options.field) p.set("field", options.field);
+            const reponse = await fetch(`/api/entities/${encodeURIComponent(id)}/history?${p}`);
+            const corps = await reponse.json();
+            if (!reponse.ok) throw new Error(corps.error ?? `historique indisponible (${reponse.status})`);
+            return corps.points.map(pt => ({ value: pt.v, measured_at: pt.t, min: pt.min, max: pt.max }));
+        },
         openEntity(slot) {
             if (liens[slot]) location.href = "/entites";
         },

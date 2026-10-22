@@ -163,6 +163,7 @@ Ce dont un tableau de bord ou un widget a besoin (WIDGETS.md §8) : les entités
 |---|---|---|---|
 | GET | `/api/entities` | | Toutes les entités : registre, pièce, dernier état |
 | GET | `/api/entities/{id}` | | Une entité ; **404** si inconnue |
+| GET | `/api/entities/{id}/history` | `?from=&to=&field=&resolution=raw\|hour` | Courbe : points bruts (3 jours au plus) ou heures consolidées ; `field` pour un objet (thermostat : `temperature`, `target`, `power`, `outdoor_temperature`…). Voir HISTORIQUE.md §4 |
 | POST | `/api/entities/{id}/commands` | `{"command": "turn_on", "args": {…}, "source": "widget:jauge-cuve"}` | Ordre **vérifié** : `{"outcome": "accepted", "verification": "confirmed"}`, et `detail` en cas d'échec |
 | GET (WebSocket) | `/api/live` | | Flux en direct ; `?entities=a,b` restreint aux entités nommées |
 
