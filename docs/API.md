@@ -192,7 +192,8 @@ l'état est un objet : `temperature`, `humidity` (si l'appareil de la sonde en m
 `target`, `target_adjusted`, `mode`, `schedule_active`, `heating`, `power` (part de chauffe du cycle TPI, 0 à 1),
 `cycle_seconds`, `coasting_high` et `coasting_low` (seuils d'inertie, en °C au-dessus de la consigne),
 `window_open`, `status` et `status_label` (« Chauffe », « Préchauffage », « Inertie », « Délesté »…, calculé par le cœur : à
-afficher tel quel). Ordres : `set_mode` `{"mode": "eco"}` (suspend le planning), `set_schedule`
+afficher tel quel), `next_change` (`{"at": "2026-10-22T18:00:00", "mode": "comfort", "label": "Confort"}`, heure
+locale, prochaine bascule du planning dans les 24 h ; `null` planning arrêté ou absence en cours). Ordres : `set_mode` `{"mode": "eco"}` (suspend le planning), `set_schedule`
 `{"active": true}` (reprend ou suspend le planning), `set_target` `{"temperature": 19.5}` ou `null`, et
 `adjust_target` `{"delta": 0.5}`, appliqué par le serveur à la consigne réellement suivie — deux « + » rapides
 font +1 °C, là où deux `set_target` calculés par l'écran repartiraient de la même valeur. Ces ordres n'ont pas

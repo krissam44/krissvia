@@ -28,8 +28,11 @@ public sealed class ThermostatEntities(
     ThermostatEngine engine,
     IEntityRegistry registry,
     IEntityStateReader reader,
-    IEntityStateWriter writer) : ICoreCommandHandler
+    IEntityStateWriter writer,
+    TimeProvider? clock = null) : ICoreCommandHandler
 {
+    private readonly TimeProvider _horloge = clock ?? TimeProvider.System;
+
     public const string IntegrationId = CoreIntegrations.Thermostats;
     public const double TargetStep = 0.5;
 
@@ -157,8 +160,28 @@ public sealed class ThermostatEntities(
             ["status_label"] = ThermostatLabels.Status(s.Status),
             // En mode d'absence (le thermostat suit l'absence de la maison et elle est vide).
             ["away"] = s.Away,
+            ["next_change"] = ProchainChangement(t, s),
         };
         return JsonSerializer.SerializeToElement(etat);
+    }
+
+    /// <summary>
+    /// La prochaine bascule du planning dans les 24 h (« Confort à 18:00 » sur une platine), en heure locale. Rien si
+    /// le planning est arrêté ou si l'absence l'emporte : annoncer une bascule qui n'aura pas lieu est pire que se taire.
+    /// </summary>
+    private JsonObject? ProchainChangement(ThermostatSettings t, ThermostatSnapshot s)
+    {
+        if (!t.ScheduleActive || s.Away) return null;
+        // Depuis la minute pleine : partir de 12:00:37 annoncerait 18:00:37, et l'état changerait à chaque passage.
+        var maintenant = _horloge.GetLocalNow().DateTime;
+        var minute = new DateTime(maintenant.Year, maintenant.Month, maintenant.Day, maintenant.Hour, maintenant.Minute, 0, maintenant.Kind);
+        if (Preheat.NextChange(t.Schedule, minute, 24 * 60) is not { } prochain) return null;
+        return new JsonObject
+        {
+            ["at"] = prochain.Start.ToString("yyyy-MM-ddTHH:mm:ss", System.Globalization.CultureInfo.InvariantCulture),
+            ["mode"] = ModeId(prochain.Mode),
+            ["label"] = ThermostatLabels.Mode(prochain.Mode),
+        };
     }
 
     /// <summary>L'humidité mesurée par l'appareil de la sonde intérieure, s'il en publie une.</summary>

@@ -4,6 +4,7 @@ using Krissvia.Contracts;
 using Krissvia.Core.Commands;
 using Krissvia.Core.Configuration;
 using Krissvia.Core.Registry;
+using Krissvia.Core.Scheduling;
 using Krissvia.Core.States;
 using Krissvia.Core.Tests;
 using Microsoft.Extensions.Time.Testing;
@@ -77,7 +78,7 @@ public class ThermostatEntitiesTests
             Inhibiteur = new ThermostatInhibitor(commandes);
             Moteur = new ThermostatEngine(Etats, Registre, commandes, Inhibiteur, Horloge);
             Service = new ThermostatService(new Magasin(), Registre, Moteur);
-            Entites = new ThermostatEntities(Service, Moteur, Registre, Etats, Ecrivain);
+            Entites = new ThermostatEntities(Service, Moteur, Registre, Etats, Ecrivain, Horloge);
             Registre.RegisterAsync("test",
             [
                 new DeviceDescriptor
@@ -220,6 +221,36 @@ public class ThermostatEntitiesTests
         var t = b.Service.Get("salon")!;
         Assert.Equal(ThermostatMode.Eco, t.ManualMode);
         Assert.False(t.ScheduleActive);
+    }
+
+    [Fact]
+    public async Task La_prochaine_bascule_du_planning_est_publiee_et_disparait_planning_arrete()
+    {
+        var b = new Banc();
+        b.Horloge.SetLocalTimeZone(TimeZoneInfo.Utc);
+        b.Horloge.Advance(TimeSpan.FromSeconds(37));   // mercredi 14 octobre, 12:00:37
+        await b.Service.SaveAsync(new ThermostatSettings
+        {
+            Id = "salon", Name = "Salon", TemperatureEntityId = Sonde, SwitchEntityIds = [Radiateur], ScheduleActive = true,
+            Schedule = new WeeklySchedule
+            {
+                Days = new Dictionary<DayOfWeek, IReadOnlyList<ScheduleSlot>>
+                {
+                    [DayOfWeek.Wednesday] = [new ScheduleSlot(TimeSpan.FromHours(18), TimeSpan.FromHours(22), ThermostatMode.Comfort)],
+                },
+                DefaultMode = ThermostatMode.Eco,
+            },
+        });
+        await b.PasserAsync();
+
+        var prochain = b.Etat().GetProperty("next_change");
+        Assert.Equal("2026-10-14T18:00:00", prochain.GetProperty("at").GetString());
+        Assert.Equal("comfort", prochain.GetProperty("mode").GetString());
+        Assert.Equal("Confort", prochain.GetProperty("label").GetString());
+
+        await b.OrdonnerAsync(StandardCommands.SetSchedule, new { active = false });
+        await b.PasserAsync();
+        Assert.Equal(JsonValueKind.Null, b.Etat().GetProperty("next_change").ValueKind);
     }
 
     [Fact]
