@@ -110,8 +110,14 @@ systemctl enable --quiet --now sauvegarde-krissvia.timer
 
 # ── Plugins Python ────────────────────────────────────────────────────────────
 if ls "$PROGRAMME"/plugins/*/plugin.json >/dev/null 2>&1 && grep -lq '"runtime"[[:space:]]*:[[:space:]]*"python"' "$PROGRAMME"/plugins/*/plugin.json; then
-    if ! runuser -u "$UTILISATEUR" -- python3 -c 'import websockets, sys; sys.exit(int(websockets.__version__.split(".")[0]) < 13)' 2>/dev/null; then
-        echo "ATTENTION : python3 ou websockets ≥ 13 manquant pour $UTILISATEUR ; les plugins Python ne démarreront pas (sudo apt install python3-websockets)."
+    # L'interpréteur que le cœur lancera : celui de krissvia.env s'il y est réglé (environnement virtuel), sinon
+    # python3. Vérifier le python3 du système quand les plugins tournent dans un venv donnerait une fausse alerte —
+    # c'est le cas sur Ubuntu 24.04, dont le paquet python3-websockets est trop ancien (10.x).
+    PYTHON=$(sed -n 's/^PluginHost__Runtimes__python=//p' "$CONFIG/krissvia.env" | tail -n 1)
+    PYTHON=${PYTHON:-python3}
+    if ! runuser -u "$UTILISATEUR" -- "$PYTHON" -c 'import websockets, sys; sys.exit(int(websockets.__version__.split(".")[0]) < 13)' 2>/dev/null; then
+        echo "ATTENTION : $PYTHON ou websockets ≥ 13 manquant pour $UTILISATEUR ; les plugins Python ne démarreront pas"
+        echo "            (docs/DEPLOIEMENT.md §4 : python3-websockets sur Debian 13, un environnement virtuel sur Ubuntu 24.04)."
     fi
 fi
 
