@@ -112,6 +112,7 @@ Rôles : `immediate`, `delayed`, `fault_only`. Activer l'alarme sans capteur est
 
 ## 7. Ce qui reste
 
-- **Digicode** (l'écran ESPHome de l'appartement) : dans DomoMud il parle MQTT (`domomud/alarme/*`). Dans Krissvia
-  il passera par un plugin, qui aura besoin de deux choses que le contrat n'offre pas encore : recevoir l'état de
-  l'alarme, et transmettre « armer / désarmer par Untel ». À concevoir avec le contrat 0.3.
+- **Digicode ESPHome** (l'écran de l'appartement sous DomoMud, qui parle `domomud/alarme/*`) : pas repris. Le
+  contrat 0.3 a fourni ce qui manquait (suivre l'entité, commander avec un code), et c'est la **page 4 des platines
+  openHASP** qui fait digicode (`plugins/Krissvia.Plugin.OpenHasp/README.md`). Le code y passe comme dans la carte du
+  tableau de bord : dans les arguments de `arm` / `disarm`, donc mêmes codes, même blocage, même journal.

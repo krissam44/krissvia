@@ -157,7 +157,7 @@ public class PluginTests
 
         Assert.Equal(
             [Donnees.Thermostat, Donnees.Lampe, Donnees.Prise, "sensor.salon_temperature", "sensor.chambre_rdc_temperature",
-                "sensor.chambre_etage_temperature", "sensor.sdb_temperature", Donnees.Exterieure],
+                "sensor.chambre_etage_temperature", "sensor.sdb_temperature", Donnees.Exterieure, Donnees.Alarme],
             r.Entites());
     }
 }

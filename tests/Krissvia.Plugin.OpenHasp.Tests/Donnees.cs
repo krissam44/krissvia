@@ -10,6 +10,7 @@ internal static class Donnees
     public const string Lampe = "light.lampe_salon";
     public const string Prise = "switch.prise_bureau";
     public const string Exterieure = "sensor.terrasse_temperature";
+    public const string Alarme = "sensor.maison_alarme";
 
     public static Platine Salon() => new()
     {
@@ -31,7 +32,12 @@ internal static class Donnees
             new SondeAffichee { Entite = Exterieure, Nom = "Terrasse", Min = -10, Max = 40 },
         ],
         Affichage = new Affichage { Exterieure = Exterieure },
+        Alarme = new Alarme { Entite = Alarme },
     };
+
+    public static EntityStateUpdate EtatAlarme(string etat, int decompte = 0, string? capteur = null, string defauts = "OK", bool sonne = false) =>
+        Etat(Alarme, new { state = etat, label = etat.ToUpperInvariant(), countdown = decompte, ringing = sonne, sensor = capteur, faults = defauts },
+            nom: "Maison Alarme");
 
     public static EntityStateUpdate Etat(string entite, object? valeur, bool disponible = true, string nom = "Entité", EntityKind genre = EntityKind.Sensor) => new()
     {

@@ -11,8 +11,10 @@ entités choisies dans ses réglages et transmet les appuis au cœur comme des o
 | 1 Thermostat | titre, ambiante, consigne −/+, mode et statut, bandeau de chauffe, six modes, bouton « Prog » (planning) | la platine a un thermostat |
 | 2 Températures | jusqu'à six sondes en arcs, en rangées de trois (la dernière rangée est centrée), **les mêmes sur toutes les platines** | au moins une sonde |
 | 3 Horloge | heure (tenue par la platine), date et température extérieure, prochaine bascule du planning (« Confort à 18:00 »), jusqu'à trois interrupteurs **propres à chaque platine**, curseur de luminosité | toujours |
+| 4 Alarme | digicode : état et décompte, capteur en cause ou défaut, code masqué, clavier 0-9 / C / ⌫, **Armer** et **Désarmer** | une alarme est choisie et la platine a « Digicode » coché (par défaut) |
 
-La barre du bas ne propose que les pages présentes. Une consigne réglée au −/+ n'allume plus aucun mode : aucun ne la
+La barre du bas ne propose que les pages présentes (à quatre, « Températures » devient « Sondes » : le mot ne tient
+plus dans le bouton). Une consigne réglée au −/+ n'allume plus aucun mode : aucun ne la
 décrit. La prochaine bascule vient du thermostat de la platine (`next_change` de l'entité `climate`) et reste vide quand
 le planning est arrêté ou que l'absence l'emporte.
 
@@ -67,6 +69,19 @@ les mêmes nœuds se repeindraient l'un l'autre en continu.
 
 Chaque platine est aussi un appareil du cœur, avec une entité **Connexion** (son LWT).
 
-## À venir
+## Le digicode (page 4)
 
-Page 4, digicode de l'alarme (`sensor.maison_alarme`, commandes `arm` / `disarm` avec code).
+- Le code tapé reste **dans la mémoire du plugin**, une saisie par platine : la platine n'affiche que des étoiles, le
+  journal ne l'écrit jamais, il part une seule fois dans les arguments de `arm` / `disarm` (comme depuis la carte du
+  tableau de bord : mêmes codes, même blocage après trois codes faux), puis il est oublié.
+- Une saisie abandonnée **expire au bout de 30 s** : le suivant qui passe ne peut pas finir le travail d'un autre.
+- Pas d'ordre sans code : un code vide serait refusé et compterait pour le blocage. Le refus du cœur s'affiche tel
+  quel (« Code incorrect », « Trop de codes faux : clavier bloqué 42 s », « Armement refusé : Porte d'entrée »).
+- **Au début du décompte d'entrée et au déclenchement**, toutes les platines qui portent le digicode passent sur la
+  page 4, écran rallumé s'il dormait : celui qui rentre n'a pas à chercher la page pendant que le décompte tourne.
+  Pas à chaque seconde du décompte, ni au premier état reçu par un plugin qui redémarre.
+- Bloqué dehors du clavier (trois codes faux) : la page `/alarme` arme et désarme sans code pour un compte connecté.
+
+**Ce que le broker voit** : openHASP publie chaque appui (`hasp/appart1/state/p4b13`), donc qui écoute le broker
+peut reconstituer le code touche par touche. C'est la nature d'une platine MQTT, pas un choix du plugin : le broker
+doit être local, avec mot de passe, et sans pont vers l'extérieur.

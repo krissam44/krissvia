@@ -31,6 +31,8 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
     private readonly ConcurrentDictionary<string, bool> _enLigne = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, int> _luminosites = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, byte> _enVeille = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, Clavier> _claviers = new(StringComparer.Ordinal);
+    private string? _etatAlarme;
     private readonly SemaphoreSlim _envoi = new(1, 1);
     private volatile bool _brokerConnecte;
     private CoreClient? _coeur;
@@ -47,6 +49,12 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
         foreach (var doublon in reglages.Platines.GroupBy(p => p.Noeud).Where(g => g.Count() > 1)) NoeudEnDouble(_logger, doublon.Key);
     }
+
+    /// <summary>
+    /// Par où partent les ordres : le cœur, sauf dans les tests, qui regardent ce qui part — en particulier le code du
+    /// digicode, qui ne doit voyager que là.
+    /// </summary>
+    internal Func<string, string, JsonElement?, Task<EntityCommandResponse>>? Commander { get; set; }
 
     /// <summary>Renseigné au démarrage : le client a besoin du plugin, et le plugin du client pour commander.</summary>
     public CoreClient? Coeur
@@ -84,11 +92,45 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
 
     // ── Cœur ─────────────────────────────────────────────────────────────────
 
-    private void EtatRecu(EntityStateUpdate etat)
+    internal void EtatRecu(EntityStateUpdate etat)
     {
         _etats[etat.EntityId] = etat;
+        var alerte = false;
+        if (etat.EntityId == _reglages.Alarme.Entite)
+        {
+            var apres = EtatAlarme.Lire(etat)?.Etat;
+            alerte = Ecran.AppelleLeClavier(_etatAlarme, apres);
+            _etatAlarme = apres;
+        }
+
         // Hors du fil de réception du cœur ; les envois sont de toute façon sérialisés.
-        _ = Task.Run(() => RafraichirAsync(CancellationToken.None));
+        _ = Task.Run(async () =>
+        {
+            if (alerte) await AppelerLeClavierAsync();
+            await RafraichirAsync(CancellationToken.None);
+        });
+    }
+
+    /// <summary>
+    /// Quelqu'un entre, ou l'alarme sonne : chaque platine en ligne qui porte le digicode le montre, écran rallumé.
+    /// Celui qui rentre chez lui n'a pas à chercher la page pendant que le décompte tourne.
+    /// </summary>
+    internal async Task AppelerLeClavierAsync()
+    {
+        foreach (var platine in _platines.Values.Where(p => p.ADigicode(_reglages) && _enLigne.TryGetValue(p.Noeud, out var l) && l))
+        {
+            var noeud = platine.Noeud;
+            await SousVerrouAsync(async () =>
+            {
+                if (_enVeille.TryRemove(noeud, out _))
+                {
+                    _republication.Oublier(noeud, "backlight");
+                    await LuminositeAsync(noeud, _luminosites.TryGetValue(noeud, out var v) ? v : Luminosite.Borner(_reglages.Affichage.LuminositeDefaut));
+                }
+
+                return await _mqtt.PublishAsync(Commande(noeud, "page"), Objets.PageAlarme.ToString(System.Globalization.CultureInfo.InvariantCulture), CancellationToken.None);
+            });
+        }
     }
 
     public IReadOnlyList<Message> Snapshot()
@@ -156,7 +198,7 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
         }
 
         if (morceaux.Length == 4 && morceaux[2] == "state"
-            && Evenements.Interpreter(platine, morceaux[3], charge, _etats) is { } reaction)
+            && Evenements.Interpreter(platine, _reglages, morceaux[3], charge, _etats) is { } reaction)
             _ = Task.Run(() => ReagirAsync(platine, reaction));
     }
 
@@ -214,7 +256,8 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
     private async Task PeindreAsync(Platine platine)
     {
         var noeud = platine.Noeud;
-        foreach (var (attribut, valeur) in Ecran.Attributs(platine, _reglages, _etats, _horloge.GetLocalNow().DateTime))
+        var clavier = _claviers.TryGetValue(noeud, out var c) ? c.Etat() : null;
+        foreach (var (attribut, valeur) in Ecran.Attributs(platine, _reglages, _etats, _horloge.GetLocalNow().DateTime, clavier))
             if (!await EnvoyerAsync(noeud, attribut, valeur)) return;
 
         // Une platine en veille est noire exprès : la republication périodique la rallumerait dix secondes après.
@@ -243,11 +286,39 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
         switch (reaction)
         {
             case Ordre ordre:
-                if (Coeur is not { } coeur) return;
-                var resultat = await coeur.CommandEntityAsync(ordre.Entite, ordre.Commande, ordre.Args);
+                var resultat = await CommanderAsync(ordre.Entite, ordre.Commande, ordre.Args);
                 if (resultat.Outcome == CommandOutcome.Accepted) OrdreAccepte(_logger, noeud, ordre.Entite, ordre.Commande);
                 else OrdreRefuse(_logger, noeud, ordre.Entite, ordre.Commande, resultat.Outcome, resultat.Detail ?? "");
                 // L'écran suivra l'état que l'entité republie : jamais d'affichage d'un ordre qui n'a pas abouti.
+                break;
+
+            case ToucheClavier touche:
+                Clavier(noeud).Appuyer(touche.Touche);
+                await SousVerrouAsync(async () => { await PeindreAsync(platine); return true; });
+                break;
+
+            case CommandeAlarme alarme when _reglages.Alarme.Entite is { Length: > 0 } entite:
+                var clavier = Clavier(noeud);
+                if (clavier.Prendre() is not { } code)
+                {
+                    // Pas d'ordre sans code : un code vide serait refusé ET compterait pour le blocage.
+                    clavier.Signaler("Taper le code d'abord");
+                }
+                else
+                {
+                    var reponse = await CommanderAsync(entite, alarme.Commande, JsonSerializer.SerializeToElement(new { code }));
+                    // Jamais le code dans le journal : la commande et l'entité suffisent.
+                    if (reponse.Outcome == CommandOutcome.Accepted) OrdreAccepte(_logger, noeud, entite, alarme.Commande);
+                    else OrdreRefuse(_logger, noeud, entite, alarme.Commande, reponse.Outcome, reponse.Detail ?? "");
+                    clavier.Signaler(reponse.Outcome switch
+                    {
+                        CommandOutcome.Accepted => alarme.Commande == StandardCommands.Arm ? "Armement en cours" : "Code accepté",
+                        CommandOutcome.Unreachable => "Krissvia injoignable",
+                        _ => Majuscule(reponse.Detail) ?? "Refusé",
+                    });
+                }
+
+                await SousVerrouAsync(async () => { await PeindreAsync(platine); return true; });
                 break;
 
             case ChangerLuminosite luminosite:
@@ -279,6 +350,15 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
                 break;
         }
     }
+
+    private Clavier Clavier(string noeud) => _claviers.GetOrAdd(noeud, _ => new Clavier(_horloge));
+
+    private Task<EntityCommandResponse> CommanderAsync(string entite, string commande, JsonElement? args) =>
+        Commander?.Invoke(entite, commande, args)
+        ?? Coeur?.CommandEntityAsync(entite, commande, args)
+        ?? Task.FromResult(new EntityCommandResponse { Id = "", Outcome = CommandOutcome.Unreachable, Detail = "pas de cœur" });
+
+    private static string? Majuscule(string? texte) => texte is { Length: > 0 } t ? char.ToUpperInvariant(t[0]) + t[1..] : null;
 
     private async Task SousVerrouAsync(Func<Task<bool>> action)
     {

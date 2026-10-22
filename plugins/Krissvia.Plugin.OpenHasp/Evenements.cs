@@ -12,6 +12,12 @@ public sealed record Ordre(string Entite, string Commande, JsonElement? Args = n
 /// <summary>Le curseur de luminosité a bougé (valeur déjà bornée).</summary>
 public sealed record ChangerLuminosite(int Valeur) : Reaction;
 
+/// <summary>Une touche du digicode : un chiffre, « C » ou « &lt; ». Le code est tenu par le plugin, pas par la réaction.</summary>
+public sealed record ToucheClavier(string Touche) : Reaction;
+
+/// <summary>Armer ou désarmer avec le code saisi sur la platine (<c>arm</c> / <c>disarm</c>).</summary>
+public sealed record CommandeAlarme(string Commande) : Reaction;
+
 /// <summary>La platine annonce sa veille : « short », « long » ou « off » (réveil).</summary>
 public sealed record Veille(string Etat) : Reaction;
 
@@ -23,7 +29,7 @@ public static class Evenements
 {
     public const double PasConsigne = 0.5;
 
-    public static Reaction? Interpreter(Platine platine, string objet, string charge, IReadOnlyDictionary<string, EntityStateUpdate> etats)
+    public static Reaction? Interpreter(Platine platine, Reglages reglages, string objet, string charge, IReadOnlyDictionary<string, EntityStateUpdate> etats)
     {
         if (objet == "idle") return Luminosite.EtatVeille(charge) is { } veille ? new Veille(veille) : null;
 
@@ -65,6 +71,16 @@ public static class Evenements
                 var actif = Climat.Lire(etats.GetValueOrDefault(thermostat))?.Planning == true;
                 return new Ordre(thermostat, StandardCommands.SetSchedule, Args(new { active = !actif }));
             }
+        }
+
+        if (platine.ADigicode(reglages))
+        {
+            for (var d = 0; d <= 9; d++)
+                if (objet == Nom(Objets.PageAlarme, Objets.Chiffre(d))) return new ToucheClavier(d.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            if (objet == Nom(Objets.PageAlarme, Objets.Effacer)) return new ToucheClavier("C");
+            if (objet == Nom(Objets.PageAlarme, Objets.Retour)) return new ToucheClavier("<");
+            if (objet == Nom(Objets.PageAlarme, Objets.Armer)) return new CommandeAlarme(StandardCommands.Arm);
+            if (objet == Nom(Objets.PageAlarme, Objets.Desarmer)) return new CommandeAlarme(StandardCommands.Disarm);
         }
 
         var interrupteurs = platine.InterrupteursAffiches();
