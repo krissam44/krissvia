@@ -47,4 +47,5 @@ Une prévision indisponible ou plus vieille que 3 h ne conclut **rien** : ni ale
 ## 4. Pour la suite
 
 Sonde muette, pile faible, plugin arrêté, présence inconnue, connexion Internet coupée et espace disque : livrés le
-22/10/2026, voir `SUPERVISION.md` (contrôle toutes les minutes, `SupervisionLoop`). Reste le délestage.
+22/10/2026, voir `SUPERVISION.md` (contrôle toutes les minutes, `SupervisionLoop`). Délestage (en cours, coupure non
+confirmée, sans mesure) : même jour, `SUPERVISION.md` §4.

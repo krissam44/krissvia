@@ -10,6 +10,7 @@ internal sealed partial class LoadSheddingLoop(
     LoadSheddingService service,
     LoadShedder shedder,
     LoadSheddingEntities entites,
+    LoadSheddingAlerts alertes,
     TimeProvider clock,
     ILogger<LoadSheddingLoop> logger) : BackgroundService
 {
@@ -17,6 +18,7 @@ internal sealed partial class LoadSheddingLoop(
     private bool _sourceIndisponible;
     private string _nonConfirmes = "";
     private string? _source;
+    private Task _alertes = Task.CompletedTask;
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -57,6 +59,25 @@ internal sealed partial class LoadSheddingLoop(
         var tick = await shedder.TickAsync(lecture, ct);
         service.RecordTick(lecture, tick, clock.GetUtcNow());
         await entites.PublishAsync(ct);   // l'état que voient la carte du délesteur, l'API et le flux
+
+        // À côté de la boucle, jamais dedans : un ntfy injoignable prend 10 s par essai, le tick en dure 2. Un passage
+        // encore en cours fait sauter celui-ci ; le suivant verra l'état à jour.
+        if (_alertes.IsCompleted)
+        {
+            var etat = service.Status;
+            var equipements = service.Configuration.Devices;
+            _alertes = Task.Run(async () =>
+            {
+                try
+                {
+                    await alertes.OnTickAsync(etat, equipements, ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    AlertesEnEchec(logger, ex);
+                }
+            }, CancellationToken.None);
+        }
 
         foreach (var id in tick.Shed) Deleste(logger, id, lecture?.Value);
         foreach (var id in tick.Restored) Retabli(logger, id, lecture?.Value);
@@ -105,6 +126,9 @@ internal sealed partial class LoadSheddingLoop(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Délestage : mesure de puissance retrouvée.")]
     private static partial void SourceRetrouvee(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Alertes du délestage en échec.")]
+    private static partial void AlertesEnEchec(ILogger logger, Exception ex);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Tick du délestage en échec.")]
     private static partial void TickEnEchec(ILogger logger, Exception ex);

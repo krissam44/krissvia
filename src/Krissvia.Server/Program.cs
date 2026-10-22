@@ -94,6 +94,7 @@ builder.Services.AddSingleton<DesiredSwitchStates>();
 builder.Services.AddSingleton<LoadShedder>();
 builder.Services.AddSingleton<LoadSheddingService>();
 builder.Services.AddSingleton<LoadSheddingEntities>();
+builder.Services.AddSingleton<LoadSheddingAlerts>();   // épisode, coupure non confirmée, délestage sans mesure
 builder.Services.AddSingleton<Krissvia.Climate.Presence.HomePresence>();   // présence du foyer (capteurs « presence »)
 // Absence : période programmée et forçage, combinés à la présence ; les thermostats qui la suivent la lisent.
 builder.Services.AddSingleton<Krissvia.Climate.Presence.AbsenceService>();
