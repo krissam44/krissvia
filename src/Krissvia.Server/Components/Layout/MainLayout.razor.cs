@@ -8,6 +8,8 @@ namespace Krissvia.Server.Components.Layout;
 /// </summary>
 public partial class MainLayout
 {
+    private static readonly Krissvia.Core.BuildVersion Version = Krissvia.Core.BuildVersion.Of(typeof(MainLayout).Assembly);
+
     [Inject] private MenuService Menu { get; set; } = default!;
     [Inject] private PreferencesService Preferences { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
