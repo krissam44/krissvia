@@ -42,16 +42,31 @@ le document au moment d'enregistrer : l'une n'écrase pas ce que l'autre vient d
 - **Ce qui n'est plus surveillé est oublié sans message** (plugin désactivé, capteur supprimé, famille éteinte) :
   ce n'est pas un retour à la normale.
 
-## 4. API
+## 4. Délestage
+
+`LoadSheddingAlerts`, appelé après chaque tick du délesteur (2 s) mais **à côté** de sa boucle : un ntfy injoignable
+prend 10 s par essai, et la protection électrique ne doit jamais l'attendre.
+
+| Alerte | Quand | Fin |
+|---|---|---|
+| **Délestage en cours** (DomoMud) | au moins un équipement coupé : puissance, seuil, liste | « terminé » quand tout est rétabli |
+| **Coupure non confirmée**, par équipement | coupé, mais aucun état ne le confirme : il consomme peut-être encore, le disjoncteur peut sauter malgré le délestage | « coupure confirmée », ou « rétabli » |
+| **Délestage sans mesure** | aucune puissance fraîche depuis 5 min : il ne décide plus rien (D6) | « mesure retrouvée » |
+
+- L'épisode se lit sur la **liste des équipements coupés**, pas sur la bascule du tick : après un redémarrage en plein
+  délestage, la bascule est passée, l'alerte doit être là quand même.
+- **Quarantaine de 15 min** entre deux épisodes : une soirée de cuisine ne fait pas dix alertes.
+- Délestage désactivé (ou cette famille éteinte, page Supervision) : les alertes en cours sont oubliées sans message.
+
+## 5. API
 
 `GET /api/supervision` : `checked_at`, `sensors_in_grace`, `items` (`key`, `category`, `name`, `problem`, `alerting`
 — panne au-delà de son délai —, `detail`, `since`) et `alerts` (toutes les alertes en cours, gel compris).
 
-## 5. Pas encore
+## 6. Pas encore
 
 - Proxmox (machines virtuelles) : dans DomoMud un service du cœur ; dans Krissvia ce sera un plugin, qui publiera des
   entités que cette supervision surveillera comme les autres.
-- **Délestage en cours** (famille DomoMud) : pas encore notifié dans Krissvia.
 - MQTT perdu (famille DomoMud) : le MQTT est l'affaire des plugins. Un plugin qui perd son broker reste connecté au
   cœur ; ses capteurs, indisponibles ou simplement silencieux, finissent signalés un par un comme muets. Une alerte
   unique « broker perdu » demanderait que le plugin le publie (une entité `connectivity` à lui, par exemple).

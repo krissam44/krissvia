@@ -57,6 +57,12 @@ public sealed record DiskAlertSettings
     public int MinFreeMegabytes { get; init; } = 1024;
 }
 
+/// <summary>Délestage : épisode en cours, coupure non confirmée, délestage sans mesure.</summary>
+public sealed record LoadSheddingAlertSettings
+{
+    public bool Enabled { get; init; } = true;
+}
+
 /// <summary>Les familles d'alertes et leurs réglages.</summary>
 public sealed record AlertSettings
 {
@@ -67,6 +73,7 @@ public sealed record AlertSettings
     public GraceAlertSettings Internet { get; init; } = new();
     public PresenceAlertSettings Presence { get; init; } = new();
     public DiskAlertSettings Disk { get; init; } = new();
+    public LoadSheddingAlertSettings LoadShedding { get; init; } = new();
 }
 
 /// <summary>Un incident signalé et pas encore rétabli.</summary>
