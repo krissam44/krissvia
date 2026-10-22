@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
-    Publie le cœur et les plugins de Krissvia pour le Raspberry Pi (linux-arm64) en UNE archive .tar.gz.
+    Publie le cœur et les plugins de Krissvia pour Linux en UNE archive .tar.gz : le Raspberry Pi (linux-arm64,
+    par défaut) ou une machine x64 (linux-x64 : la VM Proxmox d'essai).
 
 .DESCRIPTION
     Voir docs/DEPLOIEMENT.md. L'archive contient :
@@ -25,11 +26,17 @@
 
 .PARAMETER Version
     Nom de version de l'archive. Par défaut : date du jour + commit court (20261022-7a3d9eb).
+
+.PARAMETER Runtime
+    linux-arm64 (le Pi, par défaut) ou linux-x64. Un plugin C# publié pour l'un ne démarre pas sur l'autre : son
+    exécutable est natif. L'archive x64 porte « -x64 » dans son nom pour qu'on ne les confonde pas.
 #>
 [CmdletBinding()]
 param(
     [string] $Sortie,
-    [string] $Version
+    [string] $Version,
+    [ValidateSet('linux-arm64', 'linux-x64')]
+    [string] $Runtime = 'linux-arm64'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -76,7 +83,7 @@ function Publier([string] $projet, [string] $destination) {
     # global.json choisisse le SDK (et pas celui du dossier où l'on se trouve).
     Push-Location $depot
     try {
-        dotnet publish $projet -c Release -r linux-arm64 --self-contained false -p:DebugType=none `
+        dotnet publish $projet -c Release -r $Runtime --self-contained false -p:DebugType=none `
             --artifacts-path $artefacts -o $destination --nologo -v minimal
         if ($LASTEXITCODE -ne 0) { throw "Échec de la publication de $projet" }
     }
@@ -126,7 +133,7 @@ foreach ($f in Get-ChildItem (Join-Path $PSScriptRoot 'raspberry') -File) {
 }
 
 # ── L'archive ─────────────────────────────────────────────────────────────────
-$archive = Join-Path $Sortie "krissvia-$Version.tar.gz"
+$archive = Join-Path $Sortie "krissvia-$Version$(if ($Runtime -eq 'linux-x64') { '-x64' }).tar.gz"
 if (Test-Path $archive) { Remove-Item $archive -Force }
 
 $rwx = [IO.UnixFileMode]'UserRead, UserWrite, UserExecute, GroupRead, GroupExecute, OtherRead, OtherExecute'   # 755

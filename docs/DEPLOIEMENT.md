@@ -246,3 +246,37 @@ pas d'une panne du support — prévoir une recopie hors du Pi.
 | Le service redémarre en boucle | `journalctl -u krissvia -n 50 --no-pager` ; souvent `dotnet` absent de `/usr/bin` ou le runtime 10 manquant |
 
 Le journal du cœur : `journalctl -u krissvia -f`. Ce qu'écrit chaque plugin est dans sa carte de la page Services.
+
+## 10. Essai sur une machine virtuelle x64 (avant le Pi)
+
+Une VM Proxmox x64 (`ubuntu-net`, 192.168.1.10, Ubuntu 26.04 LTS) sert de répétition avant de remplacer DomoMud
+sur le Pi. Le même kit s'applique, à deux différences près.
+
+**Publier pour x64** — un plugin C# a un exécutable natif, une archive arm64 n'y démarrerait pas :
+
+```powershell
+.\deploy\publier.ps1 -Runtime linux-x64
+```
+
+L'archive s'appelle `krissvia-<version>-x64.tar.gz`. Le dossier `raspberry/` de l'archive (unité, installation,
+sauvegarde) vaut tel quel pour Ubuntu. Le même piège existe pour DomoMud : une publication arm64 (celle du Pi,
+ReadyToRun) copiée sur la VM y redémarre en boucle sur « The assembly architecture is not compatible with the
+current process architecture ».
+
+**Prérequis.** Ubuntu 26.04 fournit tout dans ses dépôts : le runtime ASP.NET Core 10
+(`aspnetcore-runtime-10.0`), `sqlite3` et `python3-websockets` 15 :
+
+```bash
+sudo apt install aspnetcore-runtime-10.0 sqlite3 python3-websockets
+```
+
+Sur Ubuntu 24.04, il faudrait en plus le PPA `ppa:dotnet/backports` pour le runtime, et un environnement virtuel
+pour `websockets` (le paquet n'y est qu'en version 10) : `python3 -m venv /opt/krissvia-venv`, `pip install
+"websockets>=13"`, puis `PluginHost__Runtimes__python=/opt/krissvia-venv/bin/python` dans
+`/etc/krissvia/krissvia.env`. `installer.sh` vérifie l'interpréteur réglé là, pas le `python3` du système.
+
+**Rien de réel derrière une instance d'essai.** Une VM pointée sur le broker de l'appartement piloterait les vrais
+radiateurs et repeindrait les vraies platines (le topic `hasp/<nœud>/…` ne dit pas quelle installation les possède
+— vécu sur DomoMud le 03/10/2026). Sur la VM : un Mosquitto à elle (`sudo apt install mosquitto`), ou aucun plugin
+MQTT activé ; pas de thermostat ni de délestage sur des appareils réels ; un sujet ntfy à part pour ne pas confondre
+ses alertes avec celles du Pi.
