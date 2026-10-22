@@ -102,6 +102,16 @@ public partial class ThermostatConfiguration
         _idSaisi = true;
     }
 
+    /// <summary>
+    /// L'auto-TPI vient de changer Kp, Ki, Kint côté serveur : le formulaire les reprend, sinon « Enregistrer » remettrait
+    /// les anciennes valeurs qu'il affichait encore.
+    /// </summary>
+    private void TpiApplique(TpiGains gains)
+    {
+        if (_m is null) return;
+        (_m.Kp, _m.Ki, _m.Kint) = (gains.Kp, gains.Ki, gains.Kint);
+    }
+
     private async Task EnregistrerAsync()
     {
         if (Creation && Service.Get(_m!.Id) is not null)

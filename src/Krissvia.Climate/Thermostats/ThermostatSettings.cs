@@ -137,6 +137,15 @@ public sealed record ThermostatSettings
 
     public TpiSettings Tpi { get; init; } = new();
 
+    /// <summary>
+    /// Auto-TPI (opt-in) : la pièce est identifiée sur son historique et un réglage est PROPOSÉ ; il ne s'applique que
+    /// sur demande (AutoTpiService).
+    /// </summary>
+    public bool AutoTpi { get; init; }
+
+    /// <summary>Type de chauffage : fixe la vitesse de réponse demandée par l'auto-TPI.</summary>
+    public HeatingType HeatingType { get; init; } = HeatingType.Electric;
+
     /// <summary>Sonde muette depuis plus longtemps : chauffage coupé jusqu'à son retour. 0 = désactivé.</summary>
     public int FailsafeMinutes { get; init; } = 60;
 

@@ -132,6 +132,10 @@ else if (_m is not null && _planning is not null)
             </MudTabPanel>
 
             <MudTabPanel Text="Régulation" Icon="@Icons.Material.Filled.Tune">
+                @if (!Creation)
+                {
+                    <AutoTpiPanel ThermostatId="@Id" TpiChanged="TpiApplique" />
+                }
                 <MudText Typo="Typo.subtitle2" Class="mud-text-secondary mb-2">Préchauffage anticipé</MudText>
                 <MudSwitch T="bool" @bind-Value="_m.Prechauffage" Color="Color.Primary"
                            Label="Avec le planning, chauffer en avance pour atteindre la consigne à l'heure du créneau" />

@@ -1,0 +1,73 @@
+@using Krissvia.Climate.Thermostats
+
+<MudText Typo="Typo.subtitle2" Class="mud-text-secondary mb-2">Auto-TPI</MudText>
+<MudGrid Spacing="2" Class="mb-1">
+    <MudItem xs="12" sm="7">
+        <MudSwitch T="bool" Value="_actif" ValueChanged="ActiverAsync" Color="Color.Primary"
+                   Label="Identifier la pièce chaque jour et proposer un réglage" />
+    </MudItem>
+    <MudItem xs="12" sm="5">
+        <MudSelect Dense="true" T="HeatingType" Value="_type" ValueChanged="TypeChangeAsync" Label="Type de chauffage"
+                   Variant="Variant.Outlined" Margin="Margin.Dense">
+            <MudSelectItem Value="HeatingType.Electric">Radiateur électrique</MudSelectItem>
+            <MudSelectItem Value="HeatingType.Water">Radiateurs à eau</MudSelectItem>
+            <MudSelectItem Value="HeatingType.Floor">Plancher chauffant</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+</MudGrid>
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">
+    Rien ne change sans « Appliquer » : le réglage proposé se lit à côté de celui en place, et le précédent reste
+    disponible pour revenir en arrière. Il faut une sonde extérieure, et au moins une journée d'historique.
+</MudText>
+
+@if (_rapport is { } r)
+{
+    <MudPaper Outlined="true" Class="pa-3 mb-2">
+        <MudText Typo="Typo.body2">
+            Dernier calcul @Heure(r.ComputedAt), sur @Jours(r.Model.ObservedHours) d'historique
+            (@r.Model.Intervals intervalles de 30 min).
+        </MudText>
+        @if (r.Model.Usable)
+        {
+            <MudText Typo="Typo.body2" Class="mt-1">
+                Pièce identifiée : la chauffe à fond gagne <b>@Nombre(r.Model.Gain, "0.0") °C/h</b> ; la pièce perd la moitié de son
+                écart avec l'extérieur en <b>@Nombre(r.Model.TimeConstantHours * Math.Log(2), "0") h</b> ; apports gratuits
+                @Nombre(r.Model.FreeGain, "0.00") °C/h. Fiabilité R² @Nombre(r.Model.R2, "0.00").
+            </MudText>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">Pas de réglage proposé : @r.Model.Refusal.</MudAlert>
+        }
+
+        @if (r.Proposal is { } p)
+        {
+            <MudSimpleTable Dense="true" Elevation="0" Class="mt-2">
+                <thead><tr><th></th><th>En place</th><th>Proposé</th></tr></thead>
+                <tbody>
+                    <tr><td>Kp</td><td>@Nombre(r.Current.Kp, "0.###")</td><td>@Nombre(p.Kp, "0.###")</td></tr>
+                    <tr><td>Ki (extérieur)</td><td>@Nombre(r.Current.Ki, "0.####")</td><td>@Nombre(p.Ki, "0.####")</td></tr>
+                    <tr><td>Kint</td><td>@Nombre(r.Current.Kint, "0.####")</td><td>@Nombre(p.Kint, "0.####")</td></tr>
+                </tbody>
+            </MudSimpleTable>
+            @foreach (var note in p.Notes)
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">@note.</MudText>
+            }
+        }
+    </MudPaper>
+}
+
+<MudStack Row="true" Spacing="2" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Calculate" Disabled="@(!_actif || _occupe)" OnClick="CalculerAsync">Calculer maintenant</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Check"
+               Disabled="@(_occupe || _rapport is not { Proposal: not null } || _rapport.ProposalInPlace)" OnClick="AppliquerAsync">
+        @(_rapport?.ProposalInPlace == true ? "Réglage proposé en place" : "Appliquer")
+    </MudButton>
+    @if (_rapport?.Previous is { } avant)
+    {
+        <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Undo" Disabled="_occupe" OnClick="RevenirAsync">
+            Revenir à Kp @Nombre(avant.Kp, "0.###") · Ki @Nombre(avant.Ki, "0.####") · Kint @Nombre(avant.Kint, "0.####")
+        </MudButton>
+    }
+</MudStack>
