@@ -20,6 +20,10 @@ internal sealed partial class PluginSupervisorLifetime(
     public Task StartAsync(CancellationToken cancellationToken)
     {
         lifetime.ApplicationStarted.Register(() => _ = DemarrerAsync());
+        // Dès le début de l'arrêt, pas à notre tour : le serveur web s'arrête avant nous et attend ses connexions, et
+        // pendant ce temps les plugins que systemd vient d'arrêter avec le cœur passaient pour des plantages et étaient
+        // relancés.
+        lifetime.ApplicationStopping.Register(supervisor.StopAll);
         return Task.CompletedTask;
     }
 

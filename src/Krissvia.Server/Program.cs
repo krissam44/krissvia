@@ -120,6 +120,9 @@ builder.Services.AddSingleton<Krissvia.Climate.Alarm.AlarmEngine>();
 
 // Ordre de démarrage : schéma et états d'abord (les hosted services démarrent avant que Kestrel accepte un
 // plugin), puis la configuration des thermostats, qui lit la base.
+// Arrêt : 15 s au plus pour le serveur web et les services, sous les 20 s de TimeoutStopSec (deploy/raspberry) — au-delà,
+// systemd tue tout, y compris l'écriture des états et de l'historique. Le défaut de .NET (30 s) le dépassait.
+builder.Services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(15));
 builder.Services.AddHostedService<StateStoreLifetime>();
 builder.Services.AddHostedService<HistoryLoop>();
 builder.Services.AddHostedService<CommandJournal>();
@@ -219,7 +222,7 @@ api.MapHistoryApi();
 api.MapWidgetApi();
 
 // Point d'entrée des plugins : voir docs/TRANSPORT.md.
-app.Map("/plugins", async (HttpContext contexte, PluginHub hub) =>
+app.Map("/plugins", async (HttpContext contexte, PluginHub hub, IHostApplicationLifetime vie) =>
 {
     if (!contexte.WebSockets.IsWebSocketRequest)
     {
@@ -228,7 +231,9 @@ app.Map("/plugins", async (HttpContext contexte, PluginHub hub) =>
     }
 
     using var socket = await contexte.WebSockets.AcceptWebSocketAsync();
-    await hub.RunAsync(new WebSocketChannel(socket), contexte.RequestAborted);
+    // Fin de session à l'arrêt du cœur, aussi pour un plugin lancé ailleurs (Visual Studio) qu'on n'arrête pas soi-même.
+    using var fin = CancellationTokenSource.CreateLinkedTokenSource(contexte.RequestAborted, vie.ApplicationStopping);
+    await hub.RunAsync(new WebSocketChannel(socket), fin.Token);
 });
 
 if (app.Environment.IsDevelopment())

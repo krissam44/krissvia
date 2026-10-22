@@ -90,7 +90,7 @@ internal static partial class EntityApi
     /// <c>{"type":"states","states":{"id": état | null}}</c> à chaque changement, et de nouveau <c>entities</c> quand
     /// le registre change. <c>?entities=a,b</c> restreint aux entités nommées. Le client n'envoie rien.
     /// </summary>
-    private static async Task LiveAsync(HttpContext contexte, LiveFeed flux, IEntityRegistry registre, IEntityStateReader etats)
+    private static async Task LiveAsync(HttpContext contexte, LiveFeed flux, IEntityRegistry registre, IEntityStateReader etats, IHostApplicationLifetime vie)
     {
         if (!contexte.WebSockets.IsWebSocketRequest)
         {
@@ -115,7 +115,8 @@ internal static partial class EntityApi
         var ct = contexte.RequestAborted;
         using var abonnement = flux.Subscribe(filtre);   // AVANT la photo : rien ne se perd entre les deux
         using var socket = await contexte.WebSockets.AcceptWebSocketAsync();
-        using var fin = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        // L'arrêt du serveur ferme aussi le flux : sinon le serveur web attendrait que le client parte de lui-même.
+        using var fin = CancellationTokenSource.CreateLinkedTokenSource(ct, vie.ApplicationStopping);
         var lecture = AttendreFermetureAsync(socket, fin);
 
         try
@@ -140,7 +141,20 @@ internal static partial class EntityApi
         }
 
         if (socket.State == WebSocketState.Open)
-            await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
+        {
+            // « Le serveur s'en va » (1001) plutôt qu'une fin normale : le tableau de bord sait qu'il doit se reconnecter.
+            using var delai = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            try
+            {
+                await socket.CloseAsync(vie.ApplicationStopping.IsCancellationRequested ? WebSocketCloseStatus.EndpointUnavailable : WebSocketCloseStatus.NormalClosure,
+                    vie.ApplicationStopping.IsCancellationRequested ? "arrêt du serveur" : null, delai.Token);
+            }
+            catch (Exception ex) when (ex is OperationCanceledException or WebSocketException)
+            {
+                // Client injoignable : il n'y a plus personne à prévenir.
+            }
+        }
+
         await lecture;
     }
 
