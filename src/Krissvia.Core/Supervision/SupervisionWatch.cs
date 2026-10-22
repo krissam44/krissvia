@@ -31,7 +31,7 @@ public sealed class SupervisionWatch(AlertService alerts, NotificationService no
 {
     public static readonly TimeSpan StartupGrace = TimeSpan.FromMinutes(10);
 
-    private static readonly string[] Prefixes = ["plugin:", "internet:", "presence", "disque", "capteur:", "pile:"];
+    private static readonly string[] Prefixes = ["plugin:", "internet:", "presence", "disque", "capteur:", "pile:", "probleme:"];
 
     private readonly DateTimeOffset _demarrage = clock.GetUtcNow();
     private readonly SemaphoreSlim _verrou = new(1, 1);
@@ -119,6 +119,7 @@ public sealed class SupervisionWatch(AlertService alerts, NotificationService no
             SupervisionCategory.Presence => new("Détection de présence hors service", $"Depuis {heure} : {it.Detail}.", 4, ["warning"]),
             SupervisionCategory.Disk => new("Espace disque faible", $"{Majuscule(it.Detail)}.", 4, ["floppy_disk"]),
             SupervisionCategory.Sensor => new($"Capteur muet : {it.Name}", $"{it.Name} : {it.Detail}.", 4, ["warning"]),
+            SupervisionCategory.Problem => new($"Problème : {it.Name}", $"{it.Name} : {it.Detail}, depuis {heure}.", 4, ["warning"]),
             _ => new($"Pile faible : {it.Name}", $"{it.Name} : {it.Detail}.", 3, ["battery"]),
         };
     }
@@ -130,6 +131,7 @@ public sealed class SupervisionWatch(AlertService alerts, NotificationService no
         SupervisionCategory.Presence => new("Détection de présence rétablie", "Les appareils suivis répondent de nouveau.", 2, ["white_check_mark"]),
         SupervisionCategory.Disk => new("Espace disque correct", $"{Majuscule(it.Detail)}.", 1, ["white_check_mark"]),
         SupervisionCategory.Sensor => new($"Capteur rétabli : {it.Name}", $"{it.Name} émet de nouveau.", 2, ["white_check_mark"]),
+        SupervisionCategory.Problem => new($"Problème résolu : {it.Name}", $"{it.Name} : plus de problème signalé.", 2, ["white_check_mark"]),
         _ => new($"Pile remplacée : {it.Name}", $"{it.Name} : {it.Detail}.", 1, ["battery"]),
     };
 

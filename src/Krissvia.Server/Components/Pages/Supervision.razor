@@ -106,6 +106,7 @@ else
                     <MudItem xs="7"><MudSwitch T="bool" @bind-Value="_f.Disque" Color="Color.Primary" Label="Disque libre sous" /></MudItem>
                     <MudItem xs="5"><MudNumericField T="int" @bind-Value="_f.DisqueMo" Label="Mo" Min="100" Max="102400" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
                     <MudItem xs="12"><MudSwitch T="bool" @bind-Value="_f.Presence" Color="Color.Primary" Label="Détection de présence perdue" /></MudItem>
+                    <MudItem xs="12"><MudSwitch T="bool" @bind-Value="_f.Problemes" Color="Color.Primary" Label="Problèmes signalés par les plugins (sous-tension…)" /></MudItem>
                     <MudItem xs="12"><MudSwitch T="bool" @bind-Value="_f.Delestage" Color="Color.Primary" Label="Délestage (en cours, coupure non confirmée, sans mesure)" /></MudItem>
                 </MudGrid>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Class="mt-3"

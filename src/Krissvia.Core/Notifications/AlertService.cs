@@ -57,6 +57,12 @@ public sealed record DiskAlertSettings
     public int MinFreeMegabytes { get; init; } = 1024;
 }
 
+/// <summary>Problèmes signalés par les plugins : toute entité de classe <c>problem</c> qui passe à vrai.</summary>
+public sealed record ProblemAlertSettings
+{
+    public bool Enabled { get; init; } = true;
+}
+
 /// <summary>Délestage : épisode en cours, coupure non confirmée, délestage sans mesure.</summary>
 public sealed record LoadSheddingAlertSettings
 {
@@ -74,6 +80,7 @@ public sealed record AlertSettings
     public PresenceAlertSettings Presence { get; init; } = new();
     public DiskAlertSettings Disk { get; init; } = new();
     public LoadSheddingAlertSettings LoadShedding { get; init; } = new();
+    public ProblemAlertSettings Problems { get; init; } = new();
 }
 
 /// <summary>Un incident signalé et pas encore rétabli.</summary>
