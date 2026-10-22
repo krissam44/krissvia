@@ -118,6 +118,26 @@ public static class DeviceClasses
     /// <summary>sensor dont la valeur est un libellé (tarif en cours…), pas un nombre.</summary>
     public const string Enum = "enum";
 
+    /// <summary>
+    /// sensor : la température d'un APPAREIL (processeur d'un Raspberry, d'un serveur), en °C. Distincte de
+    /// <see cref="Temperature"/>, qui est celle d'une pièce ou de l'extérieur : un processeur n'a rien à faire dans les
+    /// sondes, les moyennes par pièce ou les sondes proposées aux thermostats.
+    /// </summary>
+    public const string DeviceTemperature = "device_temperature";
+
+    /// <summary>
+    /// binary_sensor : true = un PROBLÈME (sous-tension d'un Raspberry, bridage, machine virtuelle arrêtée…). La
+    /// supervision alerte sur toute entité de cette classe qui passe à vrai : un plugin signale un problème sans que le
+    /// cœur ait à le connaître.
+    /// </summary>
+    public const string Problem = "problem";
+
+    /// <summary>
+    /// sensor dont la valeur est un OBJET : la santé d'une machine (modèle, température, charge, mémoire, disque,
+    /// alimentation, durée de fonctionnement). Publiée par le plugin Raspberry ; sa carte est livrée par le plugin.
+    /// </summary>
+    public const string SystemHealth = "system_health";
+
     /// <summary>binary_sensor : true = OUVERT (le plugin inverse les conventions contraires).</summary>
     public const string Opening = "opening";
 

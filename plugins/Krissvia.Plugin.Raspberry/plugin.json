@@ -1,0 +1,21 @@
+{
+  "id": "raspberry",
+  "name": "Raspberry (santé)",
+  "description": "Santé de la machine qui fait tourner Krissvia : température et occupation du processeur, mémoire, disque, durée de fonctionnement ; sous-tension et bridage sur un Raspberry Pi.",
+  "runtime": "python",
+  "executable": "raspberry.py",
+  "settings": {
+    "type": "object",
+    "properties": {
+      "Raspberry": {
+        "type": "object",
+        "title": "Relevés",
+        "properties": {
+          "Nom": { "type": "string", "title": "Nom de la machine", "description": "Vide : son nom réseau (hostname)." },
+          "IntervalSeconds": { "type": "integer", "title": "Relevé toutes les (s)", "default": 30, "minimum": 5, "maximum": 600 },
+          "Disque": { "type": "string", "title": "Disque surveillé", "description": "Un chemin sur le disque à surveiller ; vide : la racine « / ». Mettre celui de la base de Krissvia si elle est sur un autre disque." }
+        }
+      }
+    }
+  }
+}

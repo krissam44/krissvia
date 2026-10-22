@@ -6,7 +6,7 @@ using Krissvia.Core.States;
 
 namespace Krissvia.Core.Supervision;
 
-public enum SupervisionCategory { Internet, Plugin, Presence, Disk, Sensor, Battery }
+public enum SupervisionCategory { Internet, Plugin, Presence, Disk, Sensor, Battery, Problem }
 
 /// <summary>L'état d'un plugin activé, tel que la supervision le voit.</summary>
 public sealed record PluginHealth(string Id, string Name, bool Connected);
@@ -91,6 +91,19 @@ public static class SupervisionRules
             var mo = libre / (1024 * 1024);
             items.Add(new SupervisionItem("disque", SupervisionCategory.Disk, "Espace disque", mo < r.Disk.MinFreeMegabytes,
                 $"{Taille(libre)} libres à côté de la base (seuil {Taille(r.Disk.MinFreeMegabytes * 1024L * 1024)})"));
+        }
+
+        // Un problème signalé par un plugin (sous-tension d'un Raspberry, machine virtuelle arrêtée…) : le cœur n'a pas à
+        // le connaître pour le dire.
+        if (r.Problems.Enabled)
+        {
+            foreach (var e in entites.Where(e => e is { Kind: EntityKind.BinarySensor, DeviceClass: DeviceClasses.Problem }))
+            {
+                if (PluginEnPanne(e) || entree.States.Get(e.EntityId) is not { } s || !s.TryGetBool(out var probleme)) continue;
+                items.Add(new SupervisionItem($"probleme:{e.EntityId}", SupervisionCategory.Problem, e.DisplayName, probleme,
+                    // Pas d'instant de mesure : le plugin republie à chaque relevé, le début est le premier constat.
+                    probleme ? "signalé par son plugin" : "aucun"));
+            }
         }
 
         if (r.Sensors.Enabled && !capteursEnRepit)

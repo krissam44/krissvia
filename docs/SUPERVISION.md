@@ -14,6 +14,7 @@
 | **Présence perdue** | appareils suivis sans réponse (`HomePresence`) : maison tenue pour occupée par sécurité | aucun | `presence` |
 | **Espace disque** | libre à côté de la base sous le seuil — une carte SD ou un SSD plein arrête tout | 1 Go (100 Mo à 100 Go) | `disque` |
 | **Capteur muet** | aucune mesure depuis le seuil, ou indisponible | 120 min (10 min à 48 h) | `capteur:{entité}` |
+| **Problème signalé** | `binary_sensor` de classe `problem` à vrai : un plugin le dit (sous-tension d'un Raspberry…), le cœur n'a pas à le connaître. Début = premier constat (le plugin republie à chaque relevé) | aucun | `probleme:{entité}` |
 | **Pile faible** | `battery` en % au seuil ou dessous ; en vrai/faux, à vrai. Fin au-dessus du seuil + 5 (marge) | 20 % | `pile:{entité}` |
 
 Réglages : page Supervision (collection `alertes`, document `reglages`, à côté de l'alerte gel). Chaque page relit

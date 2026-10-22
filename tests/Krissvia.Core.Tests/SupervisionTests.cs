@@ -239,6 +239,26 @@ public class SupervisionTests
     }
 
     [Fact]
+    public async Task Un_probleme_signale_par_un_plugin_alerte_une_fois_depuis_son_debut()
+    {
+        var b = new Banc();
+        b.Plugins.Add(new("raspberry", "Raspberry", Connected: true));
+        b.Entites.Add(E("binary_sensor.pi_sous_tension", EntityKind.BinarySensor, DeviceClasses.Problem, "raspberry"));
+
+        foreach (var m in new[] { 0, 1, 2 })
+        {
+            b.Etats.Fixer("binary_sensor.pi_sous_tension", true, T0 + Min(m));   // republié à chaque relevé
+            await b.VerifierAsync(Min(m));
+        }
+
+        b.Etats.Fixer("binary_sensor.pi_sous_tension", false, T0 + Min(3));
+        await b.VerifierAsync(Min(3));
+
+        Assert.Equal(["Problème : binary_sensor.pi_sous_tension", "Problème résolu : binary_sensor.pi_sous_tension"], b.Titres);
+        Assert.Contains("depuis 22/10 10:00", b.Ntfy.Recues[0].Message);
+    }
+
+    [Fact]
     public async Task Ce_qu_on_ne_surveille_plus_est_oublie_sans_message()
     {
         var b = new Banc();

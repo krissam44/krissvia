@@ -20,7 +20,7 @@ public partial class Supervision : IDisposable
 
     private sealed class Formulaire
     {
-        public bool Plugins, Internet, Capteurs, Piles, Disque, Presence, Delestage;
+        public bool Plugins, Internet, Capteurs, Piles, Disque, Presence, Delestage, Problemes;
         public int PluginsMin, InternetMin, CapteursMin, PilesPct, DisqueMo;
     }
 
@@ -42,6 +42,7 @@ public partial class Supervision : IDisposable
             Disque = r.Disk.Enabled, DisqueMo = r.Disk.MinFreeMegabytes,
             Presence = r.Presence.Enabled,
             Delestage = r.LoadShedding.Enabled,
+            Problemes = r.Problems.Enabled,
         };
         Surveillance.Changed += Rafraichir;
         Alertes.Changed += Rafraichir;
@@ -64,6 +65,7 @@ public partial class Supervision : IDisposable
                 Disk = new DiskAlertSettings { Enabled = _f.Disque, MinFreeMegabytes = _f.DisqueMo },
                 Presence = new PresenceAlertSettings { Enabled = _f.Presence },
                 LoadShedding = new LoadSheddingAlertSettings { Enabled = _f.Delestage },
+                Problems = new ProblemAlertSettings { Enabled = _f.Problemes },
             });
             Snackbar.Add("Réglages enregistrés ; pris en compte au prochain contrôle (dans la minute).", Severity.Success);
         }
@@ -80,6 +82,7 @@ public partial class Supervision : IDisposable
         SupervisionCategory.Presence => Icons.Material.Filled.Home,
         SupervisionCategory.Disk => Icons.Material.Filled.Storage,
         SupervisionCategory.Battery => Icons.Material.Filled.BatteryAlert,
+        SupervisionCategory.Problem => Icons.Material.Filled.ReportProblem,
         _ => Icons.Material.Filled.Sensors,
     };
 
