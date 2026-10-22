@@ -30,6 +30,12 @@ public sealed partial class PluginHub(
 {
     private readonly ConcurrentDictionary<string, PluginSession> _sessions = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Le passage vers le reste du cœur pour les messages du contrat 0.3, branché au démarrage. Absent : tout
+    /// abonnement et tout ordre d'un plugin sont refusés.
+    /// </summary>
+    public IPluginGateway? Gateway { get; set; }
+
     /// <summary>Plugins connectés en ce moment.</summary>
     public IReadOnlyCollection<string> ConnectedPlugins => _sessions.Keys.ToList();
 
@@ -42,7 +48,7 @@ public sealed partial class PluginHub(
         var hello = await AttendreHelloAsync(channel, ct);
         if (hello is null) return;
 
-        var session = new PluginSession(hello.PluginId, channel, registry, states, options, clock, logger) { Version = hello.PluginVersion };
+        var session = new PluginSession(hello.PluginId, channel, registry, states, options, clock, logger, Gateway) { Version = hello.PluginVersion };
         PluginSession? remplacee = null;
         _sessions.AddOrUpdate(hello.PluginId, session, (_, ancienne) => { remplacee = ancienne; return session; });
 
@@ -131,7 +137,8 @@ public sealed partial class PluginHub(
         {
             await channel.SendAsync(ContractJson.Encode(new Welcome
             {
-                ContractVersion = ContractInfo.Version,
+                // La version du plugin, puisqu'elle est comprise : un plugin 0.2 se voit répondre 0.2.
+                ContractVersion = hello.ContractVersion,
                 HeartbeatSeconds = (int)options.Heartbeat.TotalSeconds,
                 TimeoutSeconds = (int)options.Timeout.TotalSeconds,
             }), ct);

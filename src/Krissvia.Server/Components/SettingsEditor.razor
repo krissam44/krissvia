@@ -53,6 +53,18 @@
                              Value="Nombre(champ)" ValueChanged="v => Ecrire(champ, v)" />
             break;
 
+        case SettingType.String when champ.Entity is { } reference:
+            @* Contrat 0.3 : choisir l'entité, c'est l'autoriser pour ce plugin (docs/CONTRACT-V0.3.md §2). *@
+            <MudSelect T="string" Label="@champ.Label" Required="champ.Required" Clearable="true" Dense="true"
+                       HelperText="@AideEntite(champ, reference)" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2"
+                       Value="Texte(champ)" ValueChanged="v => Ecrire(champ, v)" ToStringFunc="NomEntite">
+                @foreach (var e in Entites(reference, Texte(champ)))
+                {
+                    <MudSelectItem Value="e.EntityId">@e.DisplayName <span class="mud-text-secondary">· @e.EntityId</span></MudSelectItem>
+                }
+            </MudSelect>
+            break;
+
         default:
             <MudTextField T="string" Label="@champ.Label" HelperText="@champ.Description" Required="champ.Required"
                           InputType="@(champ.Secret ? InputType.Password : InputType.Text)"

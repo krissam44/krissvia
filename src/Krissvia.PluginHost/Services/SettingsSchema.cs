@@ -7,6 +7,15 @@ namespace Krissvia.PluginHost.Services;
 /// <summary>Type d'un réglage de plugin.</summary>
 public enum SettingType { String, Integer, Number, Boolean, Object, Array }
 
+/// <summary>Ce qu'un plugin a le droit de faire d'une entité qui n'est pas à lui (contrat 0.3).</summary>
+public enum EntityAccess { None, Read, Command }
+
+/// <summary>
+/// Un réglage qui désigne une entité (<c>"format": "entity"</c>) : la page Services propose une liste filtrée, et
+/// l'entité choisie devient une autorisation du plugin (docs/CONTRACT-V0.3.md §2).
+/// </summary>
+public sealed record EntitySetting(IReadOnlyList<string> Kinds, IReadOnlyList<string> DeviceClasses, EntityAccess Access);
+
 /// <summary>
 /// Un réglage décrit dans <c>plugin.json</c> (<c>"settings"</c>) — un sous-ensemble de JSON Schema : <c>type</c>,
 /// <c>title</c>, <c>description</c>, <c>default</c>, <c>minimum</c>/<c>maximum</c>, <c>required</c>,
@@ -30,6 +39,9 @@ public sealed record SettingField
 
     /// <summary>Champs d'un objet, ou de chaque élément d'une liste.</summary>
     public IReadOnlyList<SettingField> Properties { get; init; } = [];
+
+    /// <summary>Renseigné si le champ désigne une entité.</summary>
+    public EntitySetting? Entity { get; init; }
 
     public string Label => Title.Length > 0 ? Title : Key;
 }
@@ -75,7 +87,47 @@ public static class SettingsSchema
             Minimum = s.TryGetProperty("minimum", out var min) && min.TryGetDouble(out var vmin) ? vmin : null,
             Maximum = s.TryGetProperty("maximum", out var max) && max.TryGetDouble(out var vmax) ? vmax : null,
             Properties = proprietes,
+            Entity = type == SettingType.String && Chaine(s, "format") == "entity"
+                ? new EntitySetting(Liste(s, "x-kinds"), Liste(s, "x-device-classes"),
+                    Chaine(s, "x-access") == "command" ? EntityAccess.Command : EntityAccess.Read)
+                : null,
         };
+    }
+
+    private static IReadOnlyList<string> Liste(JsonElement s, string nom) =>
+        s.TryGetProperty(nom, out var v) && v.ValueKind == JsonValueKind.Array
+            ? [.. v.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String).Select(e => e.GetString()!)]
+            : [];
+
+    /// <summary>
+    /// Les entités choisies dans les réglages, où qu'elles soient (objets, listes), avec le droit le plus large qu'un de
+    /// leurs champs accorde. C'est l'autorisation du plugin : choisir l'entité, c'est l'autoriser.
+    /// </summary>
+    public static IReadOnlyDictionary<string, EntityAccess> EntityReferences(SettingField objet, JsonObject? valeur)
+    {
+        var resultat = new Dictionary<string, EntityAccess>(StringComparer.Ordinal);
+        Parcourir(objet, valeur, resultat);
+        return resultat;
+    }
+
+    private static void Parcourir(SettingField objet, JsonObject? valeur, Dictionary<string, EntityAccess> resultat)
+    {
+        if (valeur is null) return;
+        foreach (var champ in objet.Properties)
+        {
+            switch (champ.Type, valeur[champ.Key])
+            {
+                case (SettingType.Object, JsonObject o):
+                    Parcourir(champ, o, resultat);
+                    break;
+                case (SettingType.Array, JsonArray liste):
+                    foreach (var element in liste.OfType<JsonObject>()) Parcourir(champ, element, resultat);
+                    break;
+                case (SettingType.String, JsonValue v) when champ.Entity is { } e && v.TryGetValue<string>(out var id) && id.Length > 0:
+                    resultat[id] = resultat.TryGetValue(id, out var deja) && deja > e.Access ? deja : e.Access;
+                    break;
+            }
+        }
     }
 
     /// <summary>Un objet complet pour ce champ : la valeur enregistrée, complétée par les valeurs par défaut.</summary>

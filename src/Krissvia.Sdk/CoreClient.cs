@@ -67,6 +67,19 @@ public sealed partial class CoreClient(
     Func<CancellationToken, Task<WebSocket>>? connect = null)
 {
     private readonly SemaphoreSlim _envoi = new(1, 1);
+
+    // Contrat 0.3 : les entités suivies (renvoyées à chaque session) et les ordres en attente de leur résultat.
+    private volatile IReadOnlyList<string> _abonnements = [];
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, TaskCompletionSource<EntityCommandResponse>> _ordres = new(StringComparer.Ordinal);
+
+    /// <summary>Délai d'attente du résultat d'un <see cref="CommandEntityAsync"/> : la vérification du cœur peut prendre 10 s.</summary>
+    public static readonly TimeSpan EntityCommandTimeout = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    /// L'état d'une entité suivie (<see cref="SetSubscriptionsAsync"/>) : une fois à l'abonnement, puis à chaque
+    /// changement. Appelé sur la boucle de réception : rendre la main vite.
+    /// </summary>
+    public event Action<EntityStateUpdate>? EntityStateReceived;
     private WebSocket? _session;
     private long _derniereReceptionTicks;
 
@@ -212,6 +225,9 @@ public sealed partial class CoreClient(
         {
             foreach (var message in plugin.Snapshot())
                 await TextFrames.SendAsync(ws, ContractJson.Encode(message), ct);
+            // Un abonnement ne survit pas à la session : il repart après la resynchronisation.
+            if (_abonnements.Count > 0)
+                await TextFrames.SendAsync(ws, ContractJson.Encode(new Subscribe { EntityIds = _abonnements }), ct);
             Volatile.Write(ref _session, ws);
         }
         finally
@@ -230,6 +246,47 @@ public sealed partial class CoreClient(
         finally
         {
             _envoi.Release();
+        }
+
+        // Un ordre dont la session s'est fermée n'aura jamais de résultat : on ne fait pas semblant.
+        foreach (var attente in _ordres.Values)
+            attente.TrySetResult(new EntityCommandResponse { Id = "", Outcome = CommandOutcome.Unreachable, Detail = "session avec le cœur fermée" });
+    }
+
+    // ── Contrat 0.3 : lire et commander d'autres entités ────────────────────
+
+    /// <summary>
+    /// Les entités à suivre (la liste COMPLÈTE) : seules celles choisies dans les réglages du plugin sont accordées
+    /// (docs/CONTRACT-V0.3.md). Retenue et renvoyée à chaque (re)connexion ; envoyée tout de suite si une session est ouverte.
+    /// </summary>
+    public async Task SetSubscriptionsAsync(IEnumerable<string> entityIds, CancellationToken ct = default)
+    {
+        _abonnements = [.. entityIds.Where(i => !string.IsNullOrWhiteSpace(i)).Distinct(StringComparer.Ordinal)];
+        await SendAsync(new Subscribe { EntityIds = _abonnements }, ct);
+    }
+
+    /// <summary>
+    /// Un ordre sur une entité (pas forcément la sienne), par le bus de commandes du cœur. Hors session, ou sans réponse
+    /// dans <see cref="EntityCommandTimeout"/> : <see cref="CommandOutcome.Unreachable"/>, jamais un faux succès.
+    /// </summary>
+    public async Task<EntityCommandResponse> CommandEntityAsync(string entityId, string command, System.Text.Json.JsonElement? args = null, CancellationToken ct = default)
+    {
+        var id = Guid.NewGuid().ToString("N");
+        var attente = new TaskCompletionSource<EntityCommandResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _ordres[id] = attente;
+        try
+        {
+            if (!await SendAsync(new EntityCommandRequest { Id = id, EntityId = entityId, Command = command, Args = args }, ct))
+                return new EntityCommandResponse { Id = id, Outcome = CommandOutcome.Unreachable, Detail = "pas de session avec le cœur" };
+            return await attente.Task.WaitAsync(EntityCommandTimeout, clock, ct);
+        }
+        catch (TimeoutException)
+        {
+            return new EntityCommandResponse { Id = id, Outcome = CommandOutcome.Unreachable, Detail = "pas de réponse du cœur" };
+        }
+        finally
+        {
+            _ordres.TryRemove(id, out _);
         }
     }
 
@@ -250,6 +307,15 @@ public sealed partial class CoreClient(
                     case CommandRequest ordre:
                         // Hors de la boucle de réception : un ordre lent ne doit pas retarder les suivants.
                         _ = Task.Run(() => ExecuterAsync(ordre, ct), CancellationToken.None);
+                        break;
+                    case EntityStateUpdate etat:
+                        EntityStateReceived?.Invoke(etat);
+                        break;
+                    case EntityCommandResponse reponse:
+                        if (_ordres.TryGetValue(reponse.Id, out var attente)) attente.TrySetResult(reponse);
+                        break;
+                    case Subscribed abonnement:
+                        foreach (var refus in abonnement.Denied) AbonnementRefuse(logger, refus.EntityId, refus.Reason);
                         break;
                     case Configure:
                         await SendAsync(new ConfigureResult { Ok = false, Error = "configuration locale du plugin uniquement" }, ct);
@@ -310,6 +376,9 @@ public sealed partial class CoreClient(
         {
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Abonnement à {EntityId} refusé ({Raison}) : la choisir dans les réglages du plugin (page Services).")]
+    private static partial void AbonnementRefuse(ILogger logger, string entityId, SubscriptionDenial raison);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Connecté au cœur Krissvia (contrat {ContractVersion}).")]
     private static partial void SessionOuverte(ILogger logger, string contractVersion);

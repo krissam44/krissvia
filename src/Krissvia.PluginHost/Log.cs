@@ -68,4 +68,10 @@ internal static partial class Log
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Commande {Command} vers « {EntityId} » : le plugin {PluginId} n'est pas connecté.")]
     public static partial void CommandePluginAbsent(ILogger logger, string pluginId, string entityId, string command);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Plugin {PluginId} : abonnement à {EntityId} refusé ({Raison}).")]
+    public static partial void AbonnementRefuse(ILogger logger, string pluginId, string entityId, SubscriptionDenial raison);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Plugin {PluginId} : ordre {Command} sur {EntityId} refusé, entité non autorisée.")]
+    public static partial void OrdreRefuse(ILogger logger, string pluginId, string command, string entityId);
 }

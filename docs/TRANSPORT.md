@@ -100,7 +100,13 @@ surveillé : le comportement est celui d'avant.
 Limite connue : un processus que le plugin lancerait lui-même entre son démarrage et son entrée dans le job
 échapperait au job ; aucun plugin ne lance de processus.
 
-## 6. Ce qui reste ouvert
+## 6. Contrat 0.3
+
+Depuis le 22/10/2026 le cœur parle le contrat **0.3** et accepte encore les plugins **0.2** : la 0.3 n'a fait
+qu'ajouter des messages (suivre et commander d'autres entités, `CONTRACT-V0.3.md`). Le `welcome` renvoie la version
+du plugin. Les deux SDK parlent 0.3.
+
+## 7. Ce qui reste ouvert
 
 - **`configure`** : le message existe, mais le cœur n'a pas encore de configuration de plugin à
   envoyer (ni stockage, ni validation par JSON Schema). D'ici là, un plugin lit sa configuration
