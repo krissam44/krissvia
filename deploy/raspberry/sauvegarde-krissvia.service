@@ -1,0 +1,28 @@
+[Unit]
+Description=Sauvegarde de Krissvia
+# Pas de Requires= : la sauvegarde doit aussi fonctionner si Krissvia est arrêté.
+After=krissvia.service
+
+[Service]
+Type=oneshot
+
+# IMPÉRATIF : le même utilisateur que krissvia.service. En root, SQLite créerait un krissvia.db-shm
+# appartenant à root à côté de la base, et le cœur ne pourrait plus y écrire au redémarrage suivant.
+User=krissvia
+Group=krissvia
+
+ExecStart=/usr/local/bin/sauvegarde-krissvia.sh
+
+# Durcissement : tout le système est en lecture seule sauf les deux dossiers listés.
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+
+# /var/lib/krissvia doit être ACCESSIBLE EN ÉCRITURE malgré une lecture seule logique : pour lire une base en
+# mode WAL, SQLite ouvre et met à jour le fichier -shm dans le dossier de la base. En ReadOnlyPaths, « .backup »
+# échouerait sur « attempt to write a readonly database ».
+ReadWritePaths=/var/lib/krissvia /var/backups/krissvia
+
+[Install]
+WantedBy=multi-user.target

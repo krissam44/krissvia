@@ -1,0 +1,15 @@
+[Unit]
+Description=Sauvegarde de Krissvia toutes les 6 heures
+
+[Timer]
+# Le quart d'heure : pas à la même minute que la sauvegarde de DomoMud tant que les deux sont sur le Pi.
+OnCalendar=*-*-* 00,06,12,18:15:00
+
+# Rattrape l'échéance manquée si le Pi était éteint ou redémarrait : sans cela, une coupure à 06 h fait sauter
+# la sauvegarde jusqu'à midi.
+Persistent=true
+
+RandomizedDelaySec=180
+
+[Install]
+WantedBy=timers.target
