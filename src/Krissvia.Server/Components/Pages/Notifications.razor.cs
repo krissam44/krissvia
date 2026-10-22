@@ -82,7 +82,8 @@ public partial class Notifications : IDisposable
     {
         try
         {
-            _alertes = _alertes with { Frost = new FrostAlertSettings { Enabled = _gel.Actif, ThresholdCelsius = _gel.Seuil, HorizonHours = _gel.Horizon } };
+            // Relus au moment d'enregistrer : la page Supervision écrit dans le même document.
+            _alertes = (await Alertes.GetSettingsAsync()) with { Frost = new FrostAlertSettings { Enabled = _gel.Actif, ThresholdCelsius = _gel.Seuil, HorizonHours = _gel.Horizon } };
             await Alertes.SaveSettingsAsync(_alertes);
             Snackbar.Add("Alertes enregistrées ; prises en compte à la prochaine analyse.", Severity.Success);
         }

@@ -11,7 +11,7 @@ connexion (la **supervision**). Elles ne servent pas aux mêmes fonctions et ne 
 | | Publié par un plugin de box | Consommé par le cœur |
 |---|---|---|
 | Présence | un `binary_sensor` de classe `presence` par appareil suivi | `HomePresence` → `sensor.maison_presence` ; l'absence (§5), demain l'alarme |
-| Supervision | `connectivity` (lien établi), `public_ip`, `data_rate` (kbit/s) | la supervision (étape suivante de la feuille de route) |
+| Supervision | `connectivity` (lien établi), `public_ip`, `data_rate` (kbit/s) | la supervision (`SUPERVISION.md`) : alerte « connexion coupée » |
 
 Changer de fournisseur (Free, SFR…) = un autre plugin qui publie les mêmes classes : la présence du foyer, l'alarme
 et la supervision ne changent pas. Le plugin Livebox a un interrupteur « Superviser la connexion » : la présence

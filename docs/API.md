@@ -150,6 +150,11 @@ créneaux que les thermostats (un créneau de nuit finit le lendemain matin).
 Code faux **403**, clavier bloqué après trois codes faux **429** (`Retry-After`), armement refusé (porte ouverte,
 capteur muet) **409** avec la liste. La clé d'API ne suffit pas à désarmer. Détail : `ALARME.md` §6.
 
+## Supervision
+
+`GET /api/supervision` : le dernier contrôle (chaque point surveillé, en panne ou non, depuis quand, alerte partie ou
+non) et toutes les alertes en cours. Détail : `SUPERVISION.md` §4.
+
 ## Entités et flux en direct
 
 Ce dont un tableau de bord ou un widget a besoin (WIDGETS.md §8) : les entités, leur dernier état, les ordres.
