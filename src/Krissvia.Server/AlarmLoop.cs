@@ -1,4 +1,5 @@
 using Krissvia.Climate.Alarm;
+using Krissvia.Core.Commands;
 using Krissvia.Core.Events;
 
 namespace Krissvia.Server;
@@ -10,6 +11,7 @@ namespace Krissvia.Server;
 internal sealed partial class AlarmLoop(
     AlarmService service,
     AlarmEngine engine,
+    CoreCommandRouter routeur,
     IEventBus bus,
     TimeProvider clock,
     ILogger<AlarmLoop> logger) : BackgroundService
@@ -24,6 +26,7 @@ internal sealed partial class AlarmLoop(
         Demarrage(logger, service.Settings.Enabled ? AlarmLabels.Mode(engine.State.Mode) : "désactivée", service.Settings.Sensors.Count);
 
         service.Changed += Reglages;
+        routeur.Register(AlarmEngine.IntegrationId, engine);   // arm / disarm de la carte du tableau de bord
         _abonnement = bus.Subscribe<EntityStateChanged>("alarme", (e, ct) => engine.OnStateChangedAsync(e, ct));
         await base.StartAsync(cancellationToken);
     }

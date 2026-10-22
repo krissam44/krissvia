@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "alarme",
+  "name": "Alarme",
+  "description": "État de l'alarme, décomptes de sortie et d'entrée, déclenchement ; clavier pour armer ou désarmer avec son code.",
+  "version": "1.0.0",
+  "element": "kv-alarme",
+  "script": "alarme.js",
+  "slots": [ { "name": "alarme", "kinds": ["sensor"], "device_classes": ["alarm"], "required": true } ],
+  "size": { "cols": 3, "rows": 3 }
+}
