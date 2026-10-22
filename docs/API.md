@@ -144,6 +144,12 @@ créneaux que les thermostats (un créneau de nuit finit le lendemain matin).
   qu'elle veut à ce moment-là — un chauffe-eau dont le créneau s'est terminé pendant le délestage reste éteint.
 
 
+## Alarme
+
+`/api/alarm` : état, journal, réglages, et armement ou désarmement **par code** (`{"code": "1234"}` dans le corps).
+Code faux **403**, clavier bloqué après trois codes faux **429** (`Retry-After`), armement refusé (porte ouverte,
+capteur muet) **409** avec la liste. La clé d'API ne suffit pas à désarmer. Détail : `ALARME.md` §6.
+
 ## Entités et flux en direct
 
 Ce dont un tableau de bord ou un widget a besoin (WIDGETS.md §8) : les entités, leur dernier état, les ordres.

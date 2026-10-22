@@ -140,6 +140,9 @@ Implémentation : `Krissvia.Climate.LoadShedding.LoadShedder`.
 
 ## 9. Module Alarme : la sirène
 
+> Implémenté le 22/10/2026 tel que décrit ici (réglages `ring_seconds`, `ring_count`, `pause_seconds`) : voir
+> `ALARME.md`.
+
 La sirène ne sonne plus d'un seul tenant. Réglages (par installation) :
 
 | Réglage | Plage | Défaut proposé |
@@ -180,6 +183,8 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
   d'entités, hôte `kv` pour les ordres vérifiés, choix par carte > par entité > par défaut.
 - **Notifications et alertes : `NOTIFICATIONS.md`** (19/10/2026) — ntfy, une alerte par incident avec quarantaine,
   alerte gel par lieu du plugin Météo.
+- **Alarme : `ALARME.md`** (22/10/2026) — machine à états de DomoMud, sonneries du §9, codes PBKDF2 et blocage,
+  page `/alarme`, API `/api/alarm` par code.
 - **Présence et supervision : `PRESENCE.md`** (19/10/2026) — présence du foyer calculée par le cœur sur les capteurs
   `presence` de n'importe quelle source ; classes standard de supervision, indépendantes de la box.
 

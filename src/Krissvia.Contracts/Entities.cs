@@ -133,6 +133,12 @@ public static class DeviceClasses
     /// </summary>
     public const string HomePresence = "home_presence";
 
+    /// <summary>
+    /// sensor dont la valeur est un OBJET : l'état de l'alarme, publié par le cœur (état, décompte, capteur en cause,
+    /// défauts du dernier contrôle). Lecture seule : l'armement passe par un code (page Alarme, API).
+    /// </summary>
+    public const string Alarm = "alarm";
+
     // Supervision de la connexion Internet : les mêmes classes quelle que soit la box (Livebox, Freebox…), pour que la
     // supervision du cœur ne dépende pas du fournisseur.
 

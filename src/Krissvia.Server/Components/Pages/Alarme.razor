@@ -1,0 +1,200 @@
+@page "/alarme"
+@using Krissvia.Climate.Alarm
+@implements IDisposable
+
+<PageTitle>Alarme · Krissvia</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">Alarme</MudText>
+
+@if (_erreur is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="() => _erreur = null">@_erreur</MudAlert>
+}
+
+<MudGrid>
+    <MudItem xs="12" md="6">
+        <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-3">
+                <MudIcon Icon="@Icone" Size="Size.Large" Style="@($"color:{Couleur}")" />
+                <div>
+                    <MudText Typo="Typo.h6">@Titre</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">@SousTitre</MudText>
+                </div>
+            </MudStack>
+
+            @if (!Service.Settings.Enabled)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                    L'alarme est désactivée : choisissez ses capteurs, puis activez-la dans les réglages ci-dessous.
+                </MudAlert>
+            }
+            else
+            {
+                @if (Defauts.Count > 0 && Etat.Mode == AlarmMode.Disarmed)
+                {
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary mb-1">L'armement serait refusé :</MudText>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        @foreach (var d in Defauts) { <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">@d</MudChip> }
+                    </div>
+                }
+                else if (Centrale.LastFaults != AlarmFaults.None && Etat.Mode == AlarmMode.Disarmed)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">Dernier refus : @Centrale.LastFaults</MudText>
+                }
+
+                <MudStack Row="true" Spacing="2">
+                    @if (Etat.Mode == AlarmMode.Disarmed)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Lock" OnClick="() => CommanderAsync(true)">Armer</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.LockOpen" OnClick="() => CommanderAsync(false)">Désarmer</MudButton>
+                    }
+                </MudStack>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2">
+                    Ici sans code, puisque vous êtes connecté : c'est l'échappatoire d'un clavier bloqué. L'API et les
+                    claviers logiciels demandent un code.
+                </MudText>
+            }
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
+            <MudText Typo="Typo.h6" Class="mb-2">Journal</MudText>
+            @if (Service.Journal.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Rien pour l'instant.</MudText>
+            }
+            else
+            {
+                <div style="max-height: 260px; overflow-y: auto">
+                    <MudSimpleTable Dense="true" Elevation="0">
+                        <tbody>
+                            @foreach (var l in Service.Journal.Take(50))
+                            {
+                                <tr>
+                                    <td class="mud-text-secondary" style="white-space: nowrap">@Heure(l.At)</td>
+                                    <td>@l.Text</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </div>
+            }
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12">
+        <MudPaper Elevation="1" Class="pa-4 rounded-lg">
+            <MudText Typo="Typo.h6" Class="mb-1">Capteurs</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">
+                <b>Temporisé</b> : la porte par laquelle on rentre, qui laisse le temps de désarmer — jamais une fenêtre.
+                <b>Contrôle seul</b> : vérifié à l'armement (resté ouvert, muet) sans jamais déclencher. Un détecteur de
+                mouvement n'empêche pas d'armer quand il vous voit ; son silence, si.
+            </MudText>
+            @if (_capteurs.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    Aucun capteur d'ouverture ni détecteur de mouvement parmi les entités.
+                </MudText>
+            }
+            else
+            {
+                <MudSimpleTable Dense="true" Elevation="0">
+                    <thead><tr><th>Capteur</th><th>État</th><th style="width: 220px">Rôle</th></tr></thead>
+                    <tbody>
+                        @foreach (var e in _capteurs)
+                        {
+                            <tr @key="e.EntityId">
+                                <td>@e.DisplayName <span class="mud-text-secondary">· @(e.DeviceClass == Krissvia.Contracts.DeviceClasses.Occupancy ? "détecteur" : "ouverture")</span></td>
+                                <td>@EtatCapteur(e)</td>
+                                <td>
+                                    <MudSelect Dense="true" T="string" @bind-Value="_roles[e.EntityId]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                        <MudSelectItem Value="@Aucun">Non surveillé</MudSelectItem>
+                                        <MudSelectItem Value="@nameof(SensorRole.Immediate)">Immédiat</MudSelectItem>
+                                        <MudSelectItem Value="@nameof(SensorRole.Delayed)">Temporisé</MudSelectItem>
+                                        <MudSelectItem Value="@nameof(SensorRole.FaultOnly)">Contrôle seul</MudSelectItem>
+                                    </MudSelect>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="7">
+        <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
+            <MudText Typo="Typo.h6" Class="mb-2">Réglages</MudText>
+            <MudSwitch T="bool" @bind-Value="_actif" Color="Color.Primary" Label="Alarme active" Class="mb-2" />
+            <MudGrid Spacing="2">
+                <MudItem xs="6" sm="3">
+                    <MudNumericField T="int" @bind-Value="_sortie" Label="Sortie (s)" Min="0" Max="600" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudNumericField T="int" @bind-Value="_entree" Label="Entrée (s)" Min="0" Max="600" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudNumericField T="int" @bind-Value="_silence" Label="Muet après (min)" Min="0" Max="10080" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                     HelperText="0 : pas de contrôle" />
+                </MudItem>
+                <MudItem xs="6" sm="3" />
+                <MudItem xs="4">
+                    <MudNumericField T="int" @bind-Value="_sonnerie" Label="Sonnerie (s)" Min="10" Max="30" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="4">
+                    <MudNumericField T="int" @bind-Value="_sonneries" Label="Sonneries" Min="1" Max="10" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="4">
+                    <MudNumericField T="int" @bind-Value="_pause" Label="Pause (s)" Min="5" Max="120" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect T="string" Dense="true" MultiSelection="true" @bind-SelectedValues="_sirenes" Label="Sirènes" Variant="Variant.Outlined" Margin="Margin.Dense"
+                               HelperText="Allumées à chaque sonnerie, éteintes pendant les pauses, après la dernière et au désarmement" ToStringFunc="Nom">
+                        @foreach (var e in _actionneurs)
+                        {
+                            <MudSelectItem Value="e.EntityId">@e.DisplayName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+            <MudSwitch T="bool" @bind-Value="_notifDeclenchement" Color="Color.Primary" Label="Notifier un déclenchement" Class="mt-2" />
+            <MudSwitch T="bool" @bind-Value="_notifArmement" Color="Color.Primary" Label="Notifier l'armement" />
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">
+                Par ntfy (<MudLink Href="/parametres/notifications">Notifications</MudLink>). Un armement abandonné, porte restée ouverte, est toujours notifié.
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="EnregistrerAsync">Enregistrer</MudButton>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="5">
+        <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
+            <MudText Typo="Typo.h6" Class="mb-1">Codes</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">
+                Pour l'API et les claviers logiciels. Jamais enregistrés en clair ; trois codes faux bloquent 60 s.
+            </MudText>
+            @foreach (var (id, nom) in Service.CodeHolders)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" @key="id">
+                    <MudText>@nom</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" title="Retirer ce code"
+                                   OnClick="() => RetirerCodeAsync(id, nom)" />
+                </MudStack>
+            }
+            <MudGrid Spacing="2" Class="mt-1">
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="_nomCode" Label="Personne" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="_code" Label="Code" InputType="InputType.Password" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                                  autocomplete="new-password" />
+                </MudItem>
+            </MudGrid>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">4 à 12 chiffres. Le même nom remplace son code.</MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Key" OnClick="DonnerCodeAsync">Enregistrer le code</MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>

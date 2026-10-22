@@ -107,6 +107,10 @@ builder.Services.AddSingleton<DeviceScheduleService>();
 builder.Services.AddSingleton<Krissvia.Climate.Automations.AutomationEngine>();
 builder.Services.AddSingleton<Krissvia.Climate.Automations.AutomationService>();
 
+// Alarme : machine à états de DomoMud, capteurs d'ouverture et détecteurs, sirènes, codes des claviers logiciels.
+builder.Services.AddSingleton<Krissvia.Climate.Alarm.AlarmService>();
+builder.Services.AddSingleton<Krissvia.Climate.Alarm.AlarmEngine>();
+
 // Ordre de démarrage : schéma et états d'abord (les hosted services démarrent avant que Kestrel accepte un
 // plugin), puis la configuration des thermostats, qui lit la base.
 builder.Services.AddHostedService<StateStoreLifetime>();
@@ -118,6 +122,7 @@ builder.Services.AddHostedService<AutomationLoop>();
 builder.Services.AddHostedService<AlertLoop>();
 builder.Services.AddHostedService<PresenceLoop>();
 builder.Services.AddHostedService<RoomAverageLoop>();
+builder.Services.AddHostedService<AlarmLoop>();
 
 // Services : les plugins installés sur cette machine, lancés et surveillés par le cœur.
 builder.Services.AddSingleton<IPluginLauncher, ProcessPluginLauncher>();
@@ -183,6 +188,7 @@ api.MapLoadSheddingApi();
 api.MapAbsenceApi();
 api.MapDeviceScheduleApi();
 api.MapAutomationApi();
+api.MapAlarmApi();
 api.MapEntityApi();
 api.MapWidgetApi();
 
