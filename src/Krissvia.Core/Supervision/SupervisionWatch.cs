@@ -31,7 +31,7 @@ public sealed class SupervisionWatch(AlertService alerts, NotificationService no
 {
     public static readonly TimeSpan StartupGrace = TimeSpan.FromMinutes(10);
 
-    private static readonly string[] Prefixes = ["plugin:", "internet:", "presence", "disque", "capteur:", "pile:", "probleme:"];
+    private static readonly string[] Prefixes = ["plugin:", "internet:", "presence", "disque", "capteur:", "pile:", "probleme:", "reference:"];
 
     private readonly DateTimeOffset _demarrage = clock.GetUtcNow();
     private readonly SemaphoreSlim _verrou = new(1, 1);
@@ -120,6 +120,8 @@ public sealed class SupervisionWatch(AlertService alerts, NotificationService no
             SupervisionCategory.Disk => new("Espace disque faible", $"{Majuscule(it.Detail)}.", 4, ["floppy_disk"]),
             SupervisionCategory.Sensor => new($"Capteur muet : {it.Name}", $"{it.Name} : {it.Detail}.", 4, ["warning"]),
             SupervisionCategory.Problem => new($"Problème : {it.Name}", $"{it.Name} : {it.Detail}, depuis {heure}.", 4, ["warning"]),
+            SupervisionCategory.Reference => new($"Référence cassée : {it.Name}",
+                $"{it.Name} vise une entité inutilisable depuis {heure} — {it.Detail}. À corriger dans sa fiche.", 4, ["link"]),
             _ => new($"Pile faible : {it.Name}", $"{it.Name} : {it.Detail}.", 3, ["battery"]),
         };
     }
@@ -132,6 +134,7 @@ public sealed class SupervisionWatch(AlertService alerts, NotificationService no
         SupervisionCategory.Disk => new("Espace disque correct", $"{Majuscule(it.Detail)}.", 1, ["white_check_mark"]),
         SupervisionCategory.Sensor => new($"Capteur rétabli : {it.Name}", $"{it.Name} émet de nouveau.", 2, ["white_check_mark"]),
         SupervisionCategory.Problem => new($"Problème résolu : {it.Name}", $"{it.Name} : plus de problème signalé.", 2, ["white_check_mark"]),
+        SupervisionCategory.Reference => new($"Référence réparée : {it.Name}", $"{it.Name} : {it.Detail}.", 2, ["white_check_mark"]),
         _ => new($"Pile remplacée : {it.Name}", $"{it.Name} : {it.Detail}.", 1, ["battery"]),
     };
 

@@ -157,6 +157,31 @@ public class ReglagesPluginsTests
     }
 
     [Fact]
+    public async Task Les_entites_choisies_dans_les_reglages_d_un_plugin_active_sont_des_references()
+    {
+        var banc = await BancPlugins.CreerAsync();
+        await using var _ = banc;
+        var magasin = new Magasin();
+        var reglages = new PluginSettingsService(magasin);
+        var fiche = Fiche("Krissvia.Plugin.OpenHasp") with { Directory = "/plugins/openhasp" };
+        await reglages.SaveAsync(fiche, JsonNode.Parse("""
+            {"Mqtt":{"Host":"127.0.0.1"},"Platines":[{"Noeud":"appart1","Thermostat":"climate.salon",
+              "Interrupteurs":[{"Entite":"light.lampe_salon"}]}],"Alarme":{"Entite":"sensor.maison_alarme"}}
+            """)!.AsObject());
+        var superviseur = new PluginSupervisor(magasin, banc.Hub, banc.Options, new SuperviseurTests.FauxLanceur(), banc.Horloge,
+            NullLogger<PluginSupervisor>.Instance, reglages) { CoreUrl = "ws://127.0.0.1:12795/plugins" };
+        await superviseur.LoadAsync([fiche]);
+        var source = new PluginSettingsReferences(superviseur, reglages);
+
+        Assert.Empty(await source.GetReferencesAsync());   // désactivé : il ne lit rien, rien à vérifier
+
+        await superviseur.SetEnabledAsync("openhasp", true);
+        var references = await source.GetReferencesAsync();
+        Assert.Equal(["climate.salon", "light.lampe_salon", "sensor.maison_alarme"], references.Select(r => r.EntityId).Order());
+        Assert.All(references, r => Assert.Equal(("plugin", "openhasp", "Plugin openHASP"), (r.OwnerKind, r.OwnerId, r.OwnerName)));
+    }
+
+    [Fact]
     public async Task Le_superviseur_transmet_les_reglages_sans_qu_ils_puissent_ecraser_l_adresse_ni_le_jeton()
     {
         var banc = await BancPlugins.CreerAsync();

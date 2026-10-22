@@ -16,6 +16,7 @@
 | **Capteur muet** | aucune mesure depuis le seuil, ou indisponible | 120 min (10 min à 48 h) | `capteur:{entité}` |
 | **Problème signalé** | `binary_sensor` de classe `problem` à vrai : un plugin le dit (sous-tension d'un Raspberry…), le cœur n'a pas à le connaître. Début = premier constat (le plugin republie à chaque relevé) | aucun | `probleme:{entité}` |
 | **Pile faible** | `battery` en % au seuil ou dessous ; en vrai/faux, à vrai. Fin au-dessus du seuil + 5 (marge) | 20 % | `pile:{entité}` |
+| **Référence cassée** | une entité visée par un thermostat (sonde, radiateurs, extérieure, prévision, ouverture), une programmation active, le délestage activé (mesure, équipements), l'alarme activée (capteurs, sirènes) ou les réglages d'un plugin **activé** (contrat 0.3) est inconnue (renommée, supprimée), n'est plus déclarée par son plugin, ou désactivée. La page montre le compte et les seules cassées | 10 min (1 à 120) | `reference:{type}:{id}:{rôle}:{entité}` |
 
 Réglages : page Supervision (collection `alertes`, document `reglages`, à côté de l'alerte gel). Chaque page relit
 le document au moment d'enregistrer : l'une n'écrase pas ce que l'autre vient de changer.
@@ -65,6 +66,9 @@ prend 10 s par essai, et la protection électrique ne doit jamais l'attendre.
 — panne au-delà de son délai —, `detail`, `since`) et `alerts` (toutes les alertes en cours, gel compris).
 
 ## 6. Pas encore
+
+- Les automatismes et le tableau de bord ne déclarent pas encore leurs références : une carte ou une règle qui vise une
+  entité disparue ne se signale pas.
 
 - MQTT perdu (famille DomoMud) : le MQTT est l'affaire des plugins. Un plugin qui perd son broker reste connecté au
   cœur ; ses capteurs, indisponibles ou simplement silencieux, finissent signalés un par un comme muets. Une alerte

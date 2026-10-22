@@ -138,6 +138,9 @@ builder.Services.AddHostedService(sp => ActivatorUtilities.CreateInstance<Superv
 builder.Services.AddSingleton<IPluginLauncher, ProcessPluginLauncher>();
 builder.Services.AddSingleton<PluginSettingsService>();
 builder.Services.AddSingleton<IPluginSettingsProvider>(sp => sp.GetRequiredService<PluginSettingsService>());
+// Ce que visent les modules et les plugins : la supervision signale une référence cassée (renommage, suppression).
+builder.Services.AddSingleton<IEntityReferenceSource, ClimateEntityReferences>();
+builder.Services.AddSingleton<IEntityReferenceSource, PluginSettingsReferences>();
 builder.Services.AddSingleton<PluginSupervisor>();
 builder.Services.AddHostedService<PluginSupervisorLifetime>();
 

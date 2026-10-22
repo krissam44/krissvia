@@ -20,8 +20,8 @@ public partial class Supervision : IDisposable
 
     private sealed class Formulaire
     {
-        public bool Plugins, Internet, Capteurs, Piles, Disque, Presence, Delestage, Problemes;
-        public int PluginsMin, InternetMin, CapteursMin, PilesPct, DisqueMo;
+        public bool Plugins, Internet, Capteurs, Piles, Disque, Presence, Delestage, Problemes, References;
+        public int PluginsMin, InternetMin, CapteursMin, PilesPct, DisqueMo, ReferencesMin;
     }
 
     private Formulaire _f = new();
@@ -43,6 +43,7 @@ public partial class Supervision : IDisposable
             Presence = r.Presence.Enabled,
             Delestage = r.LoadShedding.Enabled,
             Problemes = r.Problems.Enabled,
+            References = r.References.Enabled, ReferencesMin = r.References.GraceMinutes,
         };
         Surveillance.Changed += Rafraichir;
         Alertes.Changed += Rafraichir;
@@ -66,6 +67,7 @@ public partial class Supervision : IDisposable
                 Presence = new PresenceAlertSettings { Enabled = _f.Presence },
                 LoadShedding = new LoadSheddingAlertSettings { Enabled = _f.Delestage },
                 Problems = new ProblemAlertSettings { Enabled = _f.Problemes },
+                References = new GraceAlertSettings { Enabled = _f.References, GraceMinutes = _f.ReferencesMin },
             });
             Snackbar.Add("Réglages enregistrés ; pris en compte au prochain contrôle (dans la minute).", Severity.Success);
         }
@@ -83,6 +85,7 @@ public partial class Supervision : IDisposable
         SupervisionCategory.Disk => Icons.Material.Filled.Storage,
         SupervisionCategory.Battery => Icons.Material.Filled.BatteryAlert,
         SupervisionCategory.Problem => Icons.Material.Filled.ReportProblem,
+        SupervisionCategory.Reference => Icons.Material.Filled.LinkOff,
         _ => Icons.Material.Filled.Sensors,
     };
 
@@ -106,6 +109,15 @@ public partial class Supervision : IDisposable
         var faibles = piles.Count(i => i.Item.Problem);
         return $"{capteurs.Count} capteur(s) surveillé(s), {(muets == 0 ? "tous émettent" : $"{muets} muet(s)")} ; "
              + $"{piles.Count} pile(s), {(faibles == 0 ? "aucune faible" : $"{faibles} faible(s)")}.";
+    }
+
+    private static string BilanReferences(SupervisionReport r)
+    {
+        var references = r.Items.Where(i => i.Item.Category == SupervisionCategory.Reference).ToList();
+        var cassees = references.Count(i => i.Item.Problem);
+        return references.Count == 0
+            ? "Aucune entité visée par un thermostat, une programmation, le délestage, l'alarme ou un plugin."
+            : $"{references.Count} référence(s) vérifiée(s) : {(cassees == 0 ? "toutes mènent à une entité utilisable" : $"{cassees} cassée(s)")}.";
     }
 
     private static string Envoi(SendOutcome o) => o switch

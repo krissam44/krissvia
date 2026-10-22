@@ -24,8 +24,8 @@ public class SupervisionTests
     };
 
     private static SupervisionInput Entree(DateTimeOffset now, EtatsEnMemoire etats, IReadOnlyList<RegisteredEntity> entites,
-        IReadOnlyList<PluginHealth>? plugins = null, bool? presence = null, long? disque = null) =>
-        new(now, entites, etats, plugins ?? [], presence, disque, TimeZoneInfo.Utc);
+        IReadOnlyList<PluginHealth>? plugins = null, bool? presence = null, long? disque = null, IReadOnlyList<EntityReference>? references = null) =>
+        new(now, entites, etats, plugins ?? [], presence, disque, TimeZoneInfo.Utc, references);
 
     // ── Règles ───────────────────────────────────────────────────────────────
 
@@ -98,6 +98,39 @@ public class SupervisionTests
         Assert.Empty(SupervisionRules.Evaluate(Entree(T0, etats, []), Reglages, false));   // aucun suivi, disque inconnu
     }
 
+    [Fact]
+    public void Une_reference_vers_une_entite_inconnue_retiree_ou_desactivee_est_cassee()
+    {
+        var entites = new[]
+        {
+            E("switch.radiateur_salon", EntityKind.Switch, null),
+            E("switch.vieux", EntityKind.Switch, null) with { Missing = true },
+            E("sensor.cave", EntityKind.Sensor, DeviceClasses.Temperature, active: false),
+        };
+        EntityReference R(string entite, string role = "radiateur") => new("thermostat", "salon", role, entite, "Thermostat Salon");
+        var references = new[]
+        {
+            R("switch.radiateur_salon"), R("switch.radiateur_salon"),   // doublon : un seul point
+            R("switch.radiateur_chbre_rdc"), R("switch.vieux"), R("sensor.cave", "sonde"),
+        };
+
+        var items = SupervisionRules.Evaluate(Entree(T0, new EtatsEnMemoire(), entites, references: references), Reglages, false)
+            .Where(i => i.Category == SupervisionCategory.Reference).ToDictionary(i => i.Key);
+
+        Assert.Equal(4, items.Count);
+        Assert.False(items["reference:thermostat:salon:radiateur:switch.radiateur_salon"].Problem);
+        var inconnue = items["reference:thermostat:salon:radiateur:switch.radiateur_chbre_rdc"];
+        Assert.True(inconnue.Problem);
+        Assert.Equal("Thermostat Salon", inconnue.Name);
+        Assert.Equal("radiateur « switch.radiateur_chbre_rdc » : entité inconnue (renommée ou supprimée ?)", inconnue.Detail);
+        Assert.Contains("ne la déclare plus", items["reference:thermostat:salon:radiateur:switch.vieux"].Detail);
+        Assert.Contains("désactivée", items["reference:thermostat:salon:sonde:sensor.cave"].Detail);
+        Assert.All(items.Values, i => Assert.Equal(10, i.GraceMinutes));
+
+        Assert.DoesNotContain(SupervisionRules.Evaluate(Entree(T0, new EtatsEnMemoire(), entites, references: references),
+            Reglages with { References = new GraceAlertSettings { Enabled = false } }, false), i => i.Category == SupervisionCategory.Reference);
+    }
+
     // ── Alertes ──────────────────────────────────────────────────────────────
 
     private sealed class Magasin : IConfigurationStore
@@ -140,6 +173,7 @@ public class SupervisionTests
         public SupervisionWatch Supervision { get; }
         public List<RegisteredEntity> Entites { get; } = [];
         public List<PluginHealth> Plugins { get; } = [];
+        public List<EntityReference> References { get; } = [];
 
         public Banc()
         {
@@ -153,7 +187,7 @@ public class SupervisionTests
         public Task<SupervisionReport> VerifierAsync(TimeSpan apres)
         {
             Horloge.SetUtcNow(T0 + apres);
-            return Supervision.CheckAsync(Entree(Horloge.GetUtcNow(), Etats, Entites, Plugins));
+            return Supervision.CheckAsync(Entree(Horloge.GetUtcNow(), Etats, Entites, Plugins, references: References));
         }
 
         public IEnumerable<string> Titres => Ntfy.Recues.Select(r => r.Titre);
@@ -256,6 +290,32 @@ public class SupervisionTests
 
         Assert.Equal(["Problème : binary_sensor.pi_sous_tension", "Problème résolu : binary_sensor.pi_sous_tension"], b.Titres);
         Assert.Contains("depuis 22/10 10:00", b.Ntfy.Recues[0].Message);
+    }
+
+    [Fact]
+    public async Task Une_reference_cassee_alerte_apres_son_delai_se_dit_reparee_et_s_oublie_si_son_objet_disparait()
+    {
+        var b = new Banc();
+        b.References.Add(new EntityReference("thermostat", "salon", "radiateur", "switch.radiateur_salon", "Thermostat Salon"));
+        await b.VerifierAsync(Min(0));
+        await b.VerifierAsync(Min(9));
+        Assert.Empty(b.Titres);   // le temps de finir un renommage
+
+        await b.VerifierAsync(Min(10));
+        Assert.Equal(["Référence cassée : Thermostat Salon"], b.Titres);
+
+        b.Entites.Add(E("switch.radiateur_salon", EntityKind.Switch, null));   // l'appareil revient sous ce nom
+        await b.VerifierAsync(Min(11));
+        Assert.Equal(["Référence cassée : Thermostat Salon", "Référence réparée : Thermostat Salon"], b.Titres);
+
+        b.Entites.Clear();
+        await b.VerifierAsync(Min(30));
+        await b.VerifierAsync(Min(41));
+        Assert.True(b.Alertes.IsActive("reference:thermostat:salon:radiateur:switch.radiateur_salon"));
+        b.References.Clear();   // le thermostat a été supprimé : plus rien à surveiller, pas de « réparée »
+        await b.VerifierAsync(Min(42));
+        Assert.False(b.Alertes.IsActive("reference:thermostat:salon:radiateur:switch.radiateur_salon"));
+        Assert.Equal(3, b.Titres.Count());
     }
 
     [Fact]

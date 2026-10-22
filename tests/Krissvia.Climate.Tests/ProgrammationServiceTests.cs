@@ -99,6 +99,21 @@ public class ProgrammationServiceTests
     }
 
     [Fact]
+    public async Task Un_switch_programme_ne_peut_pas_devenir_le_radiateur_d_un_thermostat()
+    {
+        var b = new Banc();
+        await b.Service.SaveAsync(Matin(interrupteur: Radiateur));
+        var salon = new ThermostatSettings { Id = "salon", TemperatureEntityId = Sonde, SwitchEntityIds = [Radiateur] };
+
+        var ex = await Assert.ThrowsAsync<ThermostatValidationException>(() => b.Thermostats.SaveAsync(salon));
+        Assert.Contains("« Radiateur salon » est déjà piloté par la programmation « Matin »", ex.Message);
+        Assert.Empty(b.Thermostats.List());
+
+        await b.Service.DeleteAsync("matin");
+        await b.Thermostats.SaveAsync(salon);   // libéré : accepté
+    }
+
+    [Fact]
     public async Task Un_switch_n_appartient_qu_a_une_programmation()
     {
         var b = new Banc();

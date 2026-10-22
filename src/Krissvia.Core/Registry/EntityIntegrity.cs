@@ -5,7 +5,8 @@ namespace Krissvia.Core.Registry;
 /// <param name="OwnerId">Identifiant de l'objet qui référence.</param>
 /// <param name="Role">Rôle de l'entité : « temperature_interieure », « sortie »…</param>
 /// <param name="EntityId">Entité visée.</param>
-public sealed record EntityReference(string OwnerKind, string OwnerId, string Role, string EntityId);
+/// <param name="OwnerName">Nom de l'objet pour un humain (« Thermostat Salon », « Plugin openHASP ») ; à défaut, type et identifiant.</param>
+public sealed record EntityReference(string OwnerKind, string OwnerId, string Role, string EntityId, string? OwnerName = null);
 
 /// <summary>Implémentée par chaque module qui référence des entités.</summary>
 public interface IEntityReferenceSource
@@ -41,16 +42,19 @@ public sealed class EntityIntegrityChecker(IEntityRegistry registry, IEnumerable
         foreach (var source in sources)
         {
             foreach (var reference in await source.GetReferencesAsync(ct))
-            {
-                if (!entites.TryGetValue(reference.EntityId, out var entite))
-                    problemes.Add(new IntegrityIssue(reference, ReferenceProblem.Unknown));
-                else if (entite.Missing)
-                    problemes.Add(new IntegrityIssue(reference, ReferenceProblem.Missing));
-                else if (!entite.Enabled)
-                    problemes.Add(new IntegrityIssue(reference, ReferenceProblem.Disabled));
-            }
+                if (Classify(entites.GetValueOrDefault(reference.EntityId)) is { } probleme)
+                    problemes.Add(new IntegrityIssue(reference, probleme));
         }
 
         return problemes;
     }
+
+    /// <summary>Ce qui ne va pas avec l'entité visée ; null si elle est utilisable.</summary>
+    public static ReferenceProblem? Classify(RegisteredEntity? entite) => entite switch
+    {
+        null => ReferenceProblem.Unknown,
+        { Missing: true } => ReferenceProblem.Missing,
+        { Enabled: false } => ReferenceProblem.Disabled,
+        _ => null,
+    };
 }

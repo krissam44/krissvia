@@ -6,7 +6,7 @@ using Krissvia.Core.States;
 
 namespace Krissvia.Core.Supervision;
 
-public enum SupervisionCategory { Internet, Plugin, Presence, Disk, Sensor, Battery, Problem }
+public enum SupervisionCategory { Internet, Plugin, Presence, Disk, Sensor, Battery, Problem, Reference }
 
 /// <summary>L'état d'un plugin activé, tel que la supervision le voit.</summary>
 public sealed record PluginHealth(string Id, string Name, bool Connected);
@@ -16,6 +16,7 @@ public sealed record PluginHealth(string Id, string Name, bool Connected);
 /// <param name="PresenceLost">Détection de présence perdue ; null : aucun appareil suivi, rien à surveiller.</param>
 /// <param name="DiskFreeBytes">Espace libre à côté de la base ; null : inconnu.</param>
 /// <param name="Zone">Le fuseau des heures écrites dans les messages ; null : celui du serveur.</param>
+/// <param name="References">Les entités que visent les modules et les plugins (<see cref="IEntityReferenceSource"/>).</param>
 public sealed record SupervisionInput(
     DateTimeOffset Now,
     IReadOnlyList<RegisteredEntity> Entities,
@@ -23,7 +24,8 @@ public sealed record SupervisionInput(
     IReadOnlyList<PluginHealth> Plugins,
     bool? PresenceLost,
     long? DiskFreeBytes,
-    TimeZoneInfo? Zone = null);
+    TimeZoneInfo? Zone = null,
+    IReadOnlyList<EntityReference>? References = null);
 
 /// <summary>Un point surveillé, en panne ou non.</summary>
 /// <param name="Key">La clé de l'alerte : un incident par clé.</param>
@@ -103,6 +105,28 @@ public static class SupervisionRules
                 items.Add(new SupervisionItem($"probleme:{e.EntityId}", SupervisionCategory.Problem, e.DisplayName, probleme,
                     // Pas d'instant de mesure : le plugin republie à chaque relevé, le début est le premier constat.
                     probleme ? "signalé par son plugin" : "aucun"));
+            }
+        }
+
+        // Une référence cassée ne fait rien de bruyant : le thermostat régule « dans le vide », la platine affiche un
+        // tiret. C'est exactement la panne silencieuse de DomoMud (03/10/2026, un radiateur renommé) : on la dit.
+        if (r.References.Enabled && entree.References is { Count: > 0 } references)
+        {
+            var parId = entree.Entities.ToDictionary(e => e.EntityId, StringComparer.Ordinal);
+            foreach (var reference in references.DistinctBy(x => (x.OwnerKind, x.OwnerId, x.Role, x.EntityId)))
+            {
+                var probleme = EntityIntegrityChecker.Classify(parId.GetValueOrDefault(reference.EntityId));
+                items.Add(new SupervisionItem(
+                    $"reference:{reference.OwnerKind}:{reference.OwnerId}:{reference.Role}:{reference.EntityId}", SupervisionCategory.Reference,
+                    reference.OwnerName ?? $"{reference.OwnerKind} {reference.OwnerId}", probleme is not null,
+                    $"{reference.Role} « {reference.EntityId} » : " + probleme switch
+                    {
+                        ReferenceProblem.Unknown => "entité inconnue (renommée ou supprimée ?)",
+                        ReferenceProblem.Missing => "son plugin ne la déclare plus",
+                        ReferenceProblem.Disabled => "entité désactivée",
+                        _ => "présente",
+                    },
+                    GraceMinutes: r.References.GraceMinutes));
             }
         }
 

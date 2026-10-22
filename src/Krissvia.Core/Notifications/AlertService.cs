@@ -81,6 +81,12 @@ public sealed record AlertSettings
     public DiskAlertSettings Disk { get; init; } = new();
     public LoadSheddingAlertSettings LoadShedding { get; init; } = new();
     public ProblemAlertSettings Problems { get; init; } = new();
+
+    /// <summary>
+    /// Références cassées : un thermostat, une programmation, un plugin… qui vise une entité inconnue, retirée ou
+    /// désactivée. Délai : le temps de finir de renommer, ou qu'un plugin redéclare ses entités au démarrage.
+    /// </summary>
+    public GraceAlertSettings References { get; init; } = new() { GraceMinutes = 10 };
 }
 
 /// <summary>Un incident signalé et pas encore rétabli.</summary>
@@ -205,7 +211,8 @@ public sealed class AlertService(NotificationService notifier, IConfigurationSto
             throw new NotificationValidationException("capteur muet après : de 10 min à 48 h");
         if (reglages.Battery.ThresholdPercent is < 1 or > 90)
             throw new NotificationValidationException("seuil de pile faible : de 1 à 90 %");
-        if (reglages.Plugins.GraceMinutes is < 1 or > 120 || reglages.Internet.GraceMinutes is < 1 or > 120)
+        if (reglages.Plugins.GraceMinutes is < 1 or > 120 || reglages.Internet.GraceMinutes is < 1 or > 120
+            || reglages.References.GraceMinutes is < 1 or > 120)
             throw new NotificationValidationException("délai avant alerte : de 1 à 120 min");
         if (reglages.Disk.MinFreeMegabytes is < 100 or > 102400)
             throw new NotificationValidationException("espace disque minimal : de 100 Mo à 100 Go");
