@@ -211,6 +211,49 @@ public sealed class WidgetCatalogTests : IDisposable
     }
 
     [Fact]
+    public void Un_plugin_livre_ses_widgets_sous_son_adresse_sans_prendre_un_identifiant_existant()
+    {
+        var plugin = Path.Combine(_racine, "plugin-proxmox", "widgets");
+        Deposer(Standards, "valeur", Manifeste("valeur"));
+        Deposer(plugin, "vm", Manifeste("proxmox-vm"));
+        Deposer(plugin, "copie", Manifeste("valeur"));
+
+        var catalogue = WidgetCatalog.Load(
+        [
+            WidgetSource.FromDirectory(Standards, WidgetCatalog.Standard, "/widgets/standard"),
+            WidgetSource.FromDirectory(plugin, WidgetCatalog.PluginOrigin("proxmox"), WidgetCatalog.PluginBaseUrl + "/proxmox"),
+        ]);
+
+        var vm = catalogue.Find("proxmox-vm")!;
+        Assert.Equal("plugin:proxmox", vm.Origin);
+        Assert.Equal("proxmox", WidgetCatalog.PluginOf(vm.Origin));
+        Assert.Equal("/widgets/plugins/proxmox/vm/w.js", vm.ScriptUrl);
+        Assert.Equal(WidgetCatalog.Standard, catalogue.Find("valeur")!.Origin);   // le standard garde son identifiant
+        Assert.Contains(catalogue.Errors, e => e.StartsWith("plugin:proxmox/copie", StringComparison.Ordinal) && e.Contains("déjà pris"));
+        Assert.Null(WidgetCatalog.PluginOf(WidgetCatalog.Local));
+    }
+
+    [Theory]
+    [InlineData("vm/w.js", true)]
+    [InlineData("vm/../vm/w.js", false)]
+    [InlineData("../plugin.json", false)]
+    [InlineData("vm//w.js", false)]
+    [InlineData("./vm/w.js", false)]
+    [InlineData(@"vm\w.js", false)]
+    [InlineData("C:/Windows/win.ini", false)]
+    [InlineData("/etc/passwd", false)]
+    [InlineData("vm/absent.js", false)]
+    [InlineData("", false)]
+    public void Un_fichier_de_widget_de_plugin_ne_sort_jamais_du_dossier_widgets(string chemin, bool servi)
+    {
+        var plugin = Path.Combine(_racine, "plugin");
+        Deposer(Path.Combine(plugin, "widgets"), "vm", Manifeste("vm"));
+        File.WriteAllText(Path.Combine(plugin, "plugin.json"), "{}");
+
+        Assert.Equal(servi, WidgetCatalog.SafeFile(Path.Combine(plugin, "widgets"), chemin) is not null);
+    }
+
+    [Fact]
     public void L_alarme_du_coeur_a_sa_carte_avec_clavier_par_defaut()
     {
         var catalogue = WidgetCatalog.Load([WidgetSource.FromDirectory(DossierLivre(), WidgetCatalog.Standard, "/widgets/standard")]);

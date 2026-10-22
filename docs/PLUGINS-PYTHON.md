@@ -92,6 +92,9 @@ krissvia.run(Cave(), Cave.surveiller, plugin_version="1.0.0")
   (fonction `pid → bool`) servent aux tests. Ne jamais tester l'existence d'un processus avec
   `os.kill(pid, 0)` sous Windows : il le **tue** ; `krissvia.process_alive` passe par `OpenProcess`.
 
+Un plugin peut livrer ses **cartes de tableau de bord** : un dossier `widgets/` à côté de `plugin.json`, un
+sous-dossier par widget (`widget.json` et son script). Publiées tant que le plugin est activé (WIDGETS.md §13).
+
 ## 5. Tests
 
 ```bash

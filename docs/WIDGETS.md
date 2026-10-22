@@ -183,7 +183,7 @@ mesure (deux slots), thermostat (slot `thermostat`), batterie. Courbe et histori
 - `POST /api/entities/{id}/commands` : ordre vérifié, signé `widget:{id}`.
 - **Flux en direct** : WebSocket `/api/live` (ou SSE) qui pousse chaque changement d'état et du registre, filtrable
   par entité. Le tableau de bord s'y abonne une fois et répartit vers les cartes.
-- `GET /api/widgets` : le catalogue (standards, dossier `widgets/`, plugins), avec les erreurs de chargement.
+- `GET /api/widgets` : le catalogue (standards, dossier `widgets/`, plugins activés), avec les erreurs de chargement.
 - Authentification : la session de l'interface ou la clé d'API, comme le reste de `/api`.
 
 ## 9. Confiance
@@ -233,7 +233,37 @@ laisse rien ; replier une section hors édition s'enregistre aussitôt.
   état, décomptes, clavier qui arme et désarme avec un code, `ALARME.md` §6). À score égal, le widget
   dont le slot principal accepte le moins de classes l'emporte (Linky devant Puissance), après la règle « installé exprès ».
 - Widgets locaux : dossier `widgets` à côté de la base (ou `Widgets:Directory`), publié sous `/widgets/local`.
-- Pas encore : widgets livrés par un plugin.
+- **Widgets livrés par un plugin** (22/10/2026) : le dossier `widgets/` à côté du `plugin.json`, un sous-dossier par
+  widget, comme `widgets/` de l'installation. Voir §13.
+
+## 13. Widgets livrés par un plugin (22/10/2026)
+
+Un plugin qui publie une entité particulière (une machine virtuelle Proxmox, la santé d'un Raspberry) livre la carte
+qui va avec, sans toucher au cœur :
+
+```
+Krissvia.Plugin.Proxmox/        (le dossier du plugin.json : bin/… pour un plugin C#, le dossier lui-même en Python)
+  plugin.json
+  widgets/
+    proxmox-vm/
+      widget.json
+      proxmox-vm.js
+```
+
+- **Plugins ACTIVÉS seulement** : un plugin désactivé dans Services ne publie plus ses widgets — ils sortent du
+  catalogue, leurs fichiers répondent 404, et une carte qui en utilisait un retombe sur le widget standard de son
+  entité (vérifié). L'administrateur a activé le plugin : c'est la règle de confiance du §9.
+- Publiés sous `/widgets/plugins/{id}/{dossier}/{fichier}`, origine `plugin:{id}` (affichée « plugin {id} » dans les
+  listes de choix). Rien n'est servi hors du dossier `widgets/` du plugin, où se trouvent aussi ses réglages :
+  `..`, chemin absolu, lecteur Windows, antislash et segment vide sont refusés (`WidgetCatalog.SafeFile`, testé).
+- Identifiant déjà pris : le premier trouvé l'emporte, dans l'ordre standards, dossier local, plugins (par
+  identifiant) ; le refus s'affiche dans les erreurs du catalogue. Un plugin ne peut donc pas remplacer un widget
+  standard : il livre le sien sous un autre nom, et le choix par défaut le préfère s'il est plus précis (§6) — un
+  widget de plugin compte comme « installé exprès ».
+- Le script peut importer la base des standards : `import { KvWidget, esc } from "/widgets/standard/commun.js";`.
+- **Plugin C#** : faire copier le dossier à côté de l'exécutable, comme `plugin.json` :
+  `<Content Include="widgets\**" CopyToOutputDirectory="PreserveNewest" />`. **Plugin Python** : rien à faire.
+- Relu à chaque chargement du catalogue : activer un plugin, ou modifier un de ses widgets, se voit sans redémarrer.
 
 ## 12. Widget par entité (18/10/2026)
 
