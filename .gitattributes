@@ -3,3 +3,5 @@
 # Scripts et lanceurs Linux : toujours LF, sinon bash refuse (« $'\r': command not found »).
 *.sh       text eol=lf
 *.desktop  text eol=lf
+# Unités systemd et fichiers du Pi : un retour chariot finirait dans les valeurs (« User=krissvia\r »).
+deploy/raspberry/** text eol=lf

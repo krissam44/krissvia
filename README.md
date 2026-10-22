@@ -17,3 +17,7 @@ Ces règles sont vérifiées par `tests/Krissvia.Architecture.Tests`.
 
     dotnet build
     dotnet test
+
+## Déploiement
+
+Sur le Raspberry Pi (linux-arm64, systemd) : `deploy/publier.ps1`, puis `docs/DEPLOIEMENT.md`.

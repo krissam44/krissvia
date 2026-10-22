@@ -1,0 +1,46 @@
+[Unit]
+Description=Krissvia, cœur domotique
+# Le broker est sur le même Pi : le démarrer avant évite une première minute de reconnexions des plugins.
+# Wants= et non Requires= : Krissvia doit démarrer (et montrer ses pages) même si Mosquitto est en panne.
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=krissvia
+Group=krissvia
+
+# Le programme (lecture seule pour le service) et les données (tout ce qui est propre à la machine) sont séparés :
+# une mise à jour remplace /opt/krissvia en entier sans rien perdre.
+WorkingDirectory=/opt/krissvia/server
+ExecStart=/usr/bin/dotnet /opt/krissvia/server/Krissvia.Server.dll
+
+Environment=ASPNETCORE_ENVIRONMENT=Production
+# HTTP sur toutes les interfaces. Les plugins lancés par le cœur s'y connectent en ws://127.0.0.1:12795/plugins
+# (PluginSupervisorLifetime.AdresseLocale prend la première adresse http://) : ne pas passer en https seul.
+Environment=ASPNETCORE_URLS=http://0.0.0.0:12795
+# La base ; les clés des cookies (keys/), les données des plugins (plugins-data/) et les widgets locaux (widgets/)
+# vont dans le même dossier, qui doit donc être modifiable par krissvia (SQLite y écrit aussi -wal et -shm).
+Environment=Database__Path=/var/lib/krissvia/krissvia.db
+Environment=Plugins__Directories__0=/opt/krissvia/plugins
+Environment=DOTNET_NOLOGO=1
+
+# Les secrets (Api__Key…) : fichier root:root en 600, lu par systemd avant de céder les droits.
+EnvironmentFile=/etc/krissvia/krissvia.env
+
+# Restart=always : un service qui paraît arrêté peut être revenu dix secondes plus tard. Avant de toucher à la
+# base ou aux fichiers, toujours VÉRIFIER l'arrêt (docs/DEPLOIEMENT.md §6) — deux processus sur la même base
+# SQLite, c'est ce qui a corrompu celle de DomoMud le 02/10/2026.
+Restart=always
+RestartSec=5
+# Arrêt : systemd tue tout le cgroup, plugins compris (KillMode=control-group, le défaut).
+TimeoutStopSec=20
+
+# Durcissement modéré : /usr, /boot et /etc en lecture seule, /home invisible.
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
