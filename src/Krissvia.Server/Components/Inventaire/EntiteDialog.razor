@@ -62,7 +62,7 @@
                             <MudSelectItem Value="@Automatique">@LibelleAutomatique</MudSelectItem>
                             @foreach (var w in _compatibles)
                             {
-                                <MudSelectItem Value="@w.Manifest.Id">@w.Manifest.Name@(w.IsStandard ? "" : $" — {w.Origin}")</MudSelectItem>
+                                <MudSelectItem Value="@w.Manifest.Id">@w.Manifest.Name@(w.IsStandard ? "" : $" — {(WidgetCatalog.PluginOf(w.Origin) is { } plugin ? $"plugin {plugin}" : w.Origin)}")</MudSelectItem>
                             }
                         </MudSelect>
                     </MudItem>

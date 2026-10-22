@@ -40,7 +40,8 @@ Directory.CreateDirectory(dossierWidgets);
 // Widgets Blazor : bibliothèques à la racine du dossier des widgets, ou nommées dans Widgets:Assemblies (lues une fois).
 builder.Services.AddSingleton(new BlazorWidgets(BlazorWidgets.Bibliotheques(dossierWidgets, builder.Configuration, builder.Environment.ContentRootPath)));
 builder.Services.AddSingleton(sp => new WidgetCatalogService(
-    sp.GetRequiredService<IWebHostEnvironment>().WebRootFileProvider, dossierWidgets, sp.GetRequiredService<BlazorWidgets>()));
+    sp.GetRequiredService<IWebHostEnvironment>().WebRootFileProvider, dossierWidgets, sp.GetRequiredService<BlazorWidgets>(),
+    sp.GetRequiredService<PluginSupervisor>()));
 builder.Services.AddSingleton<DashboardService>();
 
 // Bus d'événements : tout ce qui change dans le cœur y passe (états, registre, plugins, ordres).
@@ -182,6 +183,7 @@ app.UseStaticFiles(new StaticFileOptions
     OnPrepareResponse = c => c.Context.Response.Headers.CacheControl = "no-cache",
 });
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode().RequireAuthorization();
+app.MapPluginWidgetFiles();   // comme /widgets/local : des scripts, sans données
 app.MapAuthentification();
 
 // API publique (premier morceau du contrat 3) : clé d'API, ou session de l'interface.

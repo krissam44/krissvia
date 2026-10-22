@@ -100,6 +100,35 @@ public static partial class WidgetCatalog
     public const string Standard = "standard";
     public const string Local = "local";
 
+    /// <summary>Préfixe de l'origine des widgets livrés par un plugin : <c>plugin:meteo</c>.</summary>
+    public const string PluginOriginPrefix = "plugin:";
+
+    /// <summary>Adresse sous laquelle le serveur publie les widgets des plugins : <c>/widgets/plugins/{id}/…</c>.</summary>
+    public const string PluginBaseUrl = "/widgets/plugins";
+
+    public static string PluginOrigin(string pluginId) => PluginOriginPrefix + pluginId;
+
+    /// <summary>Le plugin d'où vient un widget, ou null (standard, local, Blazor).</summary>
+    public static string? PluginOf(string origin) =>
+        origin.StartsWith(PluginOriginPrefix, StringComparison.Ordinal) ? origin[PluginOriginPrefix.Length..] : null;
+
+    /// <summary>
+    /// Le fichier qu'un navigateur demande sous un dossier de widgets, ou null s'il en sortirait. Le chemin vient de
+    /// l'URL : « .. », chemin absolu ou lecteur Windows ne doivent rien servir d'autre que les widgets — c'est le dossier
+    /// d'un plugin, où se trouvent aussi ses réglages. (Un lien symbolique posé DANS le dossier par l'administrateur
+    /// est suivi : il est de son fait.)
+    /// </summary>
+    public static string? SafeFile(string directory, string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath) || relativePath.Contains('\\') || relativePath.Contains(':')) return null;
+        var segments = relativePath.Split('/');
+        if (segments.Any(s => s is "" or "." or "..")) return null;
+
+        var racine = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var chemin = Path.GetFullPath(Path.Combine(racine, Path.Combine(segments)));
+        return chemin.StartsWith(racine, StringComparison.Ordinal) && File.Exists(chemin) ? chemin : null;
+    }
+
     /// <summary>Origine des widgets Blazor, déclarés dans les bibliothèques de <c>Widgets:Assemblies</c>.</summary>
     public const string Blazor = "blazor";
     /// <summary>Contrat 2 : largeurs en douzièmes. Le contrat 1 (largeurs en sixièmes) est encore lu, converti.</summary>
