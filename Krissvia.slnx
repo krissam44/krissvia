@@ -49,5 +49,6 @@
     <File Path="docs/API.md" />
     <File Path="docs/CONTRACT-V0.3.md" />
     <File Path="docs/HISTORIQUE.md" />
+    <File Path="docs/AUTO-TPI.md" />
   </Folder>
 </Solution>

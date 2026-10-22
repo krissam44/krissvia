@@ -71,7 +71,8 @@ public sealed record ThermostatSnapshot(
 /// de zéro ; sonde perdue, conservée.</item>
 /// </list>
 /// Portés depuis : prévision météo dans le feed-forward, préchauffage anticipé et apprentissage de la pente,
-/// absence (mode d'absence, remontée avant le retour programmé). Pas encore : auto-TPI.
+/// absence (mode d'absence, remontée avant le retour programmé). L'auto-TPI ne passe pas par ici : il propose des
+/// réglages (AutoTpiService), que le moteur applique comme tout réglage saisi.
 /// </remarks>
 public sealed class ThermostatEngine(
     IEntityStateReader states,

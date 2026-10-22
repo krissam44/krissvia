@@ -93,6 +93,7 @@ builder.Services.AddSingleton<Krissvia.Climate.Alerts.FrostWatch>();
 builder.Services.AddSingleton<Krissvia.Core.Supervision.SupervisionWatch>();   // plugins, Internet, capteurs, piles, disque
 builder.Services.AddSingleton<ThermostatEngine>();
 builder.Services.AddSingleton<ThermostatService>();
+builder.Services.AddSingleton<AutoTpiService>();   // proposé, jamais appliqué seul (docs/AUTO-TPI.md)
 builder.Services.AddSingleton<ThermostatEntities>();   // les thermostats en entités climate
 builder.Services.AddSingleton<DesiredSwitchStates>();
 builder.Services.AddSingleton<LoadShedder>();
@@ -123,6 +124,7 @@ builder.Services.AddHostedService<StateStoreLifetime>();
 builder.Services.AddHostedService<HistoryLoop>();
 builder.Services.AddHostedService<CommandJournal>();
 builder.Services.AddHostedService<ThermostatLoop>();
+builder.Services.AddHostedService<AutoTpiLoop>();
 builder.Services.AddHostedService<LoadSheddingLoop>();
 builder.Services.AddHostedService<DeviceScheduleLoop>();
 builder.Services.AddHostedService<AutomationLoop>();

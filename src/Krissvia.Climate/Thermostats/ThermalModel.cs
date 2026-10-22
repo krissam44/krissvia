@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Krissvia.Climate.Thermostats;
 
 /// <summary>Type de chauffage : fixe la vitesse de réponse qu'on peut demander à la régulation.</summary>
@@ -27,8 +29,9 @@ public readonly record struct ThermalInterval(double Hours, double IndoorStart, 
 public sealed record ThermalIdentification(
     double Gain, double LossRate, double FreeGain, double R2, int Intervals, double ObservedHours, string? Refusal)
 {
-    public bool Usable => Refusal is null;
-    public double TimeConstantHours => LossRate > 0 ? 1 / LossRate : double.PositiveInfinity;
+    // Calculés, donc hors du JSON : une constante de temps infinie (pas de déperditions) ne s'écrit pas en JSON.
+    [JsonIgnore] public bool Usable => Refusal is null;
+    [JsonIgnore] public double TimeConstantHours => LossRate > 0 ? 1 / LossRate : double.PositiveInfinity;
 }
 
 /// <summary>Les réglages TPI qu'on déduit d'un modèle, et ce qu'il faut en savoir avant de les appliquer.</summary>
