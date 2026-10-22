@@ -158,6 +158,12 @@ ce qui a corrompu celle de DomoMud le 02/10/2026 (un index et une page référen
 `plugins-data/`. `installer.sh` fait cette vérification et refuse d'aller plus loin si l'arrêt n'est pas obtenu
 en trente secondes.
 
+**L'arrêt prend moins d'une seconde.** systemd envoie le signal d'arrêt au cœur et à ses plugins en même temps : le
+superviseur le sait dès le début de l'arrêt et ne relance plus rien, et les WebSockets (`/api/live`, `/plugins`) se
+ferment au lieu de faire attendre le serveur web. Le serveur ne s'accorde de toute façon que 15 s
+(`HostOptions.ShutdownTimeout`), sous les 20 s de `TimeoutStopSec`. Avant le 23/10/2026, l'arrêt durait 30 s : les
+plugins arrêtés par systemd étaient pris pour des plantages et relancés, et systemd finissait par tout tuer.
+
 Supprimer `server/` et `plugins/` avant d'extraire : extrait par-dessus, un fichier retiré d'une version
 resterait dans la suivante. On ne perd rien, rien de propre à la machine n'y vit (§ 1).
 

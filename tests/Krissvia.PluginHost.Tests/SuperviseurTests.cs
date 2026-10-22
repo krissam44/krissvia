@@ -209,6 +209,31 @@ public class SuperviseurTests
     }
 
     [Fact]
+    public async Task A_l_arret_du_coeur_un_plugin_sorti_juste_avant_n_est_pas_relance_et_plus_rien_ne_se_lance()
+    {
+        var (s, lanceur, _, banc) = await MonterAsync();
+        await using var _ = banc;
+        await s.SetEnabledAsync("shelly", true);
+        await s.SetEnabledAsync("zigbee2mqtt", true);
+        var zigbee = lanceur.Dernier;
+
+        // systemd arrête le cœur ET ses plugins : shelly sort (143 = SIGTERM) avant que le cœur ait réagi.
+        lanceur.Lancements.First().Processus.Planter(143);
+        await BancPlugins.AttendreAsync(() => Statut(s, "shelly") == ServiceStatus.Restarting);
+
+        s.StopAll();
+        Assert.True(s.Stopping);
+        Assert.True(zigbee.Tue);
+
+        await banc.AvancerAsync(TimeSpan.FromMinutes(2), TimeSpan.FromSeconds(1));
+        Assert.Equal(2, lanceur.Lancements.Count);                 // la relance programmée n'a pas eu lieu
+
+        await s.SetEnabledAsync("shelly", true);                    // un clic tardif dans la page Services
+        await banc.AvancerAsync(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(1));
+        Assert.Equal(2, lanceur.Lancements.Count);
+    }
+
+    [Fact]
     public async Task Activer_ou_desactiver_previent_le_menu_mais_pas_un_refus()
     {
         var (s, _, _, banc) = await MonterAsync();

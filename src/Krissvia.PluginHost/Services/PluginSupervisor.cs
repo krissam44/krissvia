@@ -77,6 +77,8 @@ public sealed partial class PluginSupervisor(
     private static readonly TimeSpan DureeStable = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan DelaiConnexion = TimeSpan.FromSeconds(20);
 
+    private volatile bool _arret;
+
     private readonly ConcurrentDictionary<string, Service> _services = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _verrou = new(1, 1);
 
@@ -207,10 +209,27 @@ public sealed partial class PluginSupervisor(
         }
     }
 
-    /// <summary>Arrêt du cœur : tous les plugins lancés s'arrêtent avec lui.</summary>
+    /// <summary>L'arrêt du cœur a commencé : plus aucun lancement ni aucune relance.</summary>
+    public bool Stopping => _arret;
+
+    /// <summary>
+    /// Arrêt du cœur : tous les plugins lancés s'arrêtent avec lui, et rien ne se relance ensuite. Appelé dès le DÉBUT de
+    /// l'arrêt (<c>ApplicationStopping</c>), pas après le serveur web : sous systemd, le signal d'arrêt atteint en même
+    /// temps le cœur et ses plugins ; chaque plugin qui sortait passait pour un plantage et était relancé deux secondes
+    /// plus tard, pendant que le serveur attendait ses connexions (vu sur la VM le 23/10/2026). Idempotent.
+    /// </summary>
     public void StopAll()
     {
-        foreach (var service in _services.Values) Arreter(service, "arrêt du cœur");
+        _arret = true;   // d'abord : une sortie traitée pendant la boucle ne doit plus rien programmer
+        var verrouille = _verrou.Wait(TimeSpan.FromSeconds(5));
+        try
+        {
+            foreach (var service in _services.Values) Arreter(service, "arrêt du cœur");
+        }
+        finally
+        {
+            if (verrouille) _verrou.Release();
+        }
     }
 
     public IReadOnlyList<ServiceSnapshot> Snapshots()
@@ -252,7 +271,7 @@ public sealed partial class PluginSupervisor(
 
     private void Lancer(Service service)
     {
-        if (service.Fiche is not { } fiche || service.Processus is not null) return;
+        if (service.Fiche is not { } fiche || service.Processus is not null || _arret) return;
 
         service.RelanceProgrammee?.Cancel();
         service.RelanceProgrammee = null;
@@ -309,7 +328,7 @@ public sealed partial class PluginSupervisor(
 
             // Resté en vie plus d'une minute : ce n'est pas une série de plantages, on repart du délai le plus court.
             if (duree >= DureeStable) service.EchecsRapides = 0;
-            if (service.Active) ProgrammerRelance(service);
+            if (service.Active && !_arret) ProgrammerRelance(service);
         }
         finally
         {
@@ -339,7 +358,7 @@ public sealed partial class PluginSupervisor(
             await _verrou.WaitAsync();
             try
             {
-                if (annulation.IsCancellationRequested || !service.Active) return;
+                if (annulation.IsCancellationRequested || !service.Active || _arret) return;
                 service.RelanceProgrammee = null;
                 service.Relances++;
                 Lancer(service);
