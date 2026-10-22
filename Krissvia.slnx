@@ -19,6 +19,7 @@
   </Folder>
   <Folder Name="/plugins/">
     <Project Path="plugins/Krissvia.Plugin.Livebox/Krissvia.Plugin.Livebox.csproj" />
+    <Project Path="plugins/Krissvia.Plugin.OpenHasp/Krissvia.Plugin.OpenHasp.csproj" />
     <Project Path="plugins/Krissvia.Plugin.Proxmox/Krissvia.Plugin.Proxmox.csproj" />
     <Project Path="plugins/Krissvia.Plugin.Shelly/Krissvia.Plugin.Shelly.csproj" />
     <Project Path="plugins/Krissvia.Plugin.Teleinfo/Krissvia.Plugin.Teleinfo.csproj" />
@@ -35,6 +36,7 @@
     <Project Path="tests/Krissvia.Persistence.Tests/Krissvia.Persistence.Tests.csproj" />
     <Project Path="tests/Krissvia.PluginHost.Tests/Krissvia.PluginHost.Tests.csproj" />
     <Project Path="tests/Krissvia.Plugin.Livebox.Tests/Krissvia.Plugin.Livebox.Tests.csproj" />
+    <Project Path="tests/Krissvia.Plugin.OpenHasp.Tests/Krissvia.Plugin.OpenHasp.Tests.csproj" />
     <Project Path="tests/Krissvia.Plugin.Proxmox.Tests/Krissvia.Plugin.Proxmox.Tests.csproj" />
     <Project Path="tests/Krissvia.Plugin.Shelly.Tests/Krissvia.Plugin.Shelly.Tests.csproj" />
     <Project Path="tests/Krissvia.Plugin.Teleinfo.Tests/Krissvia.Plugin.Teleinfo.Tests.csproj" />
@@ -45,5 +47,6 @@
     <File Path="docs/REGISTRE-ENTITES.md" />
     <File Path="docs/TRANSPORT.md" />
     <File Path="docs/API.md" />
+    <File Path="docs/CONTRACT-V0.3.md" />
   </Folder>
 </Solution>

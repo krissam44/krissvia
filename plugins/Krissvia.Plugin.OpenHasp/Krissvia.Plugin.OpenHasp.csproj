@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Krissvia.Contracts\Krissvia.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Krissvia.Sdk\Krissvia.Sdk.csproj" />
+    <ProjectReference Include="..\..\src\Krissvia.Sdk.Mqtt\Krissvia.Sdk.Mqtt.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- La fiche lue par la page Services du cœur. -->
+    <Content Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="appsettings.Local.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('appsettings.Local.json')" />
+    <InternalsVisibleTo Include="Krissvia.Plugin.OpenHasp.Tests" />
+  </ItemGroup>
+
+</Project>

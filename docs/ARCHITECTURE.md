@@ -195,6 +195,10 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
 - **Plugin Raspberry** (22/10/2026, `plugins/Krissvia.Plugin.Raspberry`) — santé de la machine en Python (température
   du processeur en classe `device_temperature`, processeur, mémoire, disque, sous-tension et bridage en classe
   `problem`, que la supervision signale), avec sa carte livrée par le plugin.
+- **Plugin openHASP** (22/10/2026, `plugins/Krissvia.Plugin.OpenHasp`, C#, contrat 0.3) — les pages des platines
+  Guition 480×480 sont **générées** depuis les réglages et poussées à chaque `online` : thermostat de la pièce,
+  températures communes, horloge avec les interrupteurs de la platine ; republication filtrée, veille et luminosité
+  repris de DomoMud. Voir son README.
 - **Alarme : `ALARME.md`** (22/10/2026) — machine à états de DomoMud, sonneries du §9, codes PBKDF2 et blocage,
   page `/alarme`, API `/api/alarm` par code.
 - **Présence et supervision : `PRESENCE.md`** (19/10/2026) — présence du foyer calculée par le cœur sur les capteurs

@@ -1,0 +1,73 @@
+{
+  "id": "openhasp",
+  "name": "openHASP",
+  "description": "Platines murales openHASP (Guition 480×480) : Krissvia génère leurs pages à chaque démarrage de la platine — thermostat de la pièce, températures, horloge et interrupteurs — et relaie les appuis.",
+  "executable": "Krissvia.Plugin.OpenHasp",
+  "settings": {
+    "type": "object",
+    "properties": {
+      "Mqtt": {
+        "type": "object",
+        "title": "Broker MQTT",
+        "required": [ "Host" ],
+        "properties": {
+          "Host": { "type": "string", "title": "Adresse IP", "description": "Une adresse IP plutôt qu'un nom : la résolution DNS échoue parfois en silence sous systemd." },
+          "Port": { "type": "integer", "title": "Port", "default": 1883, "minimum": 1, "maximum": 65535 },
+          "Username": { "type": "string", "title": "Utilisateur" },
+          "Password": { "type": "string", "title": "Mot de passe", "format": "password" }
+        }
+      },
+      "Platines": {
+        "type": "array",
+        "title": "Platines",
+        "description": "Une par pièce. Ses pages sont regénérées à chaque redémarrage de la platine : rien à déposer dessus.",
+        "items": {
+          "type": "object",
+          "required": [ "Noeud" ],
+          "properties": {
+            "Noeud": { "type": "string", "title": "Nom de nœud", "description": "Celui réglé dans la platine (hasp/<nœud>/…). Unique entre installations : deux sites qui partagent un broker se repeindraient l'un l'autre." },
+            "Piece": { "type": "string", "title": "Titre", "description": "Affiché en tête de la page thermostat. Vide : le nom du thermostat." },
+            "Thermostat": { "type": "string", "title": "Thermostat de la pièce", "format": "entity", "x-kinds": [ "climate" ], "x-access": "command", "description": "Page 1. Vide : pas de page thermostat." },
+            "Interrupteurs": {
+              "type": "array",
+              "title": "Interrupteurs (page horloge, 3 au plus)",
+              "items": {
+                "type": "object",
+                "required": [ "Entite" ],
+                "properties": {
+                  "Entite": { "type": "string", "title": "Interrupteur ou lumière", "format": "entity", "x-kinds": [ "switch", "light" ], "x-access": "command" },
+                  "Nom": { "type": "string", "title": "Libellé du bouton", "description": "Vide : le nom de l'entité." }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Sondes": {
+        "type": "array",
+        "title": "Températures (page 2, commune à toutes les platines, 6 au plus)",
+        "items": {
+          "type": "object",
+          "required": [ "Entite" ],
+          "properties": {
+            "Entite": { "type": "string", "title": "Sonde", "format": "entity", "x-kinds": [ "sensor" ], "x-device-classes": [ "temperature" ] },
+            "Nom": { "type": "string", "title": "Libellé", "description": "Vide : le nom de l'entité." },
+            "Min": { "type": "number", "title": "Arc : minimum (°C)", "default": 0 },
+            "Max": { "type": "number", "title": "Arc : maximum (°C)", "default": 35 }
+          }
+        }
+      },
+      "Affichage": {
+        "type": "object",
+        "title": "Affichage",
+        "properties": {
+          "Exterieure": { "type": "string", "title": "Température extérieure", "format": "entity", "x-kinds": [ "sensor" ], "x-device-classes": [ "temperature" ], "description": "Sous l'horloge, à côté de la date." },
+          "CouleurFond": { "type": "string", "title": "Couleur de fond", "default": "#1C1C1E", "description": "Format #RRGGBB. Les couleurs de texte sont relevées si elles deviennent illisibles dessus." },
+          "ContrasteMinimum": { "type": "number", "title": "Contraste minimum des textes", "default": 3, "minimum": 0, "maximum": 21, "description": "0 : pas de correction." },
+          "LuminositeDefaut": { "type": "integer", "title": "Luminosité au réveil", "default": 200, "minimum": 20, "maximum": 255, "description": "Tant que personne n'a touché le curseur de la page horloge." },
+          "EteindreEnVeille": { "type": "boolean", "title": "Éteindre l'écran en veille", "default": true, "description": "Les délais se règlent dans la platine (idle1/idle2, puis redémarrage) ; elle annonce sa veille, Krissvia coupe et rallume." }
+        }
+      }
+    }
+  }
+}

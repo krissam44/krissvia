@@ -28,11 +28,14 @@ public static class Preheat
     /// <summary>Avance maximale : 3 h. Garde-fou contre une pente aberrante ou une pièce très froide.</summary>
     public const double MaxMinutes = 180.0;
 
-    /// <summary>Le premier changement de mode dans les <see cref="MaxMinutes"/> à venir, minute par minute.</summary>
-    public static NextSlot? NextChange(WeeklySchedule planning, DateTime heureLocale)
+    /// <summary>
+    /// Le premier changement de mode dans les <paramref name="horizonMinutes"/> à venir (par défaut
+    /// <see cref="MaxMinutes"/>), minute par minute.
+    /// </summary>
+    public static NextSlot? NextChange(WeeklySchedule planning, DateTime heureLocale, int horizonMinutes = (int)MaxMinutes)
     {
         var actuel = planning.ModeAt(heureLocale);
-        for (var m = 1; m <= (int)MaxMinutes; m++)
+        for (var m = 1; m <= horizonMinutes; m++)
         {
             var t = heureLocale.AddMinutes(m);
             if (planning.ModeAt(t) is var mode && mode != actuel) return new NextSlot(t, mode);
