@@ -211,6 +211,16 @@ public sealed class WidgetCatalogTests : IDisposable
     }
 
     [Fact]
+    public void L_alarme_du_coeur_a_sa_carte_avec_clavier_par_defaut()
+    {
+        var catalogue = WidgetCatalog.Load([WidgetSource.FromDirectory(DossierLivre(), WidgetCatalog.Standard, "/widgets/standard")]);
+
+        Assert.Empty(catalogue.Errors);
+        Assert.Equal("alarme", WidgetCatalog.CompatibleWith(catalogue, Entite(EntityKind.Sensor, DeviceClasses.Alarm))[0].Manifest.Id);
+        Assert.DoesNotContain(WidgetCatalog.CompatibleWith(catalogue, Entite(EntityKind.Sensor, DeviceClasses.Temperature)), w => w.Manifest.Id == "alarme");
+    }
+
+    [Fact]
     public void Le_widget_le_plus_precis_vient_d_abord_et_un_local_l_emporte_a_egalite()
     {
         Deposer(Standards, "valeur", Manifeste("valeur"));

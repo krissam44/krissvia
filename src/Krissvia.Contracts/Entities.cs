@@ -135,7 +135,7 @@ public static class DeviceClasses
 
     /// <summary>
     /// sensor dont la valeur est un OBJET : l'état de l'alarme, publié par le cœur (état, décompte, capteur en cause,
-    /// défauts du dernier contrôle). Lecture seule : l'armement passe par un code (page Alarme, API).
+    /// défauts du dernier contrôle). Commandes <c>arm</c> et <c>disarm</c>, toujours avec un code.
     /// </summary>
     public const string Alarm = "alarm";
 
@@ -219,4 +219,9 @@ public static class StandardCommands
     public const string SetTarget = "set_target";
     public const string AdjustTarget = "adjust_target";
     public const string SetSchedule = "set_schedule";
+
+    // alarme (sensor de classe alarm, publié par le cœur) : args {"code": "1234"}, toujours. Un code faux est refusé
+    // comme partout ailleurs, et compte pour le blocage.
+    public const string Arm = "arm";
+    public const string Disarm = "disarm";
 }

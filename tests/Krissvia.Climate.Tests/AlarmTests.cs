@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using Krissvia.Climate.Alarm;
 using Krissvia.Contracts;
+using Krissvia.Core.Commands;
 using Krissvia.Core.Configuration;
 using Krissvia.Core.Events;
 using Krissvia.Core.Notifications;
@@ -428,6 +429,41 @@ public class AlarmTests
         Assert.Equal(new AlarmCodeResult(AlarmCodeOutcome.Done, "Christian"), ok);
         Assert.Equal(AlarmMode.ExitDelay, b.Centrale.State.Mode);
         Assert.Contains(b.Service.Journal, l => l.Text == "Armement demandé (Christian)");
+    }
+
+    private static Task<CommandOutcome> Ordonner(Banc b, string commande, string? code)
+    {
+        var entite = b.Registre.Loaded.Single(e => e.IntegrationId == AlarmEngine.IntegrationId);
+        var args = code is null ? (JsonElement?)null : JsonSerializer.SerializeToElement(new { code });
+        return b.Centrale.HandleAsync(entite, new EntityCommand(entite.EntityId, commande) { Args = args }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task La_carte_arme_et_desarme_avec_un_code_et_rapporte_la_raison_d_un_refus()
+    {
+        var b = new Banc();
+        var entite = b.Registre.Loaded.Single(e => e.IntegrationId == AlarmEngine.IntegrationId);
+        Assert.Equal([StandardCommands.Arm, StandardCommands.Disarm], entite.Commands);
+
+        Assert.Equal("code manquant", (await Assert.ThrowsAsync<ArgumentException>(() => Ordonner(b, StandardCommands.Arm, null))).Message);
+        Assert.Equal("code incorrect", (await Assert.ThrowsAsync<ArgumentException>(() => Ordonner(b, StandardCommands.Arm, "0000"))).Message);
+
+        // Porte ouverte : le code est bon, l'armement refusé, et la carte dit pourquoi.
+        b.Etats.Set(b.Porte, true, T0);
+        var refus = await Assert.ThrowsAsync<ArgumentException>(() => Ordonner(b, StandardCommands.Arm, "4821"));
+        Assert.Equal("armement refusé : Porte d'entrée", refus.Message);
+
+        b.Etats.Set(b.Porte, false, T0);
+        Assert.Equal(CommandOutcome.Accepted, await Ordonner(b, StandardCommands.Arm, "4821"));
+        Assert.Equal(AlarmMode.ExitDelay, b.Centrale.State.Mode);
+        Assert.Equal(CommandOutcome.Accepted, await Ordonner(b, StandardCommands.Disarm, "4821"));
+        Assert.Equal(AlarmMode.Disarmed, b.Centrale.State.Mode);
+
+        // Les codes faux de la carte comptent pour le même blocage que l'API.
+        await Assert.ThrowsAsync<ArgumentException>(() => Ordonner(b, StandardCommands.Disarm, "1"));
+        await Assert.ThrowsAsync<ArgumentException>(() => Ordonner(b, StandardCommands.Disarm, "2"));
+        Assert.StartsWith("trop de codes faux", (await Assert.ThrowsAsync<ArgumentException>(() => Ordonner(b, StandardCommands.Disarm, "3"))).Message);
+        Assert.Equal(AlarmCodeOutcome.Locked, (await b.Centrale.CommandWithCodeAsync(false, "4821")).Outcome);
     }
 
     [Fact]

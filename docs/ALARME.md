@@ -1,7 +1,8 @@
 # Alarme
 
 > Livré le 22/10/2026. Module du cœur `Krissvia.Climate.Alarm` (`AlarmMachine`, `AlarmFaults`, `AlarmCodes`,
-> `AlarmLockout`, `AlarmService`, `AlarmEngine`), boucle `AlarmLoop`, page `/alarme`, API `/api/alarm`.
+> `AlarmLockout`, `AlarmService`, `AlarmEngine`), boucle `AlarmLoop`, page `/alarme`, API `/api/alarm`, widget
+> standard `alarme`.
 > Portage de la centrale de DomoMud, avec les sonneries de `ARCHITECTURE.md` §9.
 
 ## 1. États
@@ -16,8 +17,8 @@
 
 L'état est publié par le cœur dans l'entité `sensor.maison_alarme` (classe `alarm`, valeur objet :
 `state`, `label` — le libellé des digicodes DomoMud, `EXIT_DELAY:12` —, `countdown`, `ringing`, `sensor`,
-`triggered_at`, `faults`). Elle se lit comme les autres : tableau de bord, automatismes, API des entités. Elle n'a
-**pas** de commande : armer et désarmer passent par un code.
+`triggered_at`, `faults`). Elle se lit comme les autres : tableau de bord, automatismes, API des entités. Ses deux
+commandes, `arm` et `disarm`, exigent un code dans les arguments (`{"code": "1234"}`) : voir §6.
 
 ## 2. Capteurs
 
@@ -85,6 +86,18 @@ Code faux : **403** (et non 401 : la clé d'API est bonne). Clavier bloqué : **
 désactivée : **409**. La clé d'API ne suffit pas à désarmer : un script qui la connaît ne doit pas devenir la porte
 dérobée du digicode. Le code voyage dans le corps, jamais dans l'URL.
 
+**Par l'entité** (`POST /api/entities/sensor.maison_alarme/commands`, `{"command": "arm", "args": {"code": "1234"}}`) :
+c'est le chemin de la carte du tableau de bord. Mêmes règles — un code faux compte pour le même blocage — et la raison
+d'un refus revient dans `detail` (« code incorrect », « trop de codes faux : clavier bloqué 42 s », « armement
+refusé : Porte d'entrée »). Le bus de commandes n'écrit les arguments nulle part (journal du serveur, route
+`/debug/commands`) : c'est ce qui permet d'y faire passer un code, et cela doit le rester.
+
+**La carte `alarme`** : badge d'état, décompte de sortie ou d'entrée en grand, capteur en cause et heure d'un
+déclenchement, dernier refus d'armement ; dessous un clavier de 0 à 9 et le bouton **Armer** ou **Désarmer** selon
+l'état. Le code n'est jamais affiché (des points), s'efface à l'envoi et après 30 s d'inactivité. Les touches
+réagissent à l'appui (`pointerdown`) et ne redessinent que les points : la carte se redessine à chaque seconde d'un
+décompte, et un clic à cheval sur un redessin serait perdu — précisément au moment où l'on tape son code.
+
 Réglages (`PUT /api/alarm/settings`) :
 
 ```json
@@ -102,4 +115,3 @@ Rôles : `immediate`, `delayed`, `fault_only`. Activer l'alarme sans capteur est
 - **Digicode** (l'écran ESPHome de l'appartement) : dans DomoMud il parle MQTT (`domomud/alarme/*`). Dans Krissvia
   il passera par un plugin, qui aura besoin de deux choses que le contrat n'offre pas encore : recevoir l'état de
   l'alarme, et transmettre « armer / désarmer par Untel ». À concevoir avec le contrat 0.3.
-- Un **widget** « Alarme » pour le tableau de bord (l'entité existe déjà).

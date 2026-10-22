@@ -51,7 +51,7 @@ public sealed class AlarmEngine(
     IEntityStateWriter writer,
     ICommandBus commands,
     NotificationService notifications,
-    TimeProvider clock)
+    TimeProvider clock) : ICoreCommandHandler
 {
     public const string IntegrationId = CoreIntegrations.Alarm;
     public const string UniqueId = "alarme";
@@ -120,6 +120,38 @@ public sealed class AlarmEngine(
         _blocage = AlarmLockout.Success();
         await CommandAsync(armer, qui, ct);
         return new AlarmCodeResult(AlarmCodeOutcome.Done, qui);
+    }
+
+    /// <summary>
+    /// Les commandes de l'entité (<c>arm</c>, <c>disarm</c>, avec <c>{"code": "…"}</c>) : la carte du tableau de bord
+    /// en fait un clavier logiciel. Mêmes règles que l'API — un code faux compte pour le blocage — et la raison d'un
+    /// refus revient telle quelle à l'écran (le bus la prend dans le message de l'exception).
+    /// </summary>
+    /// <remarks>
+    /// Le code voyage dans les arguments de l'ordre : le bus ne les écrit nulle part (journal du serveur, route de
+    /// diagnostic), ce qui doit le rester.
+    /// </remarks>
+    public async Task<CommandOutcome> HandleAsync(RegisteredEntity entity, EntityCommand command, CancellationToken ct)
+    {
+        var armer = command.Command switch
+        {
+            StandardCommands.Arm => true,
+            StandardCommands.Disarm => false,
+            _ => throw new ArgumentException($"commande « {command.Command} » inconnue de l'alarme"),
+        };
+        var code = command.Args is { ValueKind: JsonValueKind.Object } a && a.TryGetProperty("code", out var c) && c.ValueKind == JsonValueKind.String
+            ? c.GetString() : null;
+        if (string.IsNullOrEmpty(code)) throw new ArgumentException("code manquant");
+
+        var r = await CommandWithCodeAsync(armer, code, ct);
+        return r.Outcome switch
+        {
+            AlarmCodeOutcome.WrongCode => throw new ArgumentException("code incorrect"),
+            AlarmCodeOutcome.Locked => throw new ArgumentException($"trop de codes faux : clavier bloqué {r.LockedSeconds} s"),
+            AlarmCodeOutcome.Disabled => throw new ArgumentException("l'alarme est désactivée"),
+            _ when armer && State.Mode == AlarmMode.Disarmed => throw new ArgumentException($"armement refusé : {LastFaults}"),
+            _ => CommandOutcome.Accepted,
+        };
     }
 
     /// <summary>Secondes de blocage restantes du clavier, 0 s'il est libre.</summary>
@@ -267,7 +299,14 @@ public sealed class AlarmEngine(
                 new DeviceDescriptor
                 {
                     UniqueId = UniqueId, Name = "Maison",
-                    Entities = [new EntityDescriptor { UniqueId = UniqueId, Kind = EntityKind.Sensor, Name = "Alarme", DeviceClass = DeviceClasses.Alarm }],
+                    Entities =
+                    [
+                        new EntityDescriptor
+                        {
+                            UniqueId = UniqueId, Kind = EntityKind.Sensor, Name = "Alarme", DeviceClass = DeviceClasses.Alarm,
+                            Commands = [StandardCommands.Arm, StandardCommands.Disarm],
+                        },
+                    ],
                 },
             ], ct);
             _entite = (await registry.FindByUniqueIdAsync(IntegrationId, UniqueId, ct))?.EntityId;
