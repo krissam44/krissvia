@@ -29,6 +29,11 @@
             <MudMenuItem Icon="@Icons.Material.Filled.Extension" Href="/parametres/services">Gérer les services</MudMenuItem>
             <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" Href="/parametres/comptes">Comptes</MudMenuItem>
             <MudMenuItem Icon="@Icons.Material.Filled.Menu" OnClick="PersonnaliserMenuAsync">Personnaliser le menu</MudMenuItem>
+            <MudDivider Class="my-1" />
+            @* La version qui tourne et son commit : de quoi savoir d'un coup d'œil ce qui est déployé (VM, Pi). *@
+            <div class="px-4 py-2" title="@(Version.Commit ?? "construit hors d'un dépôt git")">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Krissvia @Version.Label</MudText>
+            </div>
         </MudMenu>
 
         <AuthorizeView>

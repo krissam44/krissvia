@@ -161,6 +161,7 @@ Ce dont un tableau de bord ou un widget a besoin (WIDGETS.md §8) : les entités
 
 | Méthode | Route | Corps | Effet |
 |---|---|---|---|
+| GET | `/api/version` | | `{"version": "1.0.0", "commit": "edc186d3e1e4…", "label": "1.0.0 · edc186d"}` : ce qui tourne, et le commit dont c'est construit (aussi dans le menu ⋮). `commit` est null pour un binaire construit hors d'un dépôt git |
 | GET | `/api/entities` | | Toutes les entités : registre, pièce, dernier état |
 | GET | `/api/entities/{id}` | | Une entité ; **404** si inconnue |
 | GET | `/api/entities/{id}/history` | `?from=&to=&field=&resolution=raw\|hour` | Courbe : points bruts (3 jours au plus) ou heures consolidées ; `field` pour un objet (thermostat : `temperature`, `target`, `power`, `outdoor_temperature`…). Voir HISTORIQUE.md §4 |

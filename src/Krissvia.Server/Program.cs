@@ -220,6 +220,12 @@ api.MapSupervisionApi();
 api.MapEntityApi();
 api.MapHistoryApi();
 api.MapWidgetApi();
+// La version qui tourne et le commit dont elle est construite (Krissvia.Core.BuildVersion).
+api.MapGet("/version", () =>
+{
+    var v = Krissvia.Core.BuildVersion.Of(typeof(Program).Assembly);
+    return Results.Json(new { version = v.Version, commit = v.Commit, label = v.Label });
+});
 
 // Point d'entrée des plugins : voir docs/TRANSPORT.md.
 app.Map("/plugins", async (HttpContext contexte, PluginHub hub, IHostApplicationLifetime vie) =>
