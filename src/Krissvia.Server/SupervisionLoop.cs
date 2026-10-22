@@ -17,6 +17,7 @@ internal sealed partial class SupervisionLoop(
     IEntityStateReader states,
     PluginSupervisor plugins,
     HomePresence presence,
+    IEnumerable<IEntityReferenceSource> references,
     string databaseDirectory,
     TimeProvider clock,
     ILogger<SupervisionLoop> logger) : BackgroundService
@@ -33,7 +34,7 @@ internal sealed partial class SupervisionLoop(
             {
                 try
                 {
-                    var rapport = await watch.CheckAsync(Entree(), stoppingToken);
+                    var rapport = await watch.CheckAsync(await EntreeAsync(stoppingToken), stoppingToken);
                     var enAlerte = rapport.Items.Where(i => i.Alerting).Select(i => i.Item.Key).ToHashSet(StringComparer.Ordinal);
                     foreach (var i in rapport.Items.Where(i => i.Alerting && !_enAlerte.Contains(i.Item.Key))) Panne(logger, i.Item.Name, i.Item.Detail);
                     foreach (var cle in _enAlerte.Where(k => !enAlerte.Contains(k))) Retour(logger, cle);
@@ -51,7 +52,7 @@ internal sealed partial class SupervisionLoop(
         }
     }
 
-    private SupervisionInput Entree()
+    private async Task<SupervisionInput> EntreeAsync(CancellationToken ct)
     {
         // Les plugins ACTIVÉS seulement : un plugin désactivé exprès n'est pas en panne. Lancé ailleurs et connecté
         // (Visual Studio), il compte comme connecté.
@@ -60,9 +61,12 @@ internal sealed partial class SupervisionLoop(
             .Select(s => new PluginHealth(s.Id, s.Name, s.Status is ServiceStatus.Connected or ServiceStatus.External))
             .ToList();
 
+        var visees = new List<EntityReference>();
+        foreach (var source in references) visees.AddRange(await source.GetReferencesAsync(ct));
+
         var p = presence.Current;
         return new SupervisionInput(clock.GetUtcNow(), registry.Loaded, states, etatPlugins,
-            p is { Tracked: > 0 } ? p.DetectionLost : null, EspaceLibre(), clock.LocalTimeZone);
+            p is { Tracked: > 0 } ? p.DetectionLost : null, EspaceLibre(), clock.LocalTimeZone, visees);
     }
 
     private long? EspaceLibre()

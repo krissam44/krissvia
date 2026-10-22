@@ -101,6 +101,7 @@ public sealed partial class ThermostatService(IConfigurationStore store, IEntity
         await VerifierEntiteAsync(thermostat.TemperatureEntityId, EntityKind.Sensor, "sonde intérieure", ct);
         foreach (var radiateur in thermostat.SwitchEntityIds)
             await VerifierEntiteAsync(radiateur, EntityKind.Switch, "radiateur", ct);
+        await VerifierPiloteUniqueAsync(thermostat.SwitchEntityIds, ct);
         if (thermostat.OutdoorTemperatureEntityId is { } exterieure)
             await VerifierEntiteAsync(exterieure, EntityKind.Sensor, "sonde extérieure", ct);
         if (thermostat.ForecastEntityId is { } prevision)
@@ -228,6 +229,37 @@ public sealed partial class ThermostatService(IConfigurationStore store, IEntity
             throw new ThermostatValidationException($"{role} : l'entité « {entityId} » n'existe pas.");
         if (entite.Kind != attendu)
             throw new ThermostatValidationException($"{role} : « {entityId} » est un {entite.Kind}, pas un {attendu}.");
+    }
+
+    /// <summary>
+    /// Un radiateur n'a qu'un pilote : refusé s'il appartient déjà à une programmation (le service des programmations
+    /// vérifie l'inverse). Lu dans la base, et non demandé à ce service, qui dépend déjà de celui-ci : des deux côtés,
+    /// c'est ce qui est enregistré qui fait foi. Deux pilotes se contrediraient à chaque créneau, sans que rien ne dise
+    /// lequel a raison.
+    /// </summary>
+    private async Task VerifierPiloteUniqueAsync(IReadOnlyList<string> radiateurs, CancellationToken ct)
+    {
+        foreach (var document in await store.ListAsync(DeviceSchedules.DeviceScheduleService.Collection, ct))
+        {
+            string? commun, nom;
+            try
+            {
+                using var json = JsonDocument.Parse(document.Json);
+                var racine = json.RootElement;
+                if (!racine.TryGetProperty("switch_entity_ids", out var ids) || ids.ValueKind != JsonValueKind.Array) continue;
+                commun = ids.EnumerateArray().Where(i => i.ValueKind == JsonValueKind.String).Select(i => i.GetString()!)
+                    .FirstOrDefault(radiateurs.Contains);
+                nom = racine.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String && n.GetString() is { Length: > 0 } s ? s : document.Id;
+            }
+            catch (JsonException)
+            {
+                continue;   // illisible : le service des programmations l'écarte déjà au chargement
+            }
+
+            if (commun is null) continue;
+            var entite = (await registry.GetAsync(commun, ct))?.DisplayName ?? commun;
+            throw new ThermostatValidationException($"radiateur : « {entite} » est déjà piloté par la programmation « {nom} ».");
+        }
     }
 
     private static void VerifierConsigne(double? cible)
