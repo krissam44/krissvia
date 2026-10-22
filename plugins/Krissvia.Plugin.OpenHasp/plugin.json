@@ -27,6 +27,7 @@
           "properties": {
             "Noeud": { "type": "string", "title": "Nom de nœud", "description": "Celui réglé dans la platine (hasp/<nœud>/…). Unique entre installations : deux sites qui partagent un broker se repeindraient l'un l'autre." },
             "Piece": { "type": "string", "title": "Titre", "description": "Affiché en tête de la page thermostat. Vide : le nom du thermostat." },
+            "Digicode": { "type": "boolean", "title": "Digicode de l'alarme (page 4)", "default": true, "description": "Seulement si une alarme est choisie plus bas." },
             "Thermostat": { "type": "string", "title": "Thermostat de la pièce", "format": "entity", "x-kinds": [ "climate" ], "x-access": "command", "description": "Page 1. Vide : pas de page thermostat." },
             "Interrupteurs": {
               "type": "array",
@@ -55,6 +56,13 @@
             "Min": { "type": "number", "title": "Arc : minimum (°C)", "default": 0 },
             "Max": { "type": "number", "title": "Arc : maximum (°C)", "default": 35 }
           }
+        }
+      },
+      "Alarme": {
+        "type": "object",
+        "title": "Alarme",
+        "properties": {
+          "Entite": { "type": "string", "title": "Alarme", "format": "entity", "x-kinds": [ "sensor" ], "x-device-classes": [ "alarm" ], "x-access": "command", "description": "Ajoute la page 4, un digicode, aux platines qui l'acceptent. Les chiffres tapés passent un à un par le broker : il doit être local et protégé par un mot de passe." }
         }
       },
       "Affichage": {

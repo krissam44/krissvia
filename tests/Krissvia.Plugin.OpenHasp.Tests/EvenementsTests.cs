@@ -7,7 +7,7 @@ namespace Krissvia.Plugin.OpenHasp.Tests;
 public class EvenementsTests
 {
     private static Reaction? Appui(string objet, string charge = """{"event":"up"}""", params EntityStateUpdate[] etats) =>
-        Evenements.Interpreter(Donnees.Salon(), objet, charge, Donnees.Etats(etats));
+        Evenements.Interpreter(Donnees.Salon(), Donnees.Reglages(), objet, charge, Donnees.Etats(etats));
 
     [Fact]
     public void Un_bouton_de_mode_choisit_le_mode_au_relache_seulement()
@@ -55,6 +55,30 @@ public class EvenementsTests
         Assert.Equal(new Veille("long"), Appui("idle", "long"));
         Assert.Equal(new Veille("off"), Appui("idle", """{"idle":"OFF"}"""));
         Assert.Null(Appui("p1b10", "pas du json"));
+    }
+
+    [Fact]
+    public void Les_touches_du_digicode_ne_portent_que_la_touche_jamais_le_code()
+    {
+        Assert.Equal(new ToucheClavier("7"), Appui("p4b17"));
+        Assert.Equal(new ToucheClavier("0"), Appui("p4b10"));
+        Assert.Equal(new ToucheClavier("C"), Appui("p4b20"));
+        Assert.Equal(new ToucheClavier("<"), Appui("p4b21"));
+        Assert.Equal(new CommandeAlarme(StandardCommands.Arm), Appui("p4b30"));
+        Assert.Equal(new CommandeAlarme(StandardCommands.Disarm), Appui("p4b31"));
+        Assert.Null(Appui("p4b17", """{"event":"down"}"""));
+    }
+
+    [Fact]
+    public void Sans_digicode_les_touches_de_la_page_4_ne_font_rien()
+    {
+        var platine = Donnees.Salon();
+        platine.Digicode = false;
+
+        Assert.Null(Evenements.Interpreter(platine, Donnees.Reglages(), "p4b31", """{"event":"up"}""", Donnees.Etats()));
+        var sansAlarme = Donnees.Reglages();
+        sansAlarme.Alarme.Entite = null;
+        Assert.Null(Evenements.Interpreter(Donnees.Salon(), sansAlarme, "p4b31", """{"event":"up"}""", Donnees.Etats()));
     }
 
     [Fact]

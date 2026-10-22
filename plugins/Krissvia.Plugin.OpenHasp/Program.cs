@@ -24,6 +24,7 @@ var reglages = new Reglages
     Platines = builder.Configuration.GetSection("Platines").Get<List<Platine>>() ?? [],
     Sondes = builder.Configuration.GetSection("Sondes").Get<List<SondeAffichee>>() ?? [],
     Affichage = builder.Configuration.GetSection("Affichage").Get<Affichage>() ?? new Affichage(),
+    Alarme = builder.Configuration.GetSection("Alarme").Get<Alarme>() ?? new Alarme(),
 };
 var coeur = builder.Configuration.GetSection("Krissvia").Get<CoreClientOptions>() ?? new CoreClientOptions();
 if (string.IsNullOrEmpty(coeur.PluginId)) coeur.PluginId = "openhasp";

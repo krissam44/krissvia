@@ -10,6 +10,7 @@ public static class Objets
     public const int PageThermostat = 1;
     public const int PageTemperatures = 2;
     public const int PageHorloge = 3;
+    public const int PageAlarme = 4;
 
     /// <summary>Fond plein écran, déclaré en premier sur chaque page (l'ordre des lignes est l'ordre d'empilement).</summary>
     public const int Fond = 50;
@@ -34,6 +35,10 @@ public static class Objets
     // Page 3 : horloge.
     public const int Heure = 40, Date = 41, ProchaineBascule = 42, Curseur = 20, Pourcentage = 21, LibelleLuminosite = 23;
     public static int BoutonInterrupteur(int i) => 10 + i;
+
+    // Page 4 : digicode. Le chiffre d est l'objet 10+d.
+    public const int EtatAlarme = 1, DetailAlarme = 2, CodeSaisi = 3, Effacer = 20, Retour = 21, Armer = 30, Desarmer = 31;
+    public static int Chiffre(int d) => 10 + d;
 
     public static string Attribut(int page, int objet, string attribut) => $"p{page}b{objet}.{attribut}";
 }
@@ -65,6 +70,7 @@ public static class MiseEnPage
         if (platine.AThermostat) pages.Add(Objets.PageThermostat);
         if (reglages.SondesAffichees().Any()) pages.Add(Objets.PageTemperatures);
         pages.Add(Objets.PageHorloge);
+        if (platine.ADigicode(reglages)) pages.Add(Objets.PageAlarme);
         return pages;
     }
 
@@ -77,6 +83,7 @@ public static class MiseEnPage
         if (platine.AThermostat) Thermostat(lignes, reglages.Affichage);
         if (pages.Contains(Objets.PageTemperatures)) Temperatures(lignes, reglages);
         Horloge(lignes, platine, reglages.Affichage);
+        if (pages.Contains(Objets.PageAlarme)) Digicode(lignes, reglages.Affichage);
         return [.. lignes.Select(l => l.ToJsonString(Json))];
     }
 
@@ -89,7 +96,9 @@ public static class MiseEnPage
             var nom = pages[i] switch
             {
                 Objets.PageThermostat => "Thermostat",
-                Objets.PageTemperatures => "Températures",
+                // À quatre boutons de 113 px, « Températures » ne tient plus en police 16.
+                Objets.PageTemperatures => pages.Count > 3 ? "Sondes" : "Températures",
+                Objets.PageAlarme => "Alarme",
                 _ => "Horloge",
             };
             var o = Btn(0, i + 1, marge + i * (largeur + ecart), 435, largeur, 42, nom, 16, Panneau, "#FFFFFF", 10);
@@ -203,6 +212,29 @@ public static class MiseEnPage
         curseur["border_width"] = 0;
         l.Add(curseur);
         l.Add(Libelle(p, Objets.Pourcentage, 385, 365, 75, 40, "", 16, "#FFFFFF"));
+    }
+
+    /// <summary>
+    /// Le digicode : l'état en grand, une ligne de détail, le code masqué, un clavier 3×4 et les deux ordres. Des
+    /// boutons séparés plutôt qu'un <c>btnmatrix</c> : chaque touche arrive alors comme n'importe quel appui.
+    /// </summary>
+    private static void Digicode(List<JsonObject> l, Affichage a)
+    {
+        const int p = Objets.PageAlarme;
+        l.Add(Fond(p, a.CouleurFond));
+        l.Add(Libelle(p, Objets.EtatAlarme, 0, 6, Cote, 40, "--", 32, "#FFFFFF"));
+        l.Add(Libelle(p, Objets.DetailAlarme, 0, 48, Cote, 26, "", 16, Secondaire));
+        l.Add(Libelle(p, Objets.CodeSaisi, 20, 78, 286, 42, "", 32, "#FFFFFF"));
+
+        string[] touches = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "<"];
+        for (var i = 0; i < touches.Length; i++)
+        {
+            var objet = touches[i] switch { "C" => Objets.Effacer, "<" => Objets.Retour, var d => Objets.Chiffre(d[0] - '0') };
+            l.Add(Btn(p, objet, 20 + i % 3 * 98, 126 + i / 3 * 74, 90, 66, touches[i], 32, Panneau, "#FFFFFF", 12));
+        }
+
+        l.Add(Btn(p, Objets.Armer, 326, 126, 134, 140, "Armer", 24, Bouton, TexteInactif, 14));
+        l.Add(Btn(p, Objets.Desarmer, 326, 274, 134, 140, "Désarmer", 24, Bouton, TexteInactif, 14));
     }
 
     // ── Briques ──────────────────────────────────────────────────────────────

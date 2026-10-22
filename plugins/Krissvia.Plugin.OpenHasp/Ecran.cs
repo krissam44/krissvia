@@ -35,7 +35,8 @@ public static class Ecran
     private static readonly CultureInfo Francais = CultureInfo.GetCultureInfo("fr-FR");
 
     public static IReadOnlyList<(string Attribut, string Valeur)> Attributs(
-        Platine platine, Reglages reglages, IReadOnlyDictionary<string, EntityStateUpdate> etats, DateTime maintenantLocal)
+        Platine platine, Reglages reglages, IReadOnlyDictionary<string, EntityStateUpdate> etats, DateTime maintenantLocal,
+        EtatClavier? clavier = null)
     {
         var a = new List<(string, string)>();
         string Lisible(string c) => CouleurOpenHasp.Lisible(c, reglages.Affichage.CouleurFond, reglages.Affichage.ContrasteMinimum);
@@ -121,8 +122,35 @@ public static class Ecran
             }
         }
 
+        // ── Page 4 : digicode ──
+        if (platine.ADigicode(reglages))
+        {
+            const int p = Objets.PageAlarme;
+            var alarme = EtatAlarme.Lire(Etat(reglages.Alarme.Entite));
+            var (texte, couleur) = alarme is null ? ("Alarme indisponible", Rouge) : alarme.Affiche();
+            a.Add((Objets.Attribut(p, Objets.EtatAlarme, "text"), texte));
+            a.Add((Objets.Attribut(p, Objets.EtatAlarme, "text_color"), Lisible(couleur)));
+            a.Add((Objets.Attribut(p, Objets.DetailAlarme, "text"), clavier?.Message ?? alarme?.Detail() ?? ""));
+            a.Add((Objets.Attribut(p, Objets.CodeSaisi, "text"), clavier?.Masque ?? ""));
+
+            // Le bouton utile ressort ; l'autre reste actif : c'est le cœur qui accepte ou refuse, pas la platine.
+            var desarmee = alarme?.Etat is null or "disarmed";
+            a.Add((Objets.Attribut(p, Objets.Armer, "bg_color"), desarmee ? PlanningActif : Inactif));
+            a.Add((Objets.Attribut(p, Objets.Armer, "text_color"), desarmee ? TexteActif : TexteInactif));
+            a.Add((Objets.Attribut(p, Objets.Desarmer, "bg_color"), desarmee ? Inactif : "#43A047"));
+            a.Add((Objets.Attribut(p, Objets.Desarmer, "text_color"), desarmee ? TexteInactif : TexteActif));
+        }
+
         return a;
     }
+
+    /// <summary>
+    /// Faut-il amener le digicode sous les yeux ? À l'entrée dans le décompte d'entrée ou au déclenchement, pas à
+    /// chaque publication (le décompte change chaque seconde), ni au premier état reçu : un plugin qui redémarre
+    /// pendant une alarme déclenchée depuis des heures n'a pas à repasser toutes les platines sur le clavier.
+    /// </summary>
+    public static bool AppelleLeClavier(string? avant, string? apres) =>
+        avant is not null && apres is "entry_delay" or "triggered" && avant != apres;
 
     /// <summary>« Jeudi 22 oct. - dehors 12.4° » : date et extérieur sur une ligne, faute de place sous l'horloge.</summary>
     internal static string LigneDate(DateTime jour, double? exterieure)
@@ -158,6 +186,35 @@ public static class Ecran
             _ => null,
         }
         : null;
+}
+
+/// <summary>L'état de l'entité d'alarme du cœur, réduit à ce qu'affiche le digicode.</summary>
+public sealed record EtatAlarme(string? Etat, int Decompte, bool Sonne, string? Capteur, string? Defauts)
+{
+    public static EtatAlarme? Lire(EntityStateUpdate? etat)
+    {
+        if (etat is not { Available: true, Value: { ValueKind: JsonValueKind.Object } v }) return null;
+        string? Texte(string nom) => v.TryGetProperty(nom, out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
+        return new EtatAlarme(Texte("state"),
+            v.TryGetProperty("countdown", out var d) && d.TryGetInt32(out var n) ? n : 0,
+            v.TryGetProperty("ringing", out var s) && s.ValueKind == JsonValueKind.True,
+            Texte("sensor"), Texte("faults"));
+    }
+
+    public (string Texte, string Couleur) Affiche() => Etat switch
+    {
+        "disarmed" => ("Désarmée", "#66BB6A"),
+        "exit_delay" => ($"Sortie : {Decompte} s", "#FFA726"),
+        "armed" => ("Armée", "#42A5F5"),
+        "entry_delay" => ($"Entrée : {Decompte} s", "#FFA726"),
+        "triggered" => (Sonne ? "ALARME - sirène" : "ALARME", "#EF5350"),
+        _ => (Etat ?? "--", "#888888"),
+    };
+
+    /// <summary>Le capteur en cause pendant une entrée ou un déclenchement ; sinon un défaut, s'il y en a.</summary>
+    public string? Detail() => Etat is "entry_delay" or "triggered" && Capteur is { Length: > 0 } c
+        ? c
+        : Defauts is { Length: > 0 } f && f != "OK" ? $"Défaut : {f}" : null;
 }
 
 /// <summary>L'état d'une entité <c>climate</c> du cœur, réduit à ce qu'affiche une platine.</summary>

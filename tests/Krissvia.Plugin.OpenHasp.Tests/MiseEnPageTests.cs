@@ -58,6 +58,7 @@ public class MiseEnPageTests
     {
         var platine = Donnees.Salon();
         platine.Thermostat = null;
+        platine.Digicode = false;
         var reglages = Donnees.Reglages(platine);
         reglages.Sondes.Clear();
 
@@ -82,6 +83,27 @@ public class MiseEnPageTests
             .Where(o => Int(o, "page") == 3 && o.GetProperty("obj").GetString() == "btn").ToList();
 
         Assert.Equal([10, 11, 12], boutons.Select(b => Int(b, "id")));
+    }
+
+    [Fact]
+    public void Avec_le_digicode_la_barre_a_quatre_pages_et_les_temperatures_deviennent_sondes()
+    {
+        var navigation = Objets(Donnees.Salon(), Donnees.Reglages()).Where(o => Int(o, "page") == 0).ToList();
+
+        Assert.Equal(["Thermostat", "Sondes", "Horloge", "Alarme"], navigation.Select(n => n.GetProperty("text").GetString()));
+        Assert.Equal(["p1", "p2", "p3", "p4"], navigation.Select(n => n.GetProperty("action").GetString()));
+    }
+
+    [Fact]
+    public void Le_digicode_a_dix_chiffres_effacer_retour_armer_et_desarmer()
+    {
+        var boutons = Objets(Donnees.Salon(), Donnees.Reglages())
+            .Where(o => Int(o, "page") == 4 && o.GetProperty("obj").GetString() == "btn")
+            .ToDictionary(b => Int(b, "id"), b => b.GetProperty("text").GetString());
+
+        Assert.Equal([.. Enumerable.Range(0, 10).Select(d => 10 + d), 20, 21, 30, 31], boutons.Keys.Order());
+        Assert.All(Enumerable.Range(0, 10), d => Assert.Equal(d.ToString(), boutons[10 + d]));
+        Assert.Equal("Désarmer", boutons[31]);
     }
 
     [Fact]
