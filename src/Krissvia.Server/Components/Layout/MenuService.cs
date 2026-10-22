@@ -36,6 +36,7 @@ public sealed class MenuService
         new("absence", "Absence", "/absence", Icons.Material.Filled.Luggage),
         new("alarme", "Alarme", "/alarme", Icons.Material.Filled.Security),
         new("entites", "Entités", "/entites", Icons.Material.Filled.Devices),
+        new("supervision", "Supervision", "/supervision", Icons.Material.Filled.MonitorHeart),
         new("services", "Services", "/parametres/services", Icons.Material.Filled.Extension, Exact: true),
         new("notifications", "Notifications", "/parametres/notifications", Icons.Material.Filled.NotificationsActive),
         new("comptes", "Comptes", "/parametres/comptes", Icons.Material.Filled.ManageAccounts),

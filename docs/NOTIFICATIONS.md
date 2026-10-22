@@ -46,5 +46,5 @@ Une prévision indisponible ou plus vieille que 3 h ne conclut **rien** : ni ale
 
 ## 4. Pour la suite
 
-Les familles d'alertes de DomoMud s'ajouteront à `AlertSettings` et à `AlertLoop` : sonde muette ou pile faible,
-délestage, plugin arrêté, présence inconnue (Livebox injoignable).
+Sonde muette, pile faible, plugin arrêté, présence inconnue, connexion Internet coupée et espace disque : livrés le
+22/10/2026, voir `SUPERVISION.md` (contrôle toutes les minutes, `SupervisionLoop`). Reste le délestage.

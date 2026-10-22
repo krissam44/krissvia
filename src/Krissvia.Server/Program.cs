@@ -86,6 +86,7 @@ builder.Services.AddSingleton(sp => new Krissvia.Core.Notifications.Notification
     new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) })));
 builder.Services.AddSingleton<Krissvia.Core.Notifications.AlertService>();
 builder.Services.AddSingleton<Krissvia.Climate.Alerts.FrostWatch>();
+builder.Services.AddSingleton<Krissvia.Core.Supervision.SupervisionWatch>();   // plugins, Internet, capteurs, piles, disque
 builder.Services.AddSingleton<ThermostatEngine>();
 builder.Services.AddSingleton<ThermostatService>();
 builder.Services.AddSingleton<ThermostatEntities>();   // les thermostats en entités climate
@@ -123,6 +124,7 @@ builder.Services.AddHostedService<AlertLoop>();
 builder.Services.AddHostedService<PresenceLoop>();
 builder.Services.AddHostedService<RoomAverageLoop>();
 builder.Services.AddHostedService<AlarmLoop>();
+builder.Services.AddHostedService(sp => ActivatorUtilities.CreateInstance<SupervisionLoop>(sp, Path.GetDirectoryName(cheminBase)!));
 
 // Services : les plugins installés sur cette machine, lancés et surveillés par le cœur.
 builder.Services.AddSingleton<IPluginLauncher, ProcessPluginLauncher>();
@@ -189,6 +191,7 @@ api.MapAbsenceApi();
 api.MapDeviceScheduleApi();
 api.MapAutomationApi();
 api.MapAlarmApi();
+api.MapSupervisionApi();
 api.MapEntityApi();
 api.MapWidgetApi();
 

@@ -183,6 +183,9 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
   d'entités, hôte `kv` pour les ordres vérifiés, choix par carte > par entité > par défaut.
 - **Notifications et alertes : `NOTIFICATIONS.md`** (19/10/2026) — ntfy, une alerte par incident avec quarantaine,
   alerte gel par lieu du plugin Météo.
+- **Supervision : `SUPERVISION.md`** (22/10/2026) — plugins arrêtés, connexion Internet, présence perdue, disque,
+  capteurs muets et piles faibles, page `/supervision` ; une coupure Internet que ntfy n'a pas pu dire est racontée au
+  retour.
 - **Alarme : `ALARME.md`** (22/10/2026) — machine à états de DomoMud, sonneries du §9, codes PBKDF2 et blocage,
   page `/alarme`, API `/api/alarm` par code.
 - **Présence et supervision : `PRESENCE.md`** (19/10/2026) — présence du foyer calculée par le cœur sur les capteurs

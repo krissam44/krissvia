@@ -16,10 +16,57 @@ public sealed record FrostAlertSettings
     public int HorizonHours { get; init; } = 24;
 }
 
-/// <summary>Les familles d'alertes et leurs réglages. Une seule pour l'instant ; les suivantes s'y ajouteront.</summary>
+/// <summary>Capteurs muets ou injoignables (supervision) : ceux qui publient d'eux-mêmes, régulièrement.</summary>
+public sealed record SensorAlertSettings
+{
+    public bool Enabled { get; init; } = true;
+
+    /// <summary>Silence au-delà duquel un capteur est muet, 10 min à 48 h.</summary>
+    public int SilentMinutes { get; init; } = 120;
+}
+
+/// <summary>Piles faibles (supervision) : entités de classe <c>battery</c>, en % ou en vrai/faux.</summary>
+public sealed record BatteryAlertSettings
+{
+    public bool Enabled { get; init; } = true;
+
+    /// <summary>À ce niveau ou en dessous, l'alerte part ; elle se lève au-dessus du seuil + 5.</summary>
+    public int ThresholdPercent { get; init; } = 20;
+}
+
+/// <summary>Un réglage de supervision qui n'a qu'un délai de grâce : plugin arrêté, connexion Internet coupée.</summary>
+public sealed record GraceAlertSettings
+{
+    public bool Enabled { get; init; } = true;
+
+    /// <summary>Durée de panne avant l'alerte, 1 à 120 min : un plugin qui redémarre n'est pas un plugin arrêté.</summary>
+    public int GraceMinutes { get; init; } = 5;
+}
+
+public sealed record PresenceAlertSettings
+{
+    public bool Enabled { get; init; } = true;
+}
+
+/// <summary>Espace disque à côté de la base : sur un Raspberry Pi, une carte ou un SSD plein arrête tout.</summary>
+public sealed record DiskAlertSettings
+{
+    public bool Enabled { get; init; } = true;
+
+    /// <summary>En dessous, l'alerte part (100 Mo à 100 Go).</summary>
+    public int MinFreeMegabytes { get; init; } = 1024;
+}
+
+/// <summary>Les familles d'alertes et leurs réglages.</summary>
 public sealed record AlertSettings
 {
     public FrostAlertSettings Frost { get; init; } = new();
+    public SensorAlertSettings Sensors { get; init; } = new();
+    public BatteryAlertSettings Battery { get; init; } = new();
+    public GraceAlertSettings Plugins { get; init; } = new();
+    public GraceAlertSettings Internet { get; init; } = new();
+    public PresenceAlertSettings Presence { get; init; } = new();
+    public DiskAlertSettings Disk { get; init; } = new();
 }
 
 /// <summary>Un incident signalé et pas encore rétabli.</summary>
@@ -106,6 +153,18 @@ public sealed class AlertService(NotificationService notifier, IConfigurationSto
         return (await notifier.SendAsync(n, ct: ct)).Sent;
     }
 
+    /// <summary>
+    /// Oublie un incident sans rien envoyer : ce qu'on ne surveille plus (plugin désactivé, capteur supprimé) n'est pas
+    /// rétabli. Pas de quarantaine non plus. Vrai s'il était actif.
+    /// </summary>
+    public bool Dismiss(string key)
+    {
+        bool oublie;
+        lock (_verrou) oublie = _actives.Remove(key);
+        if (oublie) Changed?.Invoke();
+        return oublie;
+    }
+
     public async Task<AlertSettings> GetSettingsAsync(CancellationToken ct = default)
     {
         if (_reglages is { } r) return r;
@@ -128,6 +187,14 @@ public sealed class AlertService(NotificationService notifier, IConfigurationSto
             throw new NotificationValidationException("horizon de l'alerte gel : de 1 à 48 h (la prévision publiée)");
         if (reglages.Frost.ThresholdCelsius is < -30 or > 10)
             throw new NotificationValidationException("seuil de l'alerte gel : de −30 à 10 °C");
+        if (reglages.Sensors.SilentMinutes is < 10 or > 2880)
+            throw new NotificationValidationException("capteur muet après : de 10 min à 48 h");
+        if (reglages.Battery.ThresholdPercent is < 1 or > 90)
+            throw new NotificationValidationException("seuil de pile faible : de 1 à 90 %");
+        if (reglages.Plugins.GraceMinutes is < 1 or > 120 || reglages.Internet.GraceMinutes is < 1 or > 120)
+            throw new NotificationValidationException("délai avant alerte : de 1 à 120 min");
+        if (reglages.Disk.MinFreeMegabytes is < 100 or > 102400)
+            throw new NotificationValidationException("espace disque minimal : de 100 Mo à 100 Go");
 
         await store.SaveAsync(Collection, new ConfigurationDocument(DocumentId, JsonSerializer.Serialize(reglages, Json)), ct);
         _reglages = reglages;
