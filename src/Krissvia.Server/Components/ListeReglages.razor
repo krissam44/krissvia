@@ -1,0 +1,52 @@
+@* Une liste de réglages (les platines, les sondes de la page 2…) : un tableau, une ligne par élément. Ajouter et le
+   crayon ouvrent la même fenêtre, sur une copie : « Annuler » ne laisse rien. L'ordre compte (position sur la platine),
+   d'où les flèches. Comme le reste du formulaire, rien n'est enregistré avant « Enregistrer » en bas de la page. *@
+
+<MudDataGrid T="JsonObject" Items="Elements" Dense="true" Hover="true" Elevation="0" Outlined="true" Class="rounded-lg"
+             Breakpoint="Breakpoint.Sm">
+    <Columns>
+        <TemplateColumn T="JsonObject" Title="N°" HeaderStyle="width: 48px" Sortable="false">
+            <CellTemplate>@(Liste.IndexOf(context.Item) + 1)</CellTemplate>
+        </TemplateColumn>
+        @foreach (var colonne in Colonnes)
+        {
+            <TemplateColumn T="JsonObject" Title="@Entete(colonne)" Sortable="false">
+                <CellTemplate>
+                    @if (colonne.Type == SettingType.Boolean)
+                    {
+                        <MudIcon Icon="@(context.Item[colonne.Key]?.GetValueKind() == System.Text.Json.JsonValueKind.True ? Icons.Material.Filled.Check : Icons.Material.Filled.Remove)"
+                                 Size="Size.Small" Color="@(context.Item[colonne.Key]?.GetValueKind() == System.Text.Json.JsonValueKind.True ? Color.Success : Color.Default)" />
+                    }
+                    else
+                    {
+                        @Apercu(colonne, context.Item)
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+        }
+        <TemplateColumn T="JsonObject" Title="" HeaderStyle="width: 150px" CellStyle="white-space: nowrap; text-align: right" Sortable="false">
+            <CellTemplate>
+                @{ var indice = Liste.IndexOf(context.Item); }
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Disabled="@(indice == 0)"
+                               OnClick="() => Deplacer(indice, -1)" aria-label="Monter" />
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Disabled="@(indice == Liste.Count - 1)"
+                               OnClick="() => Deplacer(indice, 1)" aria-label="Descendre" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                               OnClick="() => ModifierAsync(context.Item)" aria-label="Modifier" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                               OnClick="() => RetirerAsync(context.Item)" aria-label="Retirer" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <NoRecordsContent>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Aucun pour l'instant.</MudText>
+    </NoRecordsContent>
+</MudDataGrid>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-1 mb-2">
+    <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Add" OnClick="AjouterAsync" Disabled="Plein">Ajouter</MudButton>
+    @if (Champ.MaxItems is { } plafond)
+    {
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Liste.Count / @plafond@(Plein ? " : la liste est complète" : "")</MudText>
+    }
+</MudStack>

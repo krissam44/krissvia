@@ -1,82 +1,78 @@
-@* Formulaire tiré de la description des réglages d'un plugin (plugin.json). Récursif : une sous-section par objet,
-   un cadre par élément de liste. Écrit directement dans l'objet JSON reçu. *@
+@* Formulaire tiré de la description des réglages d'un plugin (plugin.json). Récursif : une sous-section par objet ; une
+   liste s'affiche en tableau, chaque ligne se modifie dans une fenêtre (ListeReglages). Écrit directement dans l'objet
+   JSON reçu. Les champs simples vont deux par ligne sur un écran large, puis les sections et les listes, dans l'ordre. *@
 
-@foreach (var champ in Champ.Properties)
+@if (ChampsSimples.Any())
 {
-    switch (champ.Type)
-    {
-        case SettingType.Object:
-            <MudText Typo="Typo.subtitle1" Class="mt-3 mb-1"><b>@champ.Label</b></MudText>
-            @if (champ.Description is { } aide)
-            {
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">@aide</MudText>
-            }
-            @if (champ.Shared == "mqtt")
-            {
-                <MudAlert Severity="Severity.Info" Dense="true" Class="my-1">
-                    Laisser l'adresse vide pour utiliser le broker commun (pastille MQTT de la barre du haut) ; la renseigner
-                    seulement pour un broker propre à ce plugin.
-                </MudAlert>
-            }
-            <div class="pl-3">
-                <SettingsEditor Champ="champ" Valeur="SousObjet(champ)" />
-            </div>
-            break;
-
-        case SettingType.Array:
-            <MudText Typo="Typo.subtitle1" Class="mt-3 mb-1"><b>@champ.Label</b></MudText>
-            @if (champ.Description is { } aideListe)
-            {
-                <MudText Typo="Typo.caption" Class="mud-text-secondary mb-1">@aideListe</MudText>
-            }
-            var liste = Liste(champ);
-            @for (var i = 0; i < liste.Count; i++)
-            {
-                var element = (JsonObject)liste[i]!;
-                var indice = i;
-                <MudPaper Outlined="true" Class="pa-3 mb-2 rounded-lg" @key="element">
-                    <MudStack Row="true" AlignItems="AlignItems.Start">
-                        <div style="flex: 1">
-                            <SettingsEditor Champ="champ" Valeur="element" />
-                        </div>
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
-                                       OnClick="() => liste.RemoveAt(indice)" aria-label="Retirer" />
-                    </MudStack>
-                </MudPaper>
-            }
-            <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Add"
-                       OnClick="() => Ajouter(champ)">Ajouter</MudButton>
-            break;
-
-        case SettingType.Boolean:
-            <MudSwitch T="bool" Label="@champ.Label" Color="Color.Primary"
-                       Value="Booleen(champ)" ValueChanged="v => Ecrire(champ, v)" />
-            break;
-
-        case SettingType.Integer:
-        case SettingType.Number:
-            <MudNumericField T="double?" Label="@champ.Label" HelperText="@champ.Description" Required="champ.Required"
-                             Min="champ.Minimum" Max="champ.Maximum" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2"
-                             Value="Nombre(champ)" ValueChanged="v => Ecrire(champ, v)" />
-            break;
-
-        case SettingType.String when champ.Entity is { } reference:
-            @* Contrat 0.3 : choisir l'entité, c'est l'autoriser pour ce plugin (docs/CONTRACT-V0.3.md §2). *@
-            <MudSelect T="string" Label="@champ.Label" Required="champ.Required" Clearable="true" Dense="true"
-                       HelperText="@AideEntite(champ, reference)" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2"
-                       Value="Texte(champ)" ValueChanged="v => Ecrire(champ, v)" ToStringFunc="NomEntite">
-                @foreach (var e in Entites(reference, Texte(champ)))
+    <MudGrid Spacing="2" Class="mb-1">
+        @foreach (var champ in ChampsSimples)
+        {
+            <MudItem xs="12" md="6">
+                @switch (champ.Type)
                 {
-                    <MudSelectItem Value="e.EntityId">@e.DisplayName <span class="mud-text-secondary">· @e.EntityId</span></MudSelectItem>
-                }
-            </MudSelect>
-            break;
+                    case SettingType.Boolean:
+                        <MudSwitch T="bool" Label="@champ.Label" Color="Color.Primary"
+                                   Value="Booleen(champ)" ValueChanged="v => Ecrire(champ, v)" />
+                        @if (champ.Description is { } aideOui)
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">@aideOui</MudText>
+                        }
+                        break;
 
-        default:
-            <MudTextField T="string" Label="@champ.Label" HelperText="@champ.Description" Required="champ.Required"
-                          InputType="@(champ.Secret ? InputType.Password : InputType.Text)"
-                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2"
-                          Value="Texte(champ)" ValueChanged="v => Ecrire(champ, v)" />
-            break;
+                    case SettingType.Integer:
+                    case SettingType.Number:
+                        <MudNumericField T="double?" Label="@champ.Label" HelperText="@champ.Description" Required="@(champ.Required && !Partage)"
+                                         Min="champ.Minimum" Max="champ.Maximum" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                         Value="Nombre(champ)" ValueChanged="v => Ecrire(champ, v)" />
+                        break;
+
+                    case SettingType.String when champ.Entity is { } reference:
+                        @* Contrat 0.3 : choisir l'entité, c'est l'autoriser pour ce plugin (docs/CONTRACT-V0.3.md §2). *@
+                        <MudSelect T="string" Label="@champ.Label" Required="@(champ.Required && !Partage)" Clearable="true" Dense="true"
+                                   HelperText="@AideEntite(champ, reference)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   Value="Texte(champ)" ValueChanged="v => Ecrire(champ, v)" ToStringFunc="NomEntite">
+                            @foreach (var e in Entites(reference, Texte(champ)))
+                            {
+                                <MudSelectItem Value="e.EntityId">@e.DisplayName <span class="mud-text-secondary">· @e.EntityId</span></MudSelectItem>
+                            }
+                        </MudSelect>
+                        break;
+
+                    default:
+                        <MudTextField T="string" Label="@champ.Label" HelperText="@champ.Description" Required="@(champ.Required && !Partage)"
+                                      InputType="@(champ.Secret ? InputType.Password : InputType.Text)"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Value="Texte(champ)" ValueChanged="v => Ecrire(champ, v)" />
+                        break;
+                }
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@foreach (var champ in Champ.Properties.Where(c => c.Type is SettingType.Object or SettingType.Array))
+{
+    <MudText Typo="Typo.subtitle1" Class="mt-4 mb-1"><b>@champ.Label</b></MudText>
+    @if (champ.Description is { } aide)
+    {
+        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-1">@aide</MudText>
+    }
+
+    @if (champ.Type == SettingType.Object)
+    {
+        @if (champ.Shared == "mqtt")
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="my-1">
+                Laisser l'adresse vide pour utiliser le broker commun (pastille MQTT de la barre du haut) ; la renseigner
+                seulement pour un broker propre à ce plugin.
+            </MudAlert>
+        }
+        <div class="pl-3">
+            <SettingsEditor Champ="champ" Valeur="SousObjet(champ)" Partage="@(Partage || champ.Shared is not null)" />
+        </div>
+    }
+    else
+    {
+        <ListeReglages Champ="champ" Liste="Liste(champ)" />
     }
 }

@@ -19,6 +19,17 @@ public partial class ServiceDetail
     private IReadOnlyList<string> _erreurs = [];
     private Timer? _minuterie;
 
+    /// <summary>L'état du processus, en paires libellé / valeur (le dossier en police fixe).</summary>
+    private IEnumerable<(string Libelle, string Valeur, bool Code)> Informations => _service is not { } s ? [] :
+    [
+        ("Version connectée", s.PluginVersion ?? "—", false),
+        ("Processus", s.ProcessId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "—", false),
+        ("Lancé le", s.StartedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) ?? "—", false),
+        ("Relances", s.Restarts.ToString(System.Globalization.CultureInfo.InvariantCulture), false),
+        ("Dernière sortie", s.LastExit ?? "—", false),
+        ("Dossier", s.Directory ?? "—", true),
+    ];
+
     protected override void OnParametersSet()
     {
         _service = Supervisor.GetSnapshot(Id);

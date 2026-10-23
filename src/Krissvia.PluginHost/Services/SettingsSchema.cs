@@ -19,7 +19,7 @@ public sealed record EntitySetting(IReadOnlyList<string> Kinds, IReadOnlyList<st
 /// <summary>
 /// Un réglage décrit dans <c>plugin.json</c> (<c>"settings"</c>) — un sous-ensemble de JSON Schema : <c>type</c>,
 /// <c>title</c>, <c>description</c>, <c>default</c>, <c>minimum</c>/<c>maximum</c>, <c>required</c>,
-/// <c>format: "password"</c>, <c>properties</c> (objet), <c>items</c> (liste d'objets). Les clés sont celles de la
+/// <c>format: "password"</c>, <c>properties</c> (objet), <c>items</c> et <c>maxItems</c> (liste d'objets). Les clés sont celles de la
 /// configuration du plugin (<c>Mqtt</c> → <c>Host</c>…) : c'est ce qui permet de les lui transmettre telles quelles.
 /// </summary>
 public sealed record SettingField
@@ -36,6 +36,9 @@ public sealed record SettingField
 
     public double? Minimum { get; init; }
     public double? Maximum { get; init; }
+
+    /// <summary>Liste : nombre d'éléments au plus (<c>maxItems</c>) — six températures sur la page 2 d'une platine.</summary>
+    public int? MaxItems { get; init; }
 
     /// <summary>Champs d'un objet, ou de chaque élément d'une liste.</summary>
     public IReadOnlyList<SettingField> Properties { get; init; } = [];
@@ -93,6 +96,7 @@ public static class SettingsSchema
             Minimum = s.TryGetProperty("minimum", out var min) && min.TryGetDouble(out var vmin) ? vmin : null,
             Maximum = s.TryGetProperty("maximum", out var max) && max.TryGetDouble(out var vmax) ? vmax : null,
             Properties = proprietes,
+            MaxItems = type == SettingType.Array && s.TryGetProperty("maxItems", out var mx) && mx.TryGetInt32(out var vmx) ? vmx : null,
             Shared = type == SettingType.Object ? Chaine(s, "x-shared") : null,
             Entity = type == SettingType.String && Chaine(s, "format") == "entity"
                 ? new EntitySetting(Liste(s, "x-kinds"), Liste(s, "x-device-classes"),
@@ -205,6 +209,7 @@ public static class SettingsSchema
                 case SettingType.Array:
                     if (v is not JsonArray liste) { erreurs.Add($"{nom} : liste attendue."); break; }
                     if (champ.Required && liste.Count == 0) erreurs.Add($"{nom} : au moins un élément.");
+                    if (champ.MaxItems is { } plafond && liste.Count > plafond) erreurs.Add($"{nom} : {plafond} au plus.");
                     for (var i = 0; i < liste.Count; i++)
                     {
                         if (liste[i] is JsonObject element) Valider(champ, element, $"{nom} n° {i + 1} › ", erreurs);

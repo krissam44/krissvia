@@ -1,0 +1,31 @@
+@* Une ligne d'une liste de réglages, dans le même formulaire que le reste de la page (SettingsEditor). *@
+<MudDialog>
+    <DialogContent>
+        <SettingsEditor Champ="Champ" Valeur="Element" />
+        @foreach (var erreur in _erreurs)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">@erreur</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Annuler">Annuler</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Valider">Valider</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialogue { get; set; } = default!;
+    [Parameter, EditorRequired] public SettingField Champ { get; set; } = default!;
+    [Parameter, EditorRequired] public System.Text.Json.Nodes.JsonObject Element { get; set; } = default!;
+
+    private IReadOnlyList<string> _erreurs = [];
+
+    private void Annuler() => Dialogue.Cancel();
+
+    /// <summary>Une ligne incomplète ne rentre pas dans la liste : l'erreur se voit ici, pas au moment d'enregistrer.</summary>
+    private void Valider()
+    {
+        _erreurs = SettingsSchema.Validate(Champ, Element);
+        if (_erreurs.Count == 0) Dialogue.Close(DialogResult.Ok(Element));
+    }
+}

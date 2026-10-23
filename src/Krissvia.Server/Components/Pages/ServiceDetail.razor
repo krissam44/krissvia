@@ -31,16 +31,23 @@ else
             <MudText Class="mt-3">@_service.Description</MudText>
         }
 
-        <MudSimpleTable Dense="true" Elevation="0" Class="mt-3">
-            <tbody>
-                <tr><td>Version connectée</td><td>@(_service.PluginVersion ?? "—")</td></tr>
-                <tr><td>Processus</td><td>@(_service.ProcessId?.ToString() ?? "—")</td></tr>
-                <tr><td>Lancé le</td><td>@(_service.StartedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "—")</td></tr>
-                <tr><td>Relances</td><td>@_service.Restarts</td></tr>
-                <tr><td>Dernière sortie</td><td>@(_service.LastExit ?? "—")</td></tr>
-                <tr><td>Dossier</td><td><code>@(_service.Directory ?? "—")</code></td></tr>
-            </tbody>
-        </MudSimpleTable>
+        @* Côte à côte : trois par ligne sur grand écran, deux sur un écran moyen, une sur téléphone. *@
+        <MudGrid Spacing="2" Class="mt-2">
+            @foreach (var (libelle, valeur, code) in Informations)
+            {
+                <MudItem xs="12" sm="6" lg="4">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">@libelle</MudText>
+                    @if (code)
+                    {
+                        <code style="word-break: break-all">@valeur</code>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">@valeur</MudText>
+                    }
+                </MudItem>
+            }
+        </MudGrid>
 
     </MudPaper>
 
