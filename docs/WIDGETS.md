@@ -218,7 +218,8 @@ chaque section une grille de cartes. Mode édition sur une copie : « Enregistre
 laisse rien ; replier une section hors édition s'enregistre aussitôt.
 
 - Grille : 12 colonnes sur grand écran, comme MudGrid et DomoMud ; largeur d'une carte de 1 à 12 (le menu propose
-  1/12, 1/6, 1/4, 1/3, 1/2, 2/3, 3/4 et pleine largeur ; 1/12 depuis le 23/10/2026, pour les petites cartes à icône), hauteur de 1 à 4 lignes **par demi-ligne** (menu ↕ de la carte en mode
+  1/12, 1/6, 1/4, 1/3, 1/2, 2/3, 3/4 et pleine largeur ; 1/12 depuis le 23/10/2026, pour les petites cartes à icône ;
+  en édition, une carte de moins de 180 px remplace sa barre d'outils par un menu « ⋮ » : Avancer, Reculer, Régler, Retirer), hauteur de 1 à 4 lignes **par demi-ligne** (menu ↕ de la carte en mode
   édition, ou sa roue dentée ; 23/10/2026). La grille compte en demi-lignes de 53 px : une ligne fait toujours 118 px,
   1,5 ligne 183 px, 2 lignes 248 px. Pourquoi pas une hauteur libre, qui suivrait le contenu : une carte à liste (les
   appareils de la box) grandirait jusqu'à tout montrer, et une carte qui change de taille en direct fait sauter la grille. Sur tablette, 4 colonnes (une carte y prend
