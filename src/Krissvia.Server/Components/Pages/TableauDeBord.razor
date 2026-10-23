@@ -163,6 +163,21 @@
                                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
                                                    OnClick="() => SupprimerCarte(sec.Id, carte.Id)" aria-label="Retirer la carte" />
                                 </div>
+                                @* Une carte étroite (1/12, ou 1/6 sur un écran moyen) n'a pas la place des six boutons : un seul menu,
+                                   la taille se règle dans la roue dentée. Choisi par la largeur réelle de la carte (requête de
+                                   conteneur), pas par sa largeur en douzièmes : la même carte est étroite ou non selon l'écran. *@
+                                <div class="kv-carte-outils kv-carte-outils-compacts">
+                                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" aria-label="Outils de la carte">
+                                        <MudMenuItem Icon="@Icons.Material.Filled.ChevronLeft" Disabled="@(index == 0)"
+                                                     OnClick="() => DeplacerCarte(sec.Id, index, -1)">Avancer</MudMenuItem>
+                                        <MudMenuItem Icon="@Icons.Material.Filled.ChevronRight" Disabled="@(index == sec.Cards.Count - 1)"
+                                                     OnClick="() => DeplacerCarte(sec.Id, index, 1)">Reculer</MudMenuItem>
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Settings"
+                                                     OnClick="() => ModifierCarteAsync(sec.Id, carte)">Régler (taille, widget…)</MudMenuItem>
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error"
+                                                     OnClick="() => SupprimerCarte(sec.Id, carte.Id)">Retirer</MudMenuItem>
+                                    </MudMenu>
+                                </div>
                             }
                             @if (composant is not null)
                             {
@@ -243,6 +258,14 @@
     .kv-edition .kv-carte { outline: 2px dashed var(--mud-palette-lines-inputs); outline-offset: -2px; cursor: grab; }
     .kv-carte-outils { position: absolute; top: 2px; right: 2px; z-index: 2; display: flex; align-items: center; border-radius: 16px;
                        background: var(--mud-palette-surface); box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+    /* La barre complète fait 156 px : en dessous de 180 px de carte (une 1/12, une 1/6 sur un écran moyen), elle cède
+       la place au menu « ⋮ ». Une 1/6 de grand écran (190 px) garde la barre. */
+    .kv-edition .kv-carte { container-type: inline-size; }
+    .kv-carte-outils-compacts { display: none; }
+    @@container (max-width: 179px) {
+        .kv-carte-outils:not(.kv-carte-outils-compacts) { display: none; }
+        .kv-carte-outils-compacts { display: flex; }
+    }
     .kv-ajout, .kv-ajout-section { display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
                                    border: 2px dashed var(--mud-palette-lines-inputs); border-radius: 12px; background: transparent;
                                    color: var(--mud-palette-text-secondary); font: inherit; font-size: .85rem; }
