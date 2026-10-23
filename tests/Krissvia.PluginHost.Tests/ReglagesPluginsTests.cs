@@ -89,6 +89,21 @@ public class ReglagesPluginsTests
     }
 
     [Fact]
+    public void La_page_2_d_une_platine_n_accepte_que_six_temperatures_et_trois_interrupteurs()
+    {
+        var schema = Schema("Krissvia.Plugin.OpenHasp");
+        string Sondes(int n) => string.Join(",", Enumerable.Range(1, n).Select(i => $$"""{"Entite":"sensor.t{{i}}"}"""));
+        string Boutons(int n) => string.Join(",", Enumerable.Range(1, n).Select(i => $$"""{"Entite":"switch.b{{i}}"}"""));
+        IReadOnlyList<string> Erreurs(int sondes, int boutons) => SettingsSchema.Validate(schema, SettingsSchema.Complete(schema,
+            JsonNode.Parse($$"""{"Mqtt":{},"Sondes":[{{Sondes(sondes)}}],"Platines":[{"Noeud":"salon","Interrupteurs":[{{Boutons(boutons)}}]}]}""")!.AsObject()));
+
+        Assert.Equal(6, schema.Properties.Single(p => p.Key == "Sondes").MaxItems);
+        Assert.Empty(Erreurs(6, 3));
+        Assert.Equal(["Températures (page 2, commune à toutes les platines, 6 au plus) : 6 au plus."], Erreurs(7, 3));
+        Assert.Equal(["Platines n° 1 › Interrupteurs (page horloge, 3 au plus) : 3 au plus."], Erreurs(6, 4));
+    }
+
+    [Fact]
     public void Une_liste_d_appareils_est_controlee_ligne_par_ligne()
     {
         var schema = Schema("Krissvia.Plugin.Shelly");

@@ -10,6 +10,9 @@ public partial class SettingsEditor
     [Parameter, EditorRequired] public SettingField Champ { get; set; } = default!;
     [Parameter, EditorRequired] public JsonObject Valeur { get; set; } = default!;
 
+    /// <summary>Dans une section que le cœur sait remplir (broker commun) : rien n'y est obligatoire, comme à la validation.</summary>
+    [Parameter] public bool Partage { get; set; }
+
     [Inject] private IEntityRegistry Registre { get; set; } = default!;
 
     /// <summary>
@@ -66,5 +69,6 @@ public partial class SettingsEditor
         return nouvelle;
     }
 
-    private void Ajouter(SettingField champ) => Liste(champ).Add(SettingsSchema.Complete(champ, null));
+    /// <summary>Les champs d'une seule valeur, rangés en grille ; les sections et les listes suivent.</summary>
+    private IEnumerable<SettingField> ChampsSimples => Champ.Properties.Where(c => c.Type is not (SettingType.Object or SettingType.Array));
 }

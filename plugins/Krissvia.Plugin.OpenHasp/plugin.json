@@ -33,6 +33,7 @@
             "Interrupteurs": {
               "type": "array",
               "title": "Interrupteurs (page horloge, 3 au plus)",
+              "maxItems": 3,
               "items": {
                 "type": "object",
                 "required": [ "Entite" ],
@@ -48,6 +49,7 @@
       "Sondes": {
         "type": "array",
         "title": "Températures (page 2, commune à toutes les platines, 6 au plus)",
+        "maxItems": 6,
         "items": {
           "type": "object",
           "required": [ "Entite" ],

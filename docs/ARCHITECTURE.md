@@ -220,7 +220,8 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
    fiche avec journal. Le cœur lance lui-même les plugins activés (désactivés par défaut), avec un jeton neuf à
    chaque lancement, les relance après un plantage (2 s à 1 min) et refuse d'en lancer un déjà connecté
    ailleurs. Réglages : chaque `plugin.json` les décrit (sous-ensemble de JSON Schema), la fiche du service en
-   tire un formulaire, et le cœur les transmet **au lancement** par variables d'environnement (prioritaires sur
+   tire un formulaire (champs deux par ligne ; une liste en tableau dont chaque ligne s'ajoute et se modifie
+   dans une fenêtre, sur une copie, bornée par `maxItems` — 23/10/2026), et le cœur les transmet **au lancement** par variables d'environnement (prioritaires sur
    `appsettings.Local.json`), puis relance le plugin s'ils changent — plus simple et plus sûr qu'une
    reconfiguration à chaud. Le message `configure` reste pour les plugins d'une autre machine.
    **Authentification** (15/10/2026) : toute l'interface exige une connexion, en développement comme en
