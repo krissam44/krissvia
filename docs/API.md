@@ -219,6 +219,8 @@ ouvrirait le flux avec le cookie de session.
 | Méthode | Route | Corps | Effet |
 |---|---|---|---|
 | GET | `/api/widgets` | | Catalogue : `widgets` (manifeste, `script_url`, `origin` = `standard`, `local` ou `blazor`, et `blazor` = nom du composant pour un widget Blazor) et `errors` (widgets écartés, avec leur raison) |
+| POST | `/api/widgets` | archive `.zip` (`Content-Type: application/zip`) | Installe ou met à jour un widget local : **201** `{ "id" }`, **400** avec la raison du refus (WIDGETS.md §14) |
+| DELETE | `/api/widgets/{id}` | | Retire un widget local : **204**, **404** s'il n'y en a pas (un standard ou un widget de plugin ne se retire pas) |
 | GET | `/api/dashboards` | | Les pages, dans l'ordre (une page `principal` vide si rien n'est enregistré) |
 | GET | `/api/dashboards/{id}` | | Une page ; **404** si inconnue |
 | PUT | `/api/dashboards/{id}` | une page (voir ci-dessous) | Crée ou remplace ; l'identifiant vient de l'URL |

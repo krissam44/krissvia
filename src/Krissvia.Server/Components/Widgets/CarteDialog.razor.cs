@@ -64,7 +64,7 @@ public partial class CarteDialog
         if (Carte.Widget is null)
         {
             _principale = Entites.FirstOrDefault(e => e.EntityId == Carte.Entity);
-            _compatibles = _principale is null ? [] : WidgetCatalog.CompatibleWith(Catalogue, _principale);
+            _compatibles = _principale is null ? [] : WidgetCatalog.ChoosableFor(Catalogue, _principale);
             Appliquer(Auto, Carte);
             return;
         }
@@ -74,7 +74,7 @@ public partial class CarteDialog
         _principale = Entites.FirstOrDefault(e => e.EntityId == principalId);
         if (_principale is null) return;
 
-        _compatibles = WidgetCatalog.CompatibleWith(Catalogue, _principale);
+        _compatibles = WidgetCatalog.ChoosableFor(Catalogue, _principale);
         Appliquer(widget?.Manifest.Id ?? _compatibles.FirstOrDefault()?.Manifest.Id, Carte);
     }
 
@@ -84,7 +84,7 @@ public partial class CarteDialog
                         || e.DisplayName.Contains(texte, StringComparison.CurrentCultureIgnoreCase)
                         || e.EntityId.Contains(texte, StringComparison.OrdinalIgnoreCase)
                         || Categories.De(e).Libelle.Contains(texte, StringComparison.CurrentCultureIgnoreCase))
-            .Where(e => WidgetCatalog.CompatibleWith(Catalogue, e).Count > 0)
+            .Where(e => WidgetCatalog.ChoosableFor(Catalogue, e).Count > 0)
             // Rangées par type, dans l'ordre du filtre de l'écran Entités, puis par nom.
             .OrderBy(e => Array.IndexOf(Categories.Toutes, Categories.De(e)))
             .ThenBy(e => e.DisplayName, StringComparer.CurrentCultureIgnoreCase));
@@ -92,7 +92,7 @@ public partial class CarteDialog
     private void ChoisirEntite(RegisteredEntity? entite)
     {
         _principale = entite;
-        _compatibles = entite is null ? [] : WidgetCatalog.CompatibleWith(Catalogue, entite);
+        _compatibles = entite is null ? [] : WidgetCatalog.ChoosableFor(Catalogue, entite);
         Appliquer(Auto, null);
     }
 
@@ -115,7 +115,7 @@ public partial class CarteDialog
         foreach (var slot in EstAuto ? Enumerable.Empty<WidgetSlot>() : widget.Manifest.Slots.Skip(1))
         {
             var lien = existante?.Entities.GetValueOrDefault(slot.Name) ?? anciens.GetValueOrDefault(slot.Name);
-            _liens[slot.Name] = Entites.FirstOrDefault(e => e.EntityId == lien) is { } e && WidgetCatalog.Score(slot, e) >= 0 ? lien : null;
+            _liens[slot.Name] = Entites.FirstOrDefault(e => e.EntityId == lien) is { } e && WidgetCatalog.Score(slot, e, ignoreUsage: true) >= 0 ? lien : null;
         }
 
         _cols = existante?.Cols ?? widget.Manifest.Size.Cols;

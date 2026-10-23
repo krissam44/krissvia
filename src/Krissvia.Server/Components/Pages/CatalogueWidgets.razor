@@ -1,0 +1,70 @@
+@page "/parametres/widgets"
+@using Krissvia.Core.Widgets
+
+<PageTitle>Widgets · Krissvia</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-2">Widgets</MudText>
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+    Installez vos propres cartes : choisissez les fichiers du widget (<code>widget.json</code>, son script, ses images) ou
+    une archive <code>.zip</code>. Il se choisit aussitôt pour une entité (écran Entités, champ Widget) ou pour une carte
+    du tableau de bord (mode édition, roue dentée). Réinstaller un widget du même identifiant le met à jour.
+</MudText>
+
+<div class="d-flex flex-wrap align-center gap-3 mb-4">
+    <MudFileUpload T="IReadOnlyList<IBrowserFile>" FilesChanged="InstallerAsync" MaximumFileCount="@WidgetInstaller.MaxFiles"
+                   Accept="@string.Join(",", WidgetInstaller.Extensions.Append(".zip"))" Disabled="_occupe">
+        <CustomContent Context="envoi">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Upload" Disabled="_occupe"
+                       OnClick="envoi.OpenFilePickerAsync">
+                Installer un widget…
+            </MudButton>
+        </CustomContent>
+    </MudFileUpload>
+    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+        Dossier des widgets locaux : <code>@Catalogue.LocalDirectory</code>
+    </MudText>
+</div>
+
+@if (_refus is not null)
+{
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3" ShowCloseIcon="true" CloseIconClicked="() => _refus = null">
+        Installation refusée : @_refus
+    </MudAlert>
+}
+
+@foreach (var erreur in _catalogue.Errors)
+{
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">Widget écarté : @erreur</MudAlert>
+}
+
+<MudPaper Elevation="1" Class="rounded-lg">
+    <MudTable Items="_lignes" Dense="true" Hover="true" Elevation="0" Breakpoint="Breakpoint.Sm" GroupBy="_groupes"
+              GroupHeaderStyle="background-color: var(--mud-palette-background-gray)">
+        <HeaderContent>
+            <MudTh>Widget</MudTh>
+            <MudTh>Pour</MudTh>
+            <MudTh Style="width: 90px">Taille</MudTh>
+            <MudTh Style="width: 60px"></MudTh>
+        </HeaderContent>
+        <GroupHeaderTemplate>
+            <MudTh colspan="4"><MudText Typo="Typo.subtitle2">@context.Key (@context.Items.Count())</MudText></MudTh>
+        </GroupHeaderTemplate>
+        <RowTemplate>
+            <MudTd DataLabel="Widget">
+                <MudText Typo="Typo.body1">@context.Manifest.Name</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">
+                    @context.Manifest.Id@(context.Manifest.Version is { } v ? $" · v{v}" : "")@(context.Manifest.Description is { } d ? $" — {d}" : "")
+                </MudText>
+            </MudTd>
+            <MudTd DataLabel="Pour"><MudText Typo="Typo.body2">@Accepte(context.Manifest.Slots[0])</MudText></MudTd>
+            <MudTd DataLabel="Taille" Style="white-space: nowrap">@Taille(context.Manifest.Size)</MudTd>
+            <MudTd>
+                @if (context.Origin == WidgetCatalog.Local)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" Disabled="_occupe"
+                                   OnClick="() => RetirerAsync(context)" aria-label="@($"Retirer {context.Manifest.Name}")" />
+                }
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudPaper>

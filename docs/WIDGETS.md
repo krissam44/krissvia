@@ -1,7 +1,6 @@
-# Contrat des widgets (version 1, proposition)
+# Contrat des widgets (version 2)
 
-> Statut : **proposition à valider** avant tout code (tableau de bord, widgets standards). Rien ici n'est
-> implémenté. Complète ARCHITECTURE.md §10.
+> Proposé le 16/10/2026, mis en œuvre depuis (§11 à §14). Complète ARCHITECTURE.md §10.
 
 Un widget affiche une ou plusieurs entités et peut leur envoyer des ordres. L'utilisateur peut en écrire, en
 Web Component ou en Blazor, et choisir celui qu'utilise chaque entité ou chaque carte du tableau de bord.
@@ -280,3 +279,31 @@ précis), enregistré dans le registre comme la pièce ou la puissance. Une cart
 Un widget choisi pour l'entité mais devenu impossible (retiré du dossier, ou qui refuse l'entité) laisse place au
 plus précis ; une entité disparue s'affiche dans « valeur ». La résolution est dans
 `Krissvia.Core.Widgets.WidgetResolver`.
+
+## 14. Installer ses widgets, et les choisir (23/10/2026)
+
+Deux obstacles, vécus avec un widget « spot » (une image de spot jaune allumé, grise éteint) : le dossier local est
+« à côté de la base », que personne ne va chercher sur le serveur (le widget avait été déposé dans
+`wwwroot/widgets/local`, qui n'est pas lu) ; et son slot exigeait l'usage `spot`, qu'aucune entité ne peut avoir — il
+n'était proposé nulle part.
+
+- **Paramètres › Widgets** (menu ⋮, `/parametres/widgets`) : le catalogue par origine (installés ici, plugins,
+  Blazor, standards), ce que chacun accepte, les widgets écartés et pourquoi, et le chemin du dossier local.
+  **Installer un widget…** prend ses fichiers (`widget.json`, script, images) ou une archive `.zip` (à plat, ou faite
+  d'un dossier). Réinstaller le même identifiant met à jour ; la corbeille retire un widget local en disant combien
+  d'entités et de cartes l'utilisent.
+- Même chose par l'API : `POST /api/widgets` (corps : l'archive `.zip`) rend `201 { "id" }` ou `400` avec la raison ;
+  `DELETE /api/widgets/{id}` retire un widget local.
+- L'installation **valide avant d'écrire**, avec la règle du catalogue : un widget qui s'installe est un widget qui se
+  charge. Refusés : un identifiant standard, de plugin ou Blazor (le catalogue l'écarterait en silence) ; un chemin qui
+  sortirait du dossier, un fichier caché ; un type autre que page web (`.js`, `.css`, `.json`, images, polices,
+  `.txt`/`.md`) ; plus de 100 fichiers ou 10 Mo (décompressés, comptés à la lecture). Écrite dans un dossier caché
+  puis basculée d'un coup : le tableau de bord ne voit jamais un widget à moitié copié. Un dossier caché (point en
+  tête) n'entre jamais au catalogue. Code : `Krissvia.Core.Widgets.WidgetInstaller`, testé.
+- **Le choix explicite passe outre l'usage.** Dans l'écran Entités (champ Widget) et sur une carte (roue dentée), les
+  widgets qui acceptent l'entité viennent d'abord, puis ceux qui ne diffèrent que par l'usage, marqués
+  « usage spot ». La famille et la classe d'appareil restent exigées : le widget ne saurait pas lire une autre valeur.
+  Le choix **automatique**, lui, respecte toujours l'usage : installer un widget « spot » ne change aucune carte tant
+  qu'on ne l'a pas choisi. (`WidgetCatalog.ChoosableFor`, `Score(…, ignoreUsage: true)`.)
+- Pour qu'un widget s'impose de lui-même à toutes les lumières, déclarer l'usage existant (`"usages": ["eclairage"]`) :
+  installé exprès, il passe devant le standard à précision égale (§6).
