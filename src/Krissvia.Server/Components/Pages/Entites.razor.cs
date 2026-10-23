@@ -3,6 +3,7 @@ using Krissvia.Contracts;
 using Krissvia.Core.Registry;
 using Krissvia.Core.States;
 using Krissvia.Server.Components.Inventaire;
+using Microsoft.JSInterop;
 
 namespace Krissvia.Server.Components.Pages;
 
@@ -18,6 +19,11 @@ public partial class Entites : IDisposable
     [Inject] private IEntityStateReader Etats { get; set; } = default!;
     [Inject] private IDialogService Dialogues { get; set; } = default!;
     [Inject] private TimeProvider Horloge { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    /// <summary>Colonne Valeur : masquée par défaut (le tableau tient mieux), le choix est gardé par navigateur.</summary>
+    private bool _avecValeur;
+    private const string CleValeur = "krissvia.entites.valeur";
 
     private IReadOnlyList<RegisteredEntity> _entites = [];
     private Dictionary<string, RegisteredDevice> _appareils = [];
@@ -39,6 +45,36 @@ public partial class Entites : IDisposable
     {
         await RelireAsync();
         _minuterie = new Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool premierRendu)
+    {
+        if (!premierRendu) return;
+        try
+        {
+            if (await JS.InvokeAsync<string?>("localStorage.getItem", CleValeur) == "1")
+            {
+                _avecValeur = true;
+                StateHasChanged();
+            }
+        }
+        catch (JSException)
+        {
+            // Stockage bloqué (navigation privée) : on garde le réglage par défaut.
+        }
+    }
+
+    private async Task AfficherValeurAsync(bool oui)
+    {
+        _avecValeur = oui;
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", CleValeur, oui ? "1" : "0");
+        }
+        catch (JSException)
+        {
+            // Le choix vaut pour cette visite seulement.
+        }
     }
 
     private async Task RelireAsync()
