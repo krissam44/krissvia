@@ -144,6 +144,12 @@ public static class DeviceClasses
     /// </summary>
     public const string VirtualMachine = "virtual_machine";
 
+    /// <summary>
+    /// sensor dont la valeur est un OBJET : un nœud d'hyperviseur (serveur Proxmox) — en ligne, processeur, mémoire,
+    /// disque système, durée de fonctionnement, machines en marche. Publiée par le plugin Proxmox, avec sa carte.
+    /// </summary>
+    public const string HypervisorNode = "hypervisor_node";
+
     /// <summary>binary_sensor : true = OUVERT (le plugin inverse les conventions contraires).</summary>
     public const string Opening = "opening";
 

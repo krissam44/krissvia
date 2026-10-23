@@ -61,11 +61,17 @@ class KvProxmoxVm extends KvWidget {
 
         const ligne = (nom, p, texte) => typeof p !== "number" ? "" :
             `<div class="ligne"><span>${nom}</span><div class="jauge"><div style="width:${Math.min(100, p)}%;background:${couleurCharge(p / 100)}"></div></div><span class="valeur">${texte}</span></div>`;
-        const lignes = enMarche ? [
-            ligne("Processeur", v.cpu_percent, `${nombre(v.cpu_percent, 0)} %`),
-            ligne("Mémoire", v.memory_percent, `${nombre(v.memory_percent, 0)} %`),
-            ligne("Disque", v.disk_percent, `${nombre(v.disk_percent, 0)} %`),
-        ].join("") : "";
+        // Le disque, en marche ou non : une VM sans agent invité ne remonte que la taille allouée (« 64 Go alloués »),
+        // comme dans DomoMud ; un conteneur dit ce qu'il occupe (« 1,4 Go / 4 Go »).
+        const disque = typeof v.disk_percent === "number"
+            ? ligne("Disque", v.disk_percent, `${nombre(v.disk_percent, 0)} %`)
+              + (v.disk_bytes ? `<div class="detail" style="text-align:right">${taille(v.disk_bytes)} / ${taille(v.max_disk_bytes)}</div>` : "")
+            : v.max_disk_bytes ? `<div class="ligne"><span>Disque</span><span class="detail">${taille(v.max_disk_bytes)} alloués</span><span></span></div>` : "";
+        const lignes = [
+            enMarche ? ligne("Processeur", v.cpu_percent, `${nombre(v.cpu_percent, 0)} %`) : "",
+            enMarche ? ligne("Mémoire", v.memory_percent, `${nombre(v.memory_percent, 0)} %`) : "",
+            disque,
+        ].join("");
 
         const occupe = this.#attente ? " disabled" : "";
         const bouton = (commande, ic, texte, actif) => `<button data-commande="${commande}"${actif ? occupe : " disabled"}>${icone(ic)}${texte}</button>`;
