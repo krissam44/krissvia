@@ -197,6 +197,11 @@ DomoMud reste installé (`/opt/domomud`, sa base, ses sauvegardes) : en cas de b
 `sudo systemctl disable --now krissvia` puis `sudo systemctl enable --now domomud` le remettent en service tel
 qu'il était. Les deux timers de sauvegarde peuvent coexister (00 h 00 pour DomoMud, 00 h 15 pour Krissvia).
 
+**`synchronous = FULL`** sur chaque connexion SQLite (`SqliteDatabase.OpenAsync`), sans réglage pour le changer :
+le SSD du Pi est derrière un pont USB-SATA qui acquitte des vidages de cache qu'il ne fait pas, et la corruption de
+la base de DomoMud sur ce Pi (02/10/2026) portait la signature d'écritures perdues. Le SQLite embarqué l'avait déjà
+par défaut ; c'est désormais écrit, donc indépendant de la façon dont il est compilé.
+
 ## 8. Sauvegarde et restauration
 
 `sauvegarde-krissvia.timer` lance `sauvegarde-krissvia.sh` toutes les 6 h (00, 06, 12, 18 h 15, rattrapée après
