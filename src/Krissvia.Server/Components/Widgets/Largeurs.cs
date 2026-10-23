@@ -22,3 +22,17 @@ public static class Largeurs
 
     private static int Pgcd(int a, int b) => b == 0 ? a : Pgcd(b, a % b);
 }
+
+/// <summary>Hauteur d'une carte, en lignes de la grille, par demi-ligne (WIDGETS.md §3).</summary>
+public static class Hauteurs
+{
+    /// <summary>De 1 à 4 lignes, par demi-ligne.</summary>
+    public static readonly double[] Toutes = [.. Enumerable.Range(2, WidgetCatalog.MaxRows * 2 - 1).Select(n => n / 2.0)];
+
+    /// <summary>« 1 ligne », « 1,5 ligne », « 2 lignes ».</summary>
+    public static string Libelle(double rows) =>
+        $"{rows.ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"))} {(rows >= 2 ? "lignes" : "ligne")}";
+
+    /// <summary>La classe CSS de la hauteur : la grille compte en demi-lignes (<c>h3</c> = 1,5 ligne).</summary>
+    public static string Classe(double rows) => $"h{(int)Math.Round(rows * 2)}";
+}

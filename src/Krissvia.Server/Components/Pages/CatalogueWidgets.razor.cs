@@ -56,7 +56,7 @@ public partial class CatalogueWidgets
     }
 
     /// <summary>« 1/4 × 2 » : la part de largeur, sans le « (4 par ligne) » du menu des cartes, puis les lignes.</summary>
-    private static string Taille(WidgetSize taille) => $"{Largeurs.Libelle(taille.Cols).Split(" (")[0]} × {taille.Rows}";
+    private static string Taille(WidgetSize taille) => $"{Largeurs.Libelle(taille.Cols).Split(" (")[0]} × {Hauteurs.Libelle(taille.Rows)}";
 
     private async Task InstallerAsync(IReadOnlyList<IBrowserFile>? choisis)
     {
