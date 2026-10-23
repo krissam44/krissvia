@@ -19,11 +19,16 @@ const hote = {
     ws: null,
     arret: false,
     delai: 1000,
+    dotnet: null,           // la page Blazor, pour ce que le navigateur ne sait pas faire seul (la fenêtre d'historique)
 };
 
-/** Démarre le flux en direct. `catalogue` : la liste de /api/widgets. */
-export function demarrer(racine, catalogue) {
+/**
+ * Démarre le flux en direct. `catalogue` : la liste de /api/widgets. `dotnet` : la page qui héberge les cartes, appelée
+ * pour ouvrir la fenêtre d'historique d'une entité (`kv.openHistory`).
+ */
+export function demarrer(racine, catalogue, dotnet = null) {
     hote.racine = racine;
+    hote.dotnet = dotnet;
     hote.catalogue = Object.fromEntries(catalogue.map(w => [w.id, w]));
     hote.arret = false;
     connecter();
@@ -197,6 +202,10 @@ function hoteDeCarte(carte, liens) {
         },
         openEntity(slot) {
             if (liens[slot]) location.href = "/entites";
+        },
+        /** Ouvre la fenêtre d'historique de l'entité d'un slot (HISTORIQUE.md §5) ; sans effet hors d'une page Krissvia. */
+        openHistory(slot) {
+            if (liens[slot] && hote.dotnet) hote.dotnet.invokeMethodAsync("OuvrirHistorique", liens[slot]);
         },
     });
 }

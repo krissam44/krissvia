@@ -108,6 +108,11 @@
                 }
             </MudTd>
             <MudTd Style="text-align:right">
+                @if (AHistorique(context))
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.ShowChart" Size="Size.Small" Style="color:#ce93d8"
+                                   OnClick="() => HistoriqueDialog.OuvrirAsync(Dialogues, context)" aria-label="@($"Historique de {context.DisplayName}")" />
+                }
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
                                OnClick="() => ModifierAsync(context)" aria-label="@($"Modifier {context.DisplayName}")" />
             </MudTd>

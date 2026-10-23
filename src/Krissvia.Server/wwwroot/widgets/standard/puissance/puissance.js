@@ -1,6 +1,7 @@
 import { KvWidget, esc, nombre, depuis, absence } from "../commun.js";
 
 class KvPuissance extends KvWidget {
+    static historique = "mesure";
     static css = `.alerte { color: var(--kv-error, #d33); }`;
 
     rendu() {

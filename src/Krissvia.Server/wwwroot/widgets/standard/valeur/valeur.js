@@ -2,6 +2,7 @@ import { KvWidget, esc, nombre, depuis, absence, libelleBooleen } from "../commu
 
 /** N'importe quelle entité : nombre et unité, vrai/faux, texte, ou le libellé d'un état composite. */
 class KvValeur extends KvWidget {
+    static historique = "entite";
     rendu() {
         const entite = this._entities.entite;
         const etat = this._states.entite;

@@ -1,6 +1,7 @@
 import { KvWidget, esc, depuis, absence, libelleBooleen } from "../commun.js";
 
 class KvOuverture extends KvWidget {
+    static historique = "capteur";
     static css = `.actif { color: var(--kv-warning, #e6a23c); } .alerte { color: var(--kv-error, #d33); }`;
 
     rendu() {

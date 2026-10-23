@@ -1,6 +1,7 @@
 import { KvWidget, esc, nombre, depuis, absence } from "../commun.js";
 
 class KvTemperature extends KvWidget {
+    static historique = "temperature";
     static css = `.goutte { color: var(--kv-primary, #594ae2); }`;
 
     rendu() {

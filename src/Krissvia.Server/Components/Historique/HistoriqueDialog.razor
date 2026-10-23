@@ -1,0 +1,70 @@
+@* L'historique d'une entité, comme la courbe des thermostats de DomoMud : une période (6 h, 24 h, 7 j, 30 j), la
+   courbe, et quelques chiffres. Ce qui est tracé dépend de ce que l'entité enregistre (HISTORIQUE.md §1). *@
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.ShowChart" Style="color:#ce93d8" />
+            <MudText Typo="Typo.h6">@Entite.DisplayName</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="d-flex flex-wrap align-center gap-2 mb-3">
+            @foreach (var periode in HistoryCurve.Ranges)
+            {
+                <MudButton Size="Size.Small" Variant="@(_periode == periode ? Variant.Filled : Variant.Outlined)"
+                           Color="@(_periode == periode ? Color.Secondary : Color.Default)" OnClick="() => ChoisirAsync(periode)">@periode.Label</MudButton>
+            }
+            <MudSpacer />
+            @if (_temps.Count > 0)
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    une case = @Pas(_periode.Step)@(_periode.UsesHourly ? " · heures consolidées" : "")
+                </MudText>
+            }
+        </div>
+
+        @if (_chargement)
+        {
+            <div class="d-flex justify-center pa-10"><MudProgressCircular Indeterminate="true" Color="Color.Secondary" /></div>
+        }
+        else if (_aucune)
+        {
+            <div class="pa-8 mud-text-secondary" style="text-align:center">
+                <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Style="font-size:2rem" />
+                <div>@_rien</div>
+            </div>
+        }
+        else
+        {
+            @if (_legende.Count > 0)
+            {
+                <div class="d-flex flex-wrap gap-4 mb-1" style="font-size:.78rem">
+                    @foreach (var (nom, couleur, pointilles) in _legende)
+                    {
+                        <span style="color:@couleur">@(pointilles ? "┅" : "━") @nom</span>
+                    }
+                </div>
+            }
+            <CourbeSvg Temps="_temps" Series="_series" Unite="@_unite" YMin="_yMin" YMax="_yMax" Fuseau="Horloge.LocalTimeZone" />
+
+            @if (_seriesBas.Count > 0)
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mt-3">@_titreBas</MudText>
+                <CourbeSvg Temps="_temps" Series="_seriesBas" Unite="%" YMin="0" YMax="100" Hauteur="150" Fuseau="Horloge.LocalTimeZone" />
+            }
+
+            <div class="d-flex flex-wrap gap-3 mt-3">
+                @foreach (var (valeur, libelle, couleur) in _chiffres)
+                {
+                    <MudPaper Outlined="true" Class="pa-2 rounded-lg" Style="flex:1; min-width:110px; text-align:center">
+                        <div style="font-size:1.3rem; font-weight:600; color:@couleur">@valeur</div>
+                        <div class="mud-text-secondary" style="font-size:.72rem">@libelle</div>
+                    </MudPaper>
+                }
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialogue.Close()">Fermer</MudButton>
+    </DialogActions>
+</MudDialog>

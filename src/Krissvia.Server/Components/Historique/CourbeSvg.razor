@@ -1,0 +1,65 @@
+@* Une courbe tracée en SVG, comme celle des thermostats de DomoMud : sur une grille régulière (HistoryCurve), avec
+   de vrais trous quand une case est vide, une bande min/max, des barres pour une part de temps, une consigne en
+   pointillés. Les couleurs de la grille et des textes suivent le thème. Survoler une case donne ses valeurs.
+   Les libellés passent par Texte() : en Razor, une balise <text> est réservée et ne prend pas d'attributs. *@
+@using System.Globalization
+
+<svg viewBox="0 0 @L @H" width="100%" style="display:block; height:auto" class="kv-courbe">
+    @* Grille horizontale et graduations *@
+    @foreach (var (y, libelle) in Graduations())
+    {
+        <line x1="@G" y1="@S(y)" x2="@(L - D)" y2="@S(y)" class="kv-courbe-grille" />
+        @Texte(G - 4, y + 3, "end", libelle)
+    }
+
+    @* Temps, en bas *@
+    @foreach (var (x, libelle) in Reperes())
+    {
+        <line x1="@S(x)" y1="@Haut" x2="@S(x)" y2="@(H - Bas)" class="kv-courbe-grille" />
+        @Texte(x, H - 6, "middle", libelle)
+    }
+
+    @foreach (var serie in Series)
+    {
+        @switch (serie.Style)
+        {
+            case StyleSerie.Barres:
+                var largeur = Math.Max(1, (L - G - D) / (double)Temps.Count - 1);
+                @for (var i = 0; i < Temps.Count; i++)
+                {
+                    if (serie.Valeurs[i] is not { } v || v <= 0) continue;
+                    <rect x="@S(X(i))" y="@S(Y(v))" width="@S(largeur)" height="@S(Y(_bas) - Y(v))" fill="@serie.Couleur" opacity=".55" />
+                }
+                break;
+
+            default:
+                @if (serie.Min is not null && serie.Max is not null)
+                {
+                    @foreach (var bande in Bandes(serie))
+                    {
+                        <polygon points="@bande" fill="@serie.Couleur" opacity=".16" />
+                    }
+                }
+                @foreach (var morceau in Morceaux(serie.Valeurs))
+                {
+                    <polyline points="@morceau" fill="none" stroke="@serie.Couleur" stroke-width="@(serie.Style == StyleSerie.Fine ? 1.2 : 2)"
+                              stroke-dasharray="@(serie.Style == StyleSerie.Pointilles ? "6 4" : null)" stroke-linejoin="round" stroke-linecap="round"
+                              vector-effect="non-scaling-stroke" />
+                }
+                break;
+        }
+    }
+
+    @* Une case survolée dit ses valeurs (bulle native du navigateur). *@
+    @for (var i = 0; i < Temps.Count; i++)
+    {
+        <rect x="@S(X(i))" y="@Haut" width="@S((L - G - D) / (double)Temps.Count)" height="@(H - Haut - Bas)" fill="transparent">
+            <title>@Bulle(i)</title>
+        </rect>
+    }
+</svg>
+
+<style>
+    .kv-courbe .kv-courbe-grille { stroke: var(--mud-palette-lines-default); stroke-width: 1; vector-effect: non-scaling-stroke; }
+    .kv-courbe .kv-courbe-texte { fill: var(--mud-palette-text-secondary); font-size: 11px; }
+</style>

@@ -99,6 +99,17 @@ public partial class Entites : IDisposable
         _appareils = (await Registre.ListDevicesAsync()).ToDictionary(d => d.DeviceId);
     }
 
+    /// <summary>
+    /// Ce qui se trace (HISTORIQUE.md §1) : un nombre, un tout-ou-rien, un thermostat, un délesteur. Un texte ou un objet
+    /// qu'on ne trace pas n'a pas d'icône plutôt qu'une fenêtre vide.
+    /// </summary>
+    private bool AHistorique(RegisteredEntity e) => e.Kind switch
+    {
+        EntityKind.Switch or EntityKind.Light or EntityKind.BinarySensor or EntityKind.Climate => true,
+        EntityKind.Sensor => e.DeviceClass == DeviceClasses.LoadShedding || Etats.Get(e.EntityId) is not { } s || s.TryGetNumber(out _),
+        _ => false,
+    };
+
     private string? Piece(RegisteredEntity e) => _appareils.GetValueOrDefault(e.DeviceId)?.Room;
 
     /// <summary>Filtrées, puis rangées par pièce et par nom : les entités d'une même pièce se suivent.</summary>

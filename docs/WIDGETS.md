@@ -146,6 +146,7 @@ les styles du widget ne fuient pas, ceux de la page n'entrent pas.
 kv.command(slot: string, command: string, args?: object): Promise<{ outcome, verification }>
 kv.history(slot: string, from: Date, to: Date, options?: { field }): Promise<Array<{ value, measured_at, min?, max? }>>
 kv.openEntity(slot: string): void      // ouvre la fiche de l'entité
+kv.openHistory(slot: string): void     // ouvre la fenêtre d'historique de l'entité (HISTORIQUE.md §5)
 ```
 
 - `command` passe par `POST /api/entities/{id}/commands` : l'ordre est **vérifié** comme tous les autres

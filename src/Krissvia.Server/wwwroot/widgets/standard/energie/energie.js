@@ -13,6 +13,7 @@ const TUILES = [
  * minuit » ni de coût du jour : il faudra l'historique.
  */
 class KvEnergie extends KvWidget {
+    static historique = "puissance";
     static css = `
         .entete { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
         .entete .ms { font-size: 1.3rem; color: #ffb300; }

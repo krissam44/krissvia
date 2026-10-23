@@ -14,6 +14,7 @@ function heuresCreuses(libelle) {
  * courant, tension et index. Les mesures secondaires sont celles du même appareil, liées toutes seules.
  */
 class KvLinky extends KvWidget {
+    static historique = "puissance";
     static css = `
         .entete { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
         .entete .nom { font-weight: 600; font-size: .9rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

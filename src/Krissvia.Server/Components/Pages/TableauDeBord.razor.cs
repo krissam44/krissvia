@@ -44,6 +44,7 @@ public partial class TableauDeBord
     private bool _aAppliquer = true;
     private ElementReference _racine;
     private IJSObjectReference? _module;
+    private DotNetObjectReference<TableauDeBord>? _dotnet;
     private string? _erreurNavigateur;
     private IReadOnlyList<RegisteredEntity> _entites = [];
     private Dictionary<string, string?> _pieces = new(StringComparer.Ordinal);
@@ -93,7 +94,8 @@ public partial class TableauDeBord
             {
                 // « ./ » : un import de module veut une adresse relative explicite.
                 _module = await JS.InvokeAsync<IJSObjectReference>("import", "./" + Assets["js/tableau-de-bord.js"]);
-                await _module.InvokeVoidAsync("demarrer", _racine, _catalogue.Widgets.Select(WidgetApi.Vue).Select(PourJs));
+                _dotnet ??= DotNetObjectReference.Create(this);
+                await _module.InvokeVoidAsync("demarrer", _racine, _catalogue.Widgets.Select(WidgetApi.Vue).Select(PourJs), _dotnet);
             }
 
             if (_module is not null && _aAppliquer)
@@ -416,9 +418,17 @@ public partial class TableauDeBord
         });
     }
 
+    /// <summary>Un widget demande l'historique d'une de ses entités (<c>kv.openHistory</c>).</summary>
+    [JSInvokable]
+    public async Task OuvrirHistorique(string entityId)
+    {
+        if (await Registre.GetAsync(entityId) is { } entite) await InvokeAsync(() => HistoriqueDialog.OuvrirAsync(Dialogues, entite));
+    }
+
     public async ValueTask DisposeAsync()
     {
         Tableaux.Changed -= SurChangement;
+        _dotnet?.Dispose();
         _suivi?.Dispose();
         if (_module is null) return;
         try
