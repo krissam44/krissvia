@@ -32,11 +32,6 @@ internal static class Categories
     public static readonly Categorie Machine = new("machine", "Machine / serveur", Icons.Material.Filled.Dns, "#5c6bc0");
     public static readonly Categorie Autre = new("autre", "Autre mesure", Icons.Material.Filled.Sensors, "#78909c");
 
-    /// <summary>
-    /// Un nœud Proxmox (<c>DeviceClasses.HypervisorNode</c>, ajouté par la PR du plugin) : écrit en clair ici pour que
-    /// les deux changements ne se marchent pas dessus.
-    /// </summary>
-    private const string NoeudHyperviseur = "hypervisor_node";
 
     /// <summary>L'ordre des pastilles de filtre.</summary>
     public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Prise, Compteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Presence, Reseau, Meteo, Probleme, Machine, Autre];
@@ -67,7 +62,7 @@ internal static class Categories
             DeviceClasses.Weather => Meteo,
             DeviceClasses.HomePresence => Presence,
             DeviceClasses.PublicIp or DeviceClasses.DataRate or DeviceClasses.InternetConnection or DeviceClasses.NetworkHosts => Reseau,
-            DeviceClasses.VirtualMachine or DeviceClasses.SystemHealth or DeviceClasses.DeviceTemperature or NoeudHyperviseur => Machine,
+            DeviceClasses.VirtualMachine or DeviceClasses.SystemHealth or DeviceClasses.DeviceTemperature or DeviceClasses.HypervisorNode => Machine,
             _ => Autre,
         },
     };
@@ -119,7 +114,7 @@ internal static class Categories
             return Vrai(v, "unexpected_stop") ? "Arrêt inattendu"
                 : Texte(v, "status") != "running" ? "Arrêtée"
                 : string.Join(" · ", new[] { "En marche", Nombre(v, "cpu_percent", " % CPU"), Nombre(v, "memory_percent", " % RAM") }.Where(x => x is not null));
-        if (e.DeviceClass is DeviceClasses.SystemHealth or NoeudHyperviseur && v.ValueKind == JsonValueKind.Object)
+        if (e.DeviceClass is DeviceClasses.SystemHealth or DeviceClasses.HypervisorNode && v.ValueKind == JsonValueKind.Object)
             return v.TryGetProperty("online", out var enLigne) && enLigne.ValueKind == JsonValueKind.False ? "Hors ligne"
                 : string.Join(" · ", new[] { Nombre(v, "cpu_percent", " % CPU"), Nombre(v, "memory_percent", " % RAM"), Nombre(v, "disk_percent", " % disque") }
                     .Where(x => x is not null)) is { Length: > 0 } resume ? resume : "—";
