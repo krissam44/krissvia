@@ -256,6 +256,8 @@ class CoreClient:
         self._ordres: set[asyncio.Task] = set()
         # Contrat 0.3 : entités suivies (renvoyées à chaque session) et ordres en attente de leur résultat.
         self._abonnements: list[str] = []
+        # Contrat 0.3 : l'état des liens du plugin (mqtt…), renvoyé à chaque session comme les abonnements.
+        self._liens: dict[str, Message] = {}
         self._resultats: dict[str, asyncio.Future] = {}
 
     @property
@@ -349,6 +351,8 @@ class CoreClient:
             # Un abonnement ne survit pas à la session : il repart après la resynchronisation.
             if self._abonnements:
                 await ws.send(json.dumps({"type": "subscribe", "entity_ids": self._abonnements}))
+            for lien in self._liens.values():
+                await ws.send(json.dumps(lien, ensure_ascii=False))
             self._session = ws
         log.info("Connecté au cœur Krissvia (contrat %s).", premiere.get("contract_version"))
 
@@ -406,6 +410,16 @@ class CoreClient:
                                       "detail": "session avec le cœur fermée"})
             log.warning("Session avec le cœur fermée ; reconnexion.")
         return "normale"
+
+    async def report_link(self, link: str, connected: bool, detail: str | None = None) -> bool:
+        """Contrat 0.3 : l'état d'un lien du plugin (``mqtt``), qui colore la pastille MQTT du cœur. Retenu et renvoyé à
+        chaque session. Un même état sans motif garde le motif précédent (« identifiants refusés » ne doit pas devenir un
+        simple « coupé » à la déconnexion qui suit)."""
+        avant = self._liens.get(link)
+        if detail is None and avant is not None and avant.get("connected") == connected:
+            detail = avant.get("detail")
+        self._liens[link] = _sans_vides({"type": "link_state", "link": link, "connected": connected, "detail": detail})
+        return await self.send(self._liens[link])
 
     async def subscribe(self, entity_ids: Iterable[str]) -> None:
         """Contrat 0.3 : les entités à suivre (la liste COMPLÈTE). Seules celles choisies dans les réglages du

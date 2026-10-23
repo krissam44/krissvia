@@ -171,13 +171,26 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
     {
         _connecteLe = _horloge.GetUtcNow();
         _brokerConnecte = true;
-        if (Coeur is { } coeur) await coeur.SendAsync(new Availability { Online = true });
+        if (Coeur is { } coeur)
+        {
+            await coeur.ReportLinkAsync("mqtt", true);   // pastille MQTT du cœur
+            await coeur.SendAsync(new Availability { Online = true });
+        }
     }
 
     public async Task DeconnecteAsync()
     {
         _brokerConnecte = false;
-        if (Coeur is { } coeur) await coeur.SendAsync(new Availability { Online = false });
+        if (Coeur is { } coeur)
+        {
+            await coeur.ReportLinkAsync("mqtt", false);
+            await coeur.SendAsync(new Availability { Online = false });
+        }
+    }
+
+    public async Task ConnexionImpossibleAsync(string motif)
+    {
+        if (Coeur is { } coeur) await coeur.ReportLinkAsync("mqtt", false, motif);
     }
 
     /// <summary>

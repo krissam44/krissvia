@@ -75,13 +75,17 @@ public class ReglagesPluginsTests
     [Fact]
     public void Les_champs_obligatoires_et_les_bornes_sont_controles_avec_des_libelles_lisibles()
     {
-        var schema = Schema("Krissvia.Plugin.Zigbee2Mqtt");
+        var livebox = Schema("Krissvia.Plugin.Livebox");
+        var zigbee = Schema("Krissvia.Plugin.Zigbee2Mqtt");
 
-        var erreurs = SettingsSchema.Validate(schema, SettingsSchema.Complete(schema,
+        var obligatoire = SettingsSchema.Validate(livebox, SettingsSchema.Complete(livebox,
+            JsonNode.Parse("""{"Box":{"Password":"  "}}""")!.AsObject()));
+        // L'adresse du broker n'est plus obligatoire (vide = broker commun), mais ses bornes restent contrôlées.
+        var bornes = SettingsSchema.Validate(zigbee, SettingsSchema.Complete(zigbee,
             JsonNode.Parse("""{"Mqtt":{"Host":"  ","Port":70000}}""")!.AsObject()));
 
-        Assert.Contains("Broker MQTT › Adresse IP : obligatoire.", erreurs);
-        Assert.Contains(erreurs, e => e.StartsWith("Broker MQTT › Port : au plus", StringComparison.Ordinal));
+        Assert.Contains("Box › Mot de passe administrateur : obligatoire.", obligatoire);
+        Assert.Contains(bornes, e => e.StartsWith("Broker MQTT › Port : au plus", StringComparison.Ordinal));
     }
 
     [Fact]

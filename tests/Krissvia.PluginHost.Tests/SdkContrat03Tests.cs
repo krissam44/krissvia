@@ -74,6 +74,43 @@ public class SdkContrat03Tests
     }
 
     [Fact]
+    public async Task L_etat_du_lien_part_a_l_ouverture_de_session_et_suit_ses_changements()
+    {
+        await using var banc = await BancPlugins.CreerAsync();
+        using var arret = new CancellationTokenSource();
+        var (client, _) = await ConnecterAsync(banc, arret.Token);
+
+        // Avant la connexion : le broker a refusé, le cœur doit l'apprendre dès la session ouverte.
+        await client.ReportLinkAsync("mqtt", false, "broker injoignable (adresse ou port)");
+        var session = client.RunAsync(arret.Token);
+        await BancPlugins.AttendreAsync(() => banc.Hub.GetLink("openhasp", "mqtt") is not null, "lien rapporté");
+
+        Assert.True(await client.ReportLinkAsync("mqtt", true));
+        await BancPlugins.AttendreAsync(() => banc.Hub.GetLink("openhasp", "mqtt") is { Connected: true }, "lien rétabli");
+        Assert.Null(banc.Hub.GetLink("openhasp", "mqtt")!.Detail);
+
+        await arret.CancelAsync();
+        await session.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task Une_coupure_sans_motif_garde_le_motif_connu()
+    {
+        await using var banc = await BancPlugins.CreerAsync();
+        using var arret = new CancellationTokenSource();
+        var (client, _) = await ConnecterAsync(banc, arret.Token);
+        await client.ReportLinkAsync("mqtt", false, "identifiant ou mot de passe refusé par le broker");
+        await client.ReportLinkAsync("mqtt", false);
+
+        var session = client.RunAsync(arret.Token);
+        await BancPlugins.AttendreAsync(() => banc.Hub.GetLink("openhasp", "mqtt") is not null, "lien rapporté");
+
+        Assert.Equal("identifiant ou mot de passe refusé par le broker", banc.Hub.GetLink("openhasp", "mqtt")!.Detail);
+        await arret.CancelAsync();
+        await session.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public async Task Hors_session_un_ordre_est_injoignable_jamais_un_faux_succes()
     {
         var client = new CoreClient(new CoreClientOptions { PluginId = "openhasp" }, new Platine(), TimeProvider.System, NullLogger<CoreClient>.Instance);

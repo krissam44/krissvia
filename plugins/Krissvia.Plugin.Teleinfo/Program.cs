@@ -29,9 +29,10 @@ var deviceId = tic["DeviceId"] is { Length: > 0 } d ? d : "linky";
 var nom = tic["Name"] is { Length: > 0 } n ? n : "Linky";
 var silence = TimeSpan.FromSeconds(tic.GetValue("SilenceSeconds", 60));
 
-if (string.IsNullOrWhiteSpace(mqtt.Host) || coeur.Url is null)
+// Sans broker, le plugin démarre quand même : il le signale au cœur (pastille MQTT rouge) au lieu de redémarrer en boucle.
+if (coeur.Url is null)
 {
-    Console.Error.WriteLine("Configuration incomplète : Mqtt:Host et Krissvia:Url sont obligatoires (voir appsettings.json).");
+    Console.Error.WriteLine("Configuration incomplète : Krissvia:Url est obligatoire.");
     return 2;
 }
 

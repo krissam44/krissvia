@@ -8,6 +8,7 @@
     "properties": {
       "Mqtt": {
         "type": "object",
+        "x-shared": "mqtt",
         "title": "Broker MQTT",
         "required": [ "Host" ],
         "properties": {

@@ -17,12 +17,16 @@ ne voit aucune différence. Seul un plugin qui utilise les messages ci-dessous a
 | `entity_state` | cœur → plugin | `entity_id`, `name`, `kind`, `device_class`, `unit`, `available`, `value` et `measured_at` (absents si jamais reçue) — une fois à l'abonnement, puis à chaque changement |
 | `entity_command` | plugin → cœur | `id` (corrélation), `entity_id`, `command`, `args` |
 | `entity_command_result` | cœur → plugin | `id`, `outcome` (`accepted` / `failed` / `unreachable`), `verification`, `detail` |
+| `link_state` | plugin → cœur | `link` (`mqtt`), `connected`, `detail` (le motif d'un échec, lisible) — à chaque changement (23/10/2026) |
 
 - Un abonnement ne survit pas à la session : le plugin le renvoie à chaque (re)connexion, après sa resynchronisation.
   Les SDK le font seuls.
 - L'ordre passe par le **bus de commandes** du cœur, comme celui d'un écran : vérifié, journalisé, signé
   `plugin:{id}`. Une entité qui ne déclare pas la commande, ou un plugin qui ne la porte pas, échoue bruyamment.
 - Un ordre sur une entité d'un autre plugin passe par le cœur, jamais directement : c'est lui qui sait où elle vit.
+- `link_state` dit ce que le plugin sait de SON lien vers l'extérieur (le broker MQTT). Le cœur ne se connecte pas
+  lui-même au broker : la pastille MQTT montre ce que les plugins en disent, c'est-à-dire ce qui compte vraiment.
+  Le cœur oublie l'état à la fin de la session ; les SDK le renvoient à chaque connexion.
 
 ## 2. Autorisation : ce que l'administrateur a choisi dans les réglages
 
@@ -51,3 +55,26 @@ le choix des plugins installés (`WIDGETS.md` §9, même raisonnement).
   `CommandEntityAsync(entityId, command, args)` qui attend le résultat (délai : 15 s).
 - **Python** : `client.subscribe(ids)`, la méthode `Plugin.on_entity_state(message)`, et
   `await client.command(entity_id, command, args)`.
+- **État d'un lien** : `CoreClient.ReportLinkAsync("mqtt", connecte, motif)` en C#, `await client.report_link(...)` en
+  Python. Un même état sans motif garde le motif connu : « mot de passe refusé » ne doit pas devenir un simple
+  « coupé » à la déconnexion qui suit. Avec `Krissvia.Sdk.Mqtt`, le plugin n'a qu'à relayer
+  `IMqttHandler.ConnexionImpossibleAsync(motif)`.
+
+## 4. Broker MQTT commun
+
+Le broker se saisit une fois, dans la **pastille MQTT** de la barre du haut (adresse, port, identifiants), et non plus
+dans chaque plugin. Un plugin y prend part en marquant sa section de réglages :
+
+```json
+"Mqtt": { "type": "object", "x-shared": "mqtt", "properties": { "Host": …, "Port": …, "Username": …, "Password": …, "BaseTopic": … } }
+```
+
+- Au lancement, le cœur remplace `Host`, `Port`, `Username` et `Password` de cette section par ceux du broker commun.
+  Le reste (`BaseTopic`) ne change pas.
+- Un plugin dont l'adresse est renseignée garde **son** broker (cas rare : un deuxième broker). L'adresse n'est donc
+  plus obligatoire dans une section partagée : vide, c'est le broker commun.
+- Sans broker du tout, le plugin démarre quand même et le dit (`aucun broker réglé`) au lieu de redémarrer en boucle.
+- À la première ouverture, la pastille reprend le broker déjà saisi dans un plugin, et propose de le retirer des
+  plugins qui en avaient un. Enregistrer relance les plugins MQTT activés : ils ne lisent leurs réglages qu'au démarrage.
+- Couleur : verte si tous les plugins MQTT activés joignent le broker, rouge si l'un n'y arrive pas (le motif est dans
+  l'infobulle), orange pendant un démarrage, grise sans plugin MQTT activé.

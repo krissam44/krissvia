@@ -30,9 +30,24 @@ internal sealed partial class Zigbee2MqttPlugin : ICorePlugin, IMqttHandler
 
     // ── Broker ───────────────────────────────────────────────────────────────
 
-    public Task ConnecteAsync() => EnvoyerAsync(_traducteur.MqttConnecte());
+    // Le lien « mqtt » dit au cœur si le BROKER répond (pastille MQTT) ; la disponibilité dit, elle, si les entités
+    // sont joignables — ce n'est pas la même chose (pont ou compteur muet, broker en ligne).
+    public async Task ConnecteAsync()
+    {
+        if (Coeur is { } coeur) await coeur.ReportLinkAsync("mqtt", true);
+        await EnvoyerAsync(_traducteur.MqttConnecte());
+    }
 
-    public Task DeconnecteAsync() => EnvoyerAsync(_traducteur.MqttDeconnecte());
+    public async Task DeconnecteAsync()
+    {
+        if (Coeur is { } coeur) await coeur.ReportLinkAsync("mqtt", false);
+        await EnvoyerAsync(_traducteur.MqttDeconnecte());
+    }
+
+    public async Task ConnexionImpossibleAsync(string motif)
+    {
+        if (Coeur is { } coeur) await coeur.ReportLinkAsync("mqtt", false, motif);
+    }
 
     public async Task MessageAsync(string topic, string charge)
     {

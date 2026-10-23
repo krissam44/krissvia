@@ -26,9 +26,10 @@ var coeur = builder.Configuration.GetSection("Krissvia").Get<CoreClientOptions>(
 if (string.IsNullOrEmpty(coeur.PluginId)) coeur.PluginId = "zigbee2mqtt";
 coeur.PluginVersion = typeof(Zigbee2MqttPlugin).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
 
-if (string.IsNullOrWhiteSpace(mqtt.Host) || coeur.Url is null)
+// Sans broker, le plugin démarre quand même : il le signale au cœur (pastille MQTT rouge) au lieu de redémarrer en boucle.
+if (coeur.Url is null)
 {
-    Console.Error.WriteLine("Configuration incomplète : Mqtt:Host et Krissvia:Url sont obligatoires (voir appsettings.json).");
+    Console.Error.WriteLine("Configuration incomplète : Krissvia:Url est obligatoire.");
     return 2;
 }
 

@@ -43,6 +43,12 @@ public sealed record SettingField
     /// <summary>Renseigné si le champ désigne une entité.</summary>
     public EntitySetting? Entity { get; init; }
 
+    /// <summary>
+    /// Objet que le cœur sait remplir lui-même (<c>"x-shared": "mqtt"</c> : le broker commun, pastille MQTT). Ses champs
+    /// obligatoires ne le sont plus : vide, le plugin reçoit la valeur commune.
+    /// </summary>
+    public string? Shared { get; init; }
+
     public string Label => Title.Length > 0 ? Title : Key;
 }
 
@@ -87,6 +93,7 @@ public static class SettingsSchema
             Minimum = s.TryGetProperty("minimum", out var min) && min.TryGetDouble(out var vmin) ? vmin : null,
             Maximum = s.TryGetProperty("maximum", out var max) && max.TryGetDouble(out var vmax) ? vmax : null,
             Properties = proprietes,
+            Shared = type == SettingType.Object ? Chaine(s, "x-shared") : null,
             Entity = type == SettingType.String && Chaine(s, "format") == "entity"
                 ? new EntitySetting(Liste(s, "x-kinds"), Liste(s, "x-device-classes"),
                     Chaine(s, "x-access") == "command" ? EntityAccess.Command : EntityAccess.Read)
@@ -158,7 +165,25 @@ public static class SettingsSchema
         return erreurs;
     }
 
-    private static void Valider(SettingField objet, JsonObject valeur, string chemin, List<string> erreurs)
+    /// <summary>Les sections partagées d'un plugin, avec leur chemin de configuration (<c>Mqtt</c>) et leur nature (<c>mqtt</c>).</summary>
+    public static IReadOnlyList<(string Path, string Kind)> SharedSections(SettingField? racine)
+    {
+        var sections = new List<(string, string)>();
+        void Parcourir(SettingField objet, string chemin)
+        {
+            foreach (var champ in objet.Properties.Where(c => c.Type == SettingType.Object))
+            {
+                var ici = chemin.Length == 0 ? champ.Key : $"{chemin}__{champ.Key}";
+                if (champ.Shared is { Length: > 0 } nature) sections.Add((ici, nature));
+                else Parcourir(champ, ici);
+            }
+        }
+
+        if (racine is not null) Parcourir(racine, "");
+        return sections;
+    }
+
+    private static void Valider(SettingField objet, JsonObject valeur, string chemin, List<string> erreurs, bool partage = false)
     {
         foreach (var champ in objet.Properties)
         {
@@ -166,14 +191,15 @@ public static class SettingsSchema
             var v = valeur[champ.Key];
             if (v is null || (v is JsonValue jv && jv.TryGetValue<string>(out var s) && string.IsNullOrWhiteSpace(s)))
             {
-                if (champ.Required) erreurs.Add($"{nom} : obligatoire.");
+                // Dans une section partagée, le cœur fournit ce qui manque (broker commun).
+                if (champ.Required && !partage) erreurs.Add($"{nom} : obligatoire.");
                 continue;
             }
 
             switch (champ.Type)
             {
                 case SettingType.Object:
-                    if (v is JsonObject o) Valider(champ, o, nom + " › ", erreurs);
+                    if (v is JsonObject o) Valider(champ, o, nom + " › ", erreurs, partage || champ.Shared is not null);
                     else erreurs.Add($"{nom} : objet attendu.");
                     break;
                 case SettingType.Array:

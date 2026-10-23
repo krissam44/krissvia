@@ -48,7 +48,11 @@ public sealed partial class PluginHub(
         var hello = await AttendreHelloAsync(channel, ct);
         if (hello is null) return;
 
-        var session = new PluginSession(hello.PluginId, channel, registry, states, options, clock, logger, Gateway) { Version = hello.PluginVersion };
+        var session = new PluginSession(hello.PluginId, channel, registry, states, options, clock, logger, Gateway)
+        {
+            Version = hello.PluginVersion,
+            LinksChanged = () => LinksChanged?.Invoke(),
+        };
         PluginSession? remplacee = null;
         _sessions.AddOrUpdate(hello.PluginId, session, (_, ancienne) => { remplacee = ancienne; return session; });
 
@@ -71,6 +75,7 @@ public sealed partial class PluginHub(
             // éteindre celles que sa remplaçante vient d'allumer.
             var derniere = _sessions.TryRemove(new KeyValuePair<string, PluginSession>(hello.PluginId, session));
             await session.TerminerAsync(rendreIndisponible: derniere);
+            if (!session.Links.IsEmpty) LinksChanged?.Invoke();   // ses liens ne sont plus connus
             Log.SessionFermee(logger, hello.PluginId);
             // Une session remplacée n'annonce pas de déconnexion : le plugin, lui, est toujours là.
             if (derniere) events?.Publish(new PluginConnectionChanged(hello.PluginId, Connected: false));
@@ -79,6 +84,13 @@ public sealed partial class PluginHub(
 
     /// <summary>Version annoncée par un plugin connecté, ou null.</summary>
     public string? GetPluginVersion(string pluginId) => _sessions.TryGetValue(pluginId, out var s) ? s.Version : null;
+
+    /// <summary>L'état d'un lien déclaré par un plugin connecté (contrat 0.3, <c>link_state</c>) ; null s'il ne l'a pas dit.</summary>
+    public LinkState? GetLink(string pluginId, string link) =>
+        _sessions.TryGetValue(pluginId, out var s) && s.Links.TryGetValue(link, out var etat) ? etat : null;
+
+    /// <summary>L'état d'un lien a changé, ou un plugin qui en avait déclaré s'est déconnecté.</summary>
+    public event Action? LinksChanged;
 
     internal bool TryGetSession(string pluginId, out PluginSession session) =>
         _sessions.TryGetValue(pluginId, out session!);

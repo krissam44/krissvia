@@ -23,4 +23,9 @@
     <ProjectReference Include="..\..\src\Krissvia.Contracts\Krissvia.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Un vrai broker en mémoire, pour les refus de connexion (identifiants) que seul un broker sait produire. -->
+    <PackageReference Include="MQTTnet.Server" />
+  </ItemGroup>
+
 </Project>

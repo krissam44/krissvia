@@ -27,9 +27,24 @@ internal sealed class TeleinfoPlugin(TeleinfoTranslator traducteur, IMqttLink mq
         }
     }
 
-    public Task ConnecteAsync() => EnvoyerAsync(traducteur.MqttConnecte());
+    // Le lien « mqtt » dit au cœur si le BROKER répond (pastille MQTT) ; la disponibilité dit, elle, si les entités
+    // sont joignables — ce n'est pas la même chose (pont ou compteur muet, broker en ligne).
+    public async Task ConnecteAsync()
+    {
+        if (Coeur is { } coeur) await coeur.ReportLinkAsync("mqtt", true);
+        await EnvoyerAsync(traducteur.MqttConnecte());
+    }
 
-    public Task DeconnecteAsync() => EnvoyerAsync(traducteur.MqttDeconnecte());
+    public async Task DeconnecteAsync()
+    {
+        if (Coeur is { } coeur) await coeur.ReportLinkAsync("mqtt", false);
+        await EnvoyerAsync(traducteur.MqttDeconnecte());
+    }
+
+    public async Task ConnexionImpossibleAsync(string motif)
+    {
+        if (Coeur is { } coeur) await coeur.ReportLinkAsync("mqtt", false, motif);
+    }
 
     public Task MessageAsync(string topic, string charge) =>
         EnvoyerAsync(traducteur.TraiterMessage(topic, charge, clock.GetUtcNow()));

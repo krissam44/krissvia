@@ -121,8 +121,9 @@ Restart=always
 
 2. **Les plugins** (**Paramètres › Services**, `/parametres/services`). Tous ceux de l'archive sont listés, aucun ne
    tourne (un plugin n'est lancé qu'une fois activé) : chacun s'active, se règle et se lance depuis sa carte.
-   Le broker est sur le Pi : `127.0.0.1` pour Zigbee2MQTT et Téléinfo (Mosquitto, port 1883, avec ses
-   identifiants). La carte montre ce que le plugin écrit ; c'est là, ou dans le journal du cœur pour un
+   Le broker est sur le Pi : `127.0.0.1` (Mosquitto, port 1883, avec ses identifiants), à saisir une seule fois dans
+   la **pastille MQTT** de la barre du haut ; Zigbee2MQTT, openHASP et Téléinfo le prennent tous (adresse vide dans
+   leurs réglages). La pastille passe au vert quand chacun l'a joint, au rouge avec le motif sinon. La carte montre ce que le plugin écrit ; c'est là, ou dans le journal du cœur pour un
    lancement impossible, qu'apparaît un « Permission denied » (exécutable sans droit, § 2) ou un
    `ModuleNotFoundError: websockets` (§ 4).
 

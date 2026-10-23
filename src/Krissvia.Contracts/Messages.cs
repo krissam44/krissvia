@@ -26,6 +26,7 @@ namespace Krissvia.Contracts;
 [JsonDerivedType(typeof(EntityStateUpdate), "entity_state")]
 [JsonDerivedType(typeof(EntityCommandRequest), "entity_command")]
 [JsonDerivedType(typeof(EntityCommandResponse), "entity_command_result")]
+[JsonDerivedType(typeof(LinkState), "link_state")]
 public abstract record Message;
 
 public enum CommandPriority
@@ -243,5 +244,19 @@ public sealed record EntityCommandResponse : Message
     /// <summary>La vérification de l'effet par le bus (<c>confirmed</c>, <c>not_confirmed</c>, <c>not_applicable</c>…).</summary>
     public string? Verification { get; init; }
 
+    public string? Detail { get; init; }
+}
+
+/// <summary>
+/// plugin → cœur (contrat 0.3) : l'état d'un lien du plugin vers l'extérieur, nommé (<c>mqtt</c>). Distinct de
+/// <see cref="Availability"/>, qui dit si les entités sont joignables : un plugin Zigbee2MQTT peut être connecté au
+/// broker alors que le pont Zigbee est hors ligne. C'est ce qui colore la pastille MQTT de la barre du haut.
+/// </summary>
+/// <param name="Link">Nom du lien : <c>mqtt</c>.</param>
+/// <param name="Detail">Pourquoi il est coupé (« connexion refusée : identifiants »…), pour un humain.</param>
+public sealed record LinkState : Message
+{
+    public required string Link { get; init; }
+    public required bool Connected { get; init; }
     public string? Detail { get; init; }
 }

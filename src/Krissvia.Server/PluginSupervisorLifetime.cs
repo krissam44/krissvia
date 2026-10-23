@@ -11,6 +11,7 @@ namespace Krissvia.Server;
 internal sealed partial class PluginSupervisorLifetime(
     PluginSupervisor supervisor,
     PluginSettingsService settings,
+    SharedBrokerService sharedBroker,
     IServer server,
     IHostApplicationLifetime lifetime,
     IConfiguration configuration,
@@ -47,6 +48,7 @@ internal sealed partial class PluginSupervisorLifetime(
             foreach (var erreur in erreurs) FicheIllisible(logger, erreur);
 
             await settings.LoadAsync();   // avant tout lancement : les réglages partent avec le plugin
+            await sharedBroker.LoadAsync();   // le broker commun aussi
             await supervisor.LoadAsync(plugins);
             Catalogue(logger, plugins.Count, string.Join(", ", dossiers));
             await supervisor.StartEnabledAsync();

@@ -27,6 +27,24 @@ public sealed partial class MqttNetLink(MqttOptions options, TimeProvider clock,
 
     public async Task RunAsync(string abonnement, IMqttHandler handler, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(options.Host))
+        {
+            // Rien à joindre : on le dit (pastille rouge, avec quoi faire) et on attend d'être relancé avec un broker.
+            SansBroker(logger);
+            await SignalerAsync(handler, MotifSansBroker);
+            await handler.DeconnecteAsync();
+            try
+            {
+                await Task.Delay(Timeout.Infinite, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // Arrêt du plugin.
+            }
+
+            return;
+        }
+
         using var client = new MqttClientFactory().CreateMqttClient();
         _client = client;
 
@@ -61,7 +79,9 @@ public sealed partial class MqttNetLink(MqttOptions options, TimeProvider clock,
                     .WithKeepAlivePeriod(TimeSpan.FromSeconds(30));
                 if (!string.IsNullOrEmpty(options.Username)) connexion.WithCredentials(options.Username, options.Password);
 
-                await client.ConnectAsync(connexion.Build(), ct);
+                // MQTTnet 5 ne lève pas d'exception sur un refus du broker (mot de passe faux…) : il rend le code.
+                var resultat = await client.ConnectAsync(connexion.Build(), ct);
+                if (resultat.ResultCode != MqttClientConnectResultCode.Success) throw new ConnexionRefuseeException(resultat.ResultCode);
                 client.DisconnectedAsync += SurCoupure;
                 await client.SubscribeAsync(
                     new MqttTopicFilterBuilder().WithTopic(abonnement).WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce).Build(),
@@ -81,6 +101,7 @@ public sealed partial class MqttNetLink(MqttOptions options, TimeProvider clock,
             catch (Exception ex)
             {
                 Injoignable(logger, options.Host, options.Port, ex.Message);
+                await SignalerAsync(handler, Motif(ex));
             }
             finally
             {
@@ -111,6 +132,40 @@ public sealed partial class MqttNetLink(MqttOptions options, TimeProvider clock,
         }
 
         _client = null;
+    }
+
+    internal const string MotifSansBroker = "aucun broker réglé (pastille MQTT de la barre du haut)";
+
+    private static async Task SignalerAsync(IMqttHandler handler, string motif)
+    {
+        try
+        {
+            await handler.ConnexionImpossibleAsync(motif);
+        }
+        catch (Exception)
+        {
+            // Un plugin qui ne sait pas le dire ne doit pas arrêter les reconnexions.
+        }
+    }
+
+    private sealed class ConnexionRefuseeException(MqttClientConnectResultCode code) : Exception($"connexion refusée par le broker ({code})")
+    {
+        public MqttClientConnectResultCode Code => code;
+    }
+
+    /// <summary>Le motif d'un échec, lisible : c'est lui qu'affiche l'infobulle de la pastille MQTT.</summary>
+    internal static string Motif(Exception ex)
+    {
+        if (ex is ConnexionRefuseeException refus)
+            return refus.Code switch
+            {
+                MqttClientConnectResultCode.BadUserNameOrPassword => "identifiant ou mot de passe refusé par le broker",
+                MqttClientConnectResultCode.NotAuthorized => "connexion non autorisée par le broker",
+                _ => refus.Message,
+            };
+        for (var e = ex; e is not null; e = e.InnerException)
+            if (e is System.Net.Sockets.SocketException) return "broker injoignable (adresse ou port)";
+        return ex.Message;
     }
 
     public async Task<bool> PublishAsync(string topic, string charge, CancellationToken ct)
@@ -148,4 +203,7 @@ public sealed partial class MqttNetLink(MqttOptions options, TimeProvider clock,
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Publication sur {Topic} impossible : {Error}.")]
     private static partial void PublicationImpossible(ILogger logger, string topic, string error);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Aucun broker MQTT réglé : à saisir dans la pastille MQTT de la barre du haut.")]
+    private static partial void SansBroker(ILogger logger);
 }
