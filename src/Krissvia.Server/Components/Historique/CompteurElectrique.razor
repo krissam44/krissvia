@@ -1,0 +1,74 @@
+@* Une carte de compteur, comme celle de DomoMud : quatre chiffres, la puissance du jour, la consommation des 30 derniers
+   jours en barres, et le tableau jour par jour. Tout vient de l'historique (HISTORIQUE.md §6). *@
+@implements IDisposable
+
+<MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
+    <div class="d-flex align-center gap-2 mb-3">
+        <MudIcon Icon="@Icons.Material.Filled.Bolt" Style="color:#ffb300" />
+        <MudText Typo="Typo.h6">@Compteur.Nom</MudText>
+    </div>
+
+    <MudGrid Spacing="2" Class="mb-2">
+        @foreach (var (valeur, libelle, couleur) in Tuiles())
+        {
+            <MudItem xs="6" md="3">
+                <div style="text-align:center">
+                    <div style="font-size:2rem; font-weight:600; line-height:1.15; color:@couleur">@valeur</div>
+                    <div class="mud-text-secondary" style="font-size:.72rem; letter-spacing:.06em; text-transform:uppercase">@libelle</div>
+                </div>
+            </MudItem>
+        }
+    </MudGrid>
+
+    <MudTabs Elevation="0" Rounded="true" TabPanelsClass="pt-3" @bind-ActivePanelIndex="_onglet">
+        <MudTabPanel Text="Puissance du jour" Icon="@Icons.Material.Filled.ShowChart">
+            @if (_jourVide)
+            {
+                <MudText Class="mud-text-secondary pa-6" Style="text-align:center">@(Compteur.Puissance is null ? "Ce compteur ne publie pas sa puissance." : "Pas encore de mesure aujourd'hui.")</MudText>
+            }
+            else
+            {
+                <CourbeSvg Temps="_tempsJour" Series="_serieJour" Unite="@Compteur.Puissance?.Unit" Fuseau="Horloge.LocalTimeZone" />
+            }
+        </MudTabPanel>
+        <MudTabPanel Text="Conso 30 jours" Icon="@Icons.Material.Filled.BarChart">
+            @if (_jours.All(j => j.Kwh is null))
+            {
+                <MudText Class="mud-text-secondary pa-6" Style="text-align:center">Pas encore d'historique pour ce compteur.</MudText>
+            }
+            else
+            {
+                <CourbeSvg Temps="_tempsJours" Series="_serieJours" Unite="kWh" YMin="0" Fuseau="Horloge.LocalTimeZone" />
+            }
+        </MudTabPanel>
+        <MudTabPanel Text="Tableau" Icon="@Icons.Material.Filled.TableChart">
+            <MudDataGrid T="Ligne" Items="_lignes" Dense="true" Hover="true" Elevation="0" Height="420px" FixedHeader="true">
+                <Columns>
+                    <PropertyColumn Property="l => l.Date" Title="Jour" />
+                    <PropertyColumn Property="l => l.Kwh" Title="Consommation" />
+                    @for (var i = 0; i < Compteur.Partiels.Count; i++)
+                    {
+                        var k = i;
+                        <TemplateColumn T="Ligne" Title="@NomPartiel(Compteur.Partiels[k])">
+                            <CellTemplate>@context.Item.Parts[k]</CellTemplate>
+                        </TemplateColumn>
+                    }
+                    @if (Prix is not null)
+                    {
+                        <PropertyColumn Property="l => l.Cout" Title="Coût" />
+                    }
+                    @if (Compteur.Puissance is not null)
+                    {
+                        <PropertyColumn Property="l => l.Pointe" Title="Puissance max" />
+                    }
+                </Columns>
+            </MudDataGrid>
+            @if (_total is { } total)
+            {
+                <MudText Typo="Typo.body2" Class="mt-2">
+                    Sur 30 jours : <b>@Kwh(total)</b>@(Prix is { } p ? $" · {Euros(total * p)}" : "") · moyenne @Kwh(total / Math.Max(1, _jours.Count(j => j.Kwh is not null))) par jour
+                </MudText>
+            }
+        </MudTabPanel>
+    </MudTabs>
+</MudPaper>

@@ -33,6 +33,7 @@ public sealed class MenuService
         new("programmations", "Programmations", "/programmations", Icons.Material.Filled.Schedule),
         new("automatismes", "Automatismes", "/automatismes", Icons.Material.Filled.AutoMode),
         new("delestage", "Délestage", "/delestage", Icons.Material.Filled.Bolt),
+        new("electricite", "Électricité", "/electricite", Icons.Material.Filled.ElectricMeter),
         new("absence", "Absence", "/absence", Icons.Material.Filled.Luggage),
         new("alarme", "Alarme", "/alarme", Icons.Material.Filled.Security),
         new("entites", "Entités", "/entites", Icons.Material.Filled.Devices),
