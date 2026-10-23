@@ -2,14 +2,19 @@ using Krissvia.Contracts;
 using Krissvia.Core.Registry;
 using Krissvia.Core.States;
 
-namespace Krissvia.Server.Components.Pages;
+namespace Krissvia.Server.Components.Automatismes;
 
 /// <summary>
-/// Création et réglage d'un automatisme : Quand (déclencheur), Si (conditions), Alors (actions dans l'ordre). Les listes
-/// ne proposent que les entités de la bonne famille ; le service revérifie tout à l'enregistrement.
+/// Création et réglage d'un automatisme, dans une fenêtre à trois onglets comme dans DomoMud : Déclencheur (quand),
+/// Conditions (si), Commandes (alors, dans l'ordre). Chaque onglet commence par sa phrase (« S'exécute si… »). Les
+/// listes ne proposent que les entités de la bonne famille ; le service revérifie tout à l'enregistrement, et une
+/// erreur ramène sur l'onglet concerné.
 /// </summary>
-public partial class AutomatismeConfiguration
+public partial class AutomatismeDialog
 {
+    [CascadingParameter] private IMudDialogInstance Dialogue { get; set; } = default!;
+
+    /// <summary>L'automatisme à régler ; null pour en créer un.</summary>
     [Parameter] public string? Id { get; set; }
 
     [Inject] private AutomationService Service { get; set; } = default!;
@@ -18,7 +23,6 @@ public partial class AutomatismeConfiguration
     [Inject] private IEntityStateReader Etats { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IDialogService Dialogues { get; set; } = default!;
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     private Modele? _m;
     private Automation? _existant;
@@ -33,7 +37,27 @@ public partial class AutomatismeConfiguration
 
     private bool Creation => Id is null;
 
-    private string Titre => Creation ? "Nouvel automatisme" : $"Automatisme · {(_existant?.Name is { Length: > 0 } n ? n : Id)}";
+    private int _onglet;
+
+    /// <summary>« Créer » reste grisé tant que l'essentiel manque, comme dans DomoMud ; le reste, le service le dit.</summary>
+    private bool Incomplet => _m is null || string.IsNullOrWhiteSpace(_m.Nom) || string.IsNullOrWhiteSpace(_m.Id)
+        || (_m.Declencheur != TriggerType.Time && string.IsNullOrWhiteSpace(_m.EntiteDeclencheur)) || _m.Actions.Count == 0;
+
+    private string ResumeDeclencheur => _m is null ? "" : $"Quand {Minuscule(LibellesAutomatisme.Declencheur(_m.Vers().Trigger, NomEntite))}.";
+
+    private string ResumeConditions => _m is null || _m.Conditions.Count == 0
+        ? "S'exécute à chaque déclenchement : aucune condition."
+        : $"S'exécute si {string.Join(" ET ", _m.Conditions.Select(c => Minuscule(LibellesAutomatisme.Condition(c.Vers(), NomEntite, NomThermostatId))))}.";
+
+    private string ResumeActions => _m is null || _m.Actions.Count == 0
+        ? "Ajoutez au moins une commande."
+        : $"Alors {string.Join(", puis ", _m.Actions.Select(a => Minuscule(LibellesAutomatisme.Action(a.Vers(), NomEntite, NomThermostatId))))}.";
+
+    private string NomEntite(string? id) => _entites.FirstOrDefault(e => e.EntityId == id)?.DisplayName ?? (string.IsNullOrEmpty(id) ? "…" : id);
+
+    private string NomThermostatId(string? id) => id is { Length: > 0 } && Thermostats.Get(id) is { } t ? NomThermostat(t) : "…";
+
+    private static string Minuscule(string texte) => texte.Length > 0 ? char.ToLower(texte[0], System.Globalization.CultureInfo.CurrentCulture) + texte[1..] : texte;
 
     /// <summary>La dernière action reçue du bouton choisi : c'est le mot à recopier (« single », « double »…).</summary>
     private string AideAction =>
@@ -41,7 +65,7 @@ public partial class AutomatismeConfiguration
             ? $"Vide : toutes. Dernière reçue : « {v.GetString()} »"
             : "Vide : toutes. Appuyez une fois pour voir son nom ici.";
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnInitializedAsync()
     {
         _entites = await Registre.ListAsync();
         var actives = _entites.Where(e => e.Enabled && !e.Missing).OrderBy(e => e.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToList();
@@ -105,11 +129,14 @@ public partial class AutomatismeConfiguration
         {
             var enregistre = await Service.SaveAsync(_m!.Vers());
             Snackbar.Add($"Automatisme « {(enregistre.Name is { Length: > 0 } n ? n : enregistre.Id)} » enregistré.", Severity.Success);
-            Navigation.NavigateTo("/automatismes");
+            Dialogue.Close(DialogResult.Ok(true));
         }
         catch (AutomationValidationException ex)
         {
             _erreur = Phrases.Majuscule(ex.Message);
+            // L'erreur concerne-t-elle les conditions ou les commandes ? On y va, plutôt que de la laisser chercher.
+            var message = ex.Message.ToLowerInvariant();
+            _onglet = message.Contains("condition") ? 1 : message.Contains("action") || message.Contains("commande") ? 2 : 0;
         }
     }
 
@@ -121,7 +148,7 @@ public partial class AutomatismeConfiguration
 
         await Service.DeleteAsync(_existant.Id);
         Snackbar.Add("Automatisme supprimé.", Severity.Info);
-        Navigation.NavigateTo("/automatismes");
+        Dialogue.Close(DialogResult.Ok(true));
     }
 
     // ── Formulaire ───────────────────────────────────────────────────────────

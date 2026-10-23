@@ -10,7 +10,7 @@
             Quand quelque chose arrive (un appui, une heure, une détection), et si les conditions sont remplies, faire une suite d'actions.
         </MudText>
     </div>
-    <MudButton Href="/automatismes/nouveau" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">Nouveau</MudButton>
+    <MudButton OnClick="() => OuvrirAsync(null)" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">Nouveau</MudButton>
 </MudStack>
 
 @foreach (var erreur in Service.LoadErrors)
@@ -34,7 +34,7 @@
             <MudPaper Elevation="1" Class="pa-4 rounded-lg d-flex flex-column" Style="height: 100%">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
                     <MudText Typo="Typo.h6">@Nom(a)</MudText>
-                    <MudIconButton Href="@($"/automatismes/{a.Id}")" Icon="@Icons.Material.Filled.Settings" Size="Size.Small" aria-label="Modifier" />
+                    <MudIconButton OnClick="() => OuvrirAsync(a.Id)" Icon="@Icons.Material.Filled.Settings" Size="Size.Small" aria-label="Modifier" />
                 </MudStack>
 
                 <div class="kv-regle">

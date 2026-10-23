@@ -12,6 +12,7 @@ public partial class Automatismes : IDisposable
     [Inject] private IEntityRegistry Registre { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private TimeProvider Horloge { get; set; } = default!;
+    [Inject] private IDialogService Dialogues { get; set; } = default!;
 
     private IReadOnlyList<RegisteredEntity> _entites = [];
     private readonly HashSet<string> _enCours = new(StringComparer.Ordinal);
@@ -61,6 +62,17 @@ public partial class Automatismes : IDisposable
         {
             _enCours.Remove(a.Id);
         }
+    }
+
+    /// <summary>Créer (id null) ou régler un automatisme, dans sa fenêtre ; la liste se relit en sortant.</summary>
+    private async Task OuvrirAsync(string? id)
+    {
+        var parametres = new DialogParameters<AutomatismeDialog> { { d => d.Id, id } };
+        var dialogue = await Dialogues.ShowAsync<AutomatismeDialog>(null, parametres,
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true, BackdropClick = false });
+        await dialogue.Result;
+        _entites = await Registre.ListAsync();
+        StateHasChanged();
     }
 
     public void Dispose() => Moteur.Ran -= Rafraichir;
