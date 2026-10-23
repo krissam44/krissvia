@@ -100,7 +100,7 @@ MudBlazor, déjà dans Krissvia). Le manifeste s'écrit en attributs :
   L'usage est choisi par l'utilisateur dans l'écran Entités (`radiateur`, `eclairage`, `prise`, `compteur` pour un interrupteur) ; une
   entité `light` a d'elle-même l'usage `eclairage`.
 - `size` : taille par défaut d'une carte. `cols` en douzièmes de la largeur d'un grand écran (1 à 12 : 3 = un quart,
-  quatre cartes par ligne, comme un `lg="3"` de MudGrid), `rows` en lignes (1 à 4). Contrat 2 ; un manifeste du
+  quatre cartes par ligne, comme un `lg="3"` de MudGrid), `rows` en lignes, de 1 à 4 par demi-ligne (`2.5` convient, `2.25` non). Contrat 2 ; un manifeste du
   contrat 1 comptait en sixièmes (1 à 6) : il est encore lu, sa largeur doublée. Même unité pour l'attribut
   `Cols` d'un widget Blazor (2 par défaut).
 - `settings` : options propres à chaque carte, décrites avec le même sous-ensemble de JSON Schema que les réglages
@@ -218,7 +218,10 @@ chaque section une grille de cartes. Mode édition sur une copie : « Enregistre
 laisse rien ; replier une section hors édition s'enregistre aussitôt.
 
 - Grille : 12 colonnes sur grand écran, comme MudGrid et DomoMud ; largeur d'une carte de 1 à 12 (le menu propose
-  1/6, 1/4, 1/3, 1/2, 2/3, 3/4 et pleine largeur), hauteur de 1 à 4. Sur tablette, 4 colonnes (une carte y prend
+  1/6, 1/4, 1/3, 1/2, 2/3, 3/4 et pleine largeur), hauteur de 1 à 4 lignes **par demi-ligne** (menu ↕ de la carte en mode
+  édition, ou sa roue dentée ; 23/10/2026). La grille compte en demi-lignes de 53 px : une ligne fait toujours 118 px,
+  1,5 ligne 183 px, 2 lignes 248 px. Pourquoi pas une hauteur libre, qui suivrait le contenu : une carte à liste (les
+  appareils de la box) grandirait jusqu'à tout montrer, et une carte qui change de taille en direct fait sauter la grille. Sur tablette, 4 colonnes (une carte y prend
   la moitié de sa largeur, arrondie au-dessus) ; sur téléphone, 2 (une demi-ligne jusqu'à 2/12, puis la ligne).
   Les pages écrites avant la grille de 12 (sans `grid`) sont relues en doublant leurs largeurs.
 - Cartes : glisser-déposer, y compris d'une section à l'autre ; flèches ◀ ▶ pour le téléphone ; menu de taille.

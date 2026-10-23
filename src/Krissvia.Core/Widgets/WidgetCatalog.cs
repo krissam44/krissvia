@@ -19,9 +19,9 @@ public sealed record WidgetSlot
 
 /// <summary>
 /// Taille d'une carte : <see cref="Cols"/> en douzièmes de la largeur d'un grand écran (3 = un quart, comme un
-/// <c>lg="3"</c> de MudGrid), <see cref="Rows"/> en lignes.
+/// <c>lg="3"</c> de MudGrid), <see cref="Rows"/> en lignes, par demi-ligne (1, 1,5, 2…).
 /// </summary>
-public sealed record WidgetSize(int Cols = 1, int Rows = 1);
+public sealed record WidgetSize(int Cols = 1, double Rows = 1);
 
 /// <summary>Le manifeste <c>widget.json</c> (WIDGETS.md §3).</summary>
 public sealed record WidgetManifest
@@ -148,6 +148,12 @@ public static partial class WidgetCatalog
 
     public const int MaxRows = 4;
 
+    /// <summary>
+    /// Hauteur valable : de 1 à <see cref="MaxRows"/> lignes, par demi-ligne. Une ligne entière laissait le choix entre
+    /// une carte trop serrée (la carte Énergie coupée en 1) et une carte à moitié vide (en 2).
+    /// </summary>
+    public static bool IsValidRows(double rows) => rows is >= 1 and <= MaxRows && rows * 2 == Math.Floor(rows * 2);
+
     /// <summary>Le widget générique, qui sait tout afficher : le dernier recours (WIDGETS.md §6).</summary>
     public const string FallbackId = "valeur";
 
@@ -245,8 +251,8 @@ public static partial class WidgetCatalog
         if (m.Slots.Any(s => s.Type != "entity")) return "slot : seul le type « entity » existe";
         if (!m.Slots[0].Required) return "le premier slot (principal) doit être obligatoire";
         var maxCols = m.Contract == LegacyContractVersion ? MaxCols / 2 : MaxCols;
-        if (m.Size.Cols < 1 || m.Size.Cols > maxCols || m.Size.Rows is < 1 or > MaxRows)
-            return $"size : de 1 à {maxCols} colonnes et de 1 à {MaxRows} lignes";
+        if (m.Size.Cols < 1 || m.Size.Cols > maxCols || !IsValidRows(m.Size.Rows))
+            return $"size : de 1 à {maxCols} colonnes et de 1 à {MaxRows} lignes, par demi-ligne";
         return null;
     }
 

@@ -28,8 +28,8 @@ public sealed class KrissviaWidgetAttribute(string id, string name) : Attribute
     /// </summary>
     public int Cols { get; init; } = 2;
 
-    /// <summary>Hauteur par défaut, en lignes (1 à 4).</summary>
-    public int Rows { get; init; } = 1;
+    /// <summary>Hauteur par défaut, en lignes (1 à 4, par demi-ligne : 1,5 convient).</summary>
+    public double Rows { get; init; } = 1;
 
     /// <summary>
     /// Options de chaque carte, en JSON Schema (le même sous-ensemble que les réglages des plugins) ; le tableau de

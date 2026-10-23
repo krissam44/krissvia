@@ -44,6 +44,18 @@ public sealed class WidgetCatalogTests : IDisposable
     };
 
     [Fact]
+    public void Un_widget_peut_demander_une_demi_ligne_de_plus_mais_pas_un_quart()
+    {
+        Deposer(Locaux, "energie", Manifeste("energie").Replace("\"rows\": 1", "\"rows\": 2.5"));
+        Deposer(Locaux, "quart", Manifeste("quart").Replace("\"rows\": 1", "\"rows\": 2.25"));
+
+        var catalogue = Charger();
+
+        Assert.Equal(2.5, Assert.Single(catalogue.Widgets).Manifest.Size.Rows);
+        Assert.Contains(catalogue.Errors, e => e.Contains("quart") && e.Contains("demi-ligne"));
+    }
+
+    [Fact]
     public void Un_widget_valide_entre_au_catalogue_avec_l_adresse_de_son_script()
     {
         Deposer(Locaux, "jauge", Manifeste("jauge-cuve", """[{ "name": "niveau", "kinds": ["sensor", "binary_sensor"], "device_classes": ["moisture"], "required": true }]"""));
@@ -385,6 +397,31 @@ public class DashboardServiceTests
         var refus = await Assert.ThrowsAsync<DashboardValidationException>(() =>
             service.SaveAsync(Page("confort", Section("s", Carte("a") with { Title = new string('x', DashboardService.MaxTitleLength + 1) }))));
         Assert.Contains("nom", refus.Message);
+    }
+
+    [Theory]
+    [InlineData(1.5, true)]
+    [InlineData(2.5, true)]
+    [InlineData(4.0, true)]
+    [InlineData(1.25, false)]   // pas de quart de ligne : la grille compte en demi-lignes
+    [InlineData(0.5, false)]
+    [InlineData(4.5, false)]
+    public async Task Une_carte_se_regle_par_demi_ligne(double lignes, bool acceptee)
+    {
+        var magasin = new Magasin();
+        var service = new DashboardService(magasin);
+        var page = Page("technique", Section("s", Carte("energie") with { Rows = lignes }));
+
+        if (!acceptee)
+        {
+            var refus = await Assert.ThrowsAsync<DashboardValidationException>(() => service.SaveAsync(page));
+            Assert.Contains("demi-ligne", refus.Message);
+            return;
+        }
+
+        await service.SaveAsync(page);
+        var relue = await new DashboardService(magasin).GetAsync("technique");
+        Assert.Equal(lignes, relue!.Sections[0].Cards[0].Rows);
     }
 
     [Fact]

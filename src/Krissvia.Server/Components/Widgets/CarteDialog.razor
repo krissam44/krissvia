@@ -63,10 +63,10 @@
                         <MudSelectItem Value="@n">@Largeurs.Libelle(n)</MudSelectItem>
                     }
                 </MudSelect>
-                <MudSelect Dense="true" T="int" Label="Hauteur" @bind-Value="_rows" Variant="Variant.Outlined" HelperText="En lignes">
-                    @foreach (var n in Hauteurs)
+                <MudSelect Dense="true" T="double" Label="Hauteur" @bind-Value="_rows" Variant="Variant.Outlined" HelperText="Par demi-ligne">
+                    @foreach (var n in Hauteurs.Toutes)
                     {
-                        <MudSelectItem Value="@n">@n</MudSelectItem>
+                        <MudSelectItem Value="@n">@Hauteurs.Libelle(n)</MudSelectItem>
                     }
                 </MudSelect>
             </div>

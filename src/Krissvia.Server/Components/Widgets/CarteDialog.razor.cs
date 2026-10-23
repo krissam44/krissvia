@@ -26,7 +26,7 @@ public partial class CarteDialog
 
     /// <summary>Nom propre à la carte ; vide : celui de l'entité.</summary>
     private string? _titre;
-    private int _rows = 1;
+    private double _rows = 1;
     private SettingField? _schema;
     private JsonObject? _reglages;
     private string? _erreur;
@@ -35,7 +35,6 @@ public partial class CarteDialog
     // compteur de boucle à sa dernière valeur.
     /// <summary>Les largeurs usuelles, et celle de la carte si elle n'en est pas (une page convertie des sixièmes).</summary>
     private IEnumerable<int> ChoixLargeurs => Largeurs.Usuelles.Append(_cols).Where(n => n is >= 1 and <= WidgetCatalog.MaxCols).Distinct().Order();
-    private static readonly int[] Hauteurs = [.. Enumerable.Range(1, WidgetCatalog.MaxRows)];
 
     /// <summary>Valeur de la liste pour « la carte suit son entité ».</summary>
     private const string Auto = "";

@@ -32,7 +32,7 @@ public sealed record DashboardCard
 
     public JsonElement? Settings { get; init; }
     public int? Cols { get; init; }
-    public int? Rows { get; init; }
+    public double? Rows { get; init; }
 }
 
 /// <summary>Une section d'une page (« Météo », « Thermostats »…) : un titre et une grille de cartes, repliable.</summary>
@@ -234,8 +234,8 @@ public sealed partial class DashboardService(IConfigurationStore store)
                 if (!cartes.Add(carte.Id)) throw new DashboardValidationException($"deux cartes portent l'identifiant « {carte.Id} »");
                 if (carte.Widget is null ? string.IsNullOrWhiteSpace(carte.Entity) : string.IsNullOrWhiteSpace(carte.Widget))
                     throw new DashboardValidationException($"carte « {carte.Id} » : il faut un widget, ou une entité dont suivre le widget");
-                if (carte.Cols is < 1 or > WidgetCatalog.MaxCols || carte.Rows is < 1 or > WidgetCatalog.MaxRows)
-                    throw new DashboardValidationException($"carte « {carte.Id} » : de 1 à {WidgetCatalog.MaxCols} colonnes et de 1 à {WidgetCatalog.MaxRows} lignes");
+                if (carte.Cols is < 1 or > WidgetCatalog.MaxCols || carte.Rows is { } lignes && !WidgetCatalog.IsValidRows(lignes))
+                    throw new DashboardValidationException($"carte « {carte.Id} » : de 1 à {WidgetCatalog.MaxCols} colonnes et de 1 à {WidgetCatalog.MaxRows} lignes, par demi-ligne");
                 if (carte.Title is { Length: > MaxTitleLength })
                     throw new DashboardValidationException($"carte « {carte.Id} » : nom de {MaxTitleLength} caractères au plus");
                 if (carte.Entities.Any(kv => string.IsNullOrWhiteSpace(kv.Key) || string.IsNullOrWhiteSpace(kv.Value)))

@@ -182,7 +182,7 @@ public partial class TableauDeBord
     /// <summary>Le widget de la carte : le sien, sinon celui de son entité, sinon le plus précis (WIDGETS.md §6).</summary>
     private ResolvedCard Resoudre(DashboardCard carte) => WidgetResolver.Resolve(carte, _entites, _catalogue);
 
-    private (int Cols, int Rows) Taille(DashboardCard carte)
+    private (int Cols, double Rows) Taille(DashboardCard carte)
     {
         var defaut = Resoudre(carte).Widget?.Manifest.Size ?? new WidgetSize();
         return (carte.Cols ?? defaut.Cols, carte.Rows ?? defaut.Rows);
@@ -348,6 +348,9 @@ public partial class TableauDeBord
 
     private void Redimensionner(string sectionId, string carteId, int? cols) =>
         ChangerSection(sectionId, s => s with { Cards = [.. s.Cards.Select(c => c.Id == carteId ? c with { Cols = cols } : c)] });
+
+    private void Rehausser(string sectionId, string carteId, double? rows) =>
+        ChangerSection(sectionId, s => s with { Cards = [.. s.Cards.Select(c => c.Id == carteId ? c with { Rows = rows } : c)] });
 
     /// <summary>
     /// Glisser-déposer : une carte lâchée sur une autre se place devant elle, lâchée dans le vide d'une section elle
