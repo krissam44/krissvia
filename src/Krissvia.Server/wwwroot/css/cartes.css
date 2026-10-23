@@ -23,3 +23,8 @@
                          background: var(--mud-palette-warning); color: #fff; font-size: .85rem; }
 .kv-hote.kv-hors-ligne .kv-bandeau-hors-ligne { display: block; }
 .kv-hote.kv-hors-ligne .kv-carte-corps { opacity: .5; }
+
+/* Fenêtres déplaçables par leur barre de titre (js/fenetres.js) : le curseur l'annonce, et le doigt la tire au lieu
+   de faire défiler la page. */
+.mud-dialog .mud-dialog-title { cursor: move; touch-action: none; user-select: none; }
+.mud-dialog .mud-dialog-title :is(button, a) { cursor: pointer; }
