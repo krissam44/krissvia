@@ -8,8 +8,11 @@ namespace Krissvia.Server.Components.Widgets;
 /// </summary>
 public static class Largeurs
 {
-    /// <summary>Celles du menu de la carte : les fractions qui tombent juste, de six à une carte par ligne.</summary>
-    public static readonly int[] Usuelles = [2, 3, 4, 6, 8, 9, WidgetCatalog.MaxCols];
+    /// <summary>
+    /// Celles du menu de la carte : les fractions qui tombent juste, de douze à une carte par ligne. 1/12 pour les
+    /// petites cartes à icône (un spot, un interrupteur), qu'on aligne en rangée.
+    /// </summary>
+    public static readonly int[] Usuelles = [1, 2, 3, 4, 6, 8, 9, WidgetCatalog.MaxCols];
 
     public static string Libelle(int cols)
     {
