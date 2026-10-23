@@ -49,11 +49,11 @@ public partial class EntiteDialog
         _active = Entite.Enabled;
         _usage = Entite.Usage ?? SansUsage;
 
-        // Seuls les widgets qui acceptent cette entité ; un choix devenu impossible (widget retiré) revient à
+        // Seuls les widgets qui acceptent cette entité (usage mis à part : le choix est le vôtre) ; un choix devenu impossible (widget retiré) revient à
         // l'automatique plutôt que d'afficher une valeur absente de la liste.
         var catalogue = Widgets.Load();
-        _compatibles = WidgetCatalog.CompatibleWith(catalogue, Entite);
-        var meilleur = _compatibles.FirstOrDefault();
+        _compatibles = WidgetCatalog.ChoosableFor(catalogue, Entite);
+        var meilleur = WidgetCatalog.CompatibleWith(catalogue, Entite).FirstOrDefault();
         LibelleAutomatique = meilleur is null ? "Automatique" : $"Automatique — {meilleur.Manifest.Name}";
         _widget = Entite.Widget is { } choix && _compatibles.Any(w => w.Manifest.Id == choix) ? choix : Automatique;
     }

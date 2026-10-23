@@ -74,10 +74,13 @@ public interface IWidgetFolder
 /// <summary>Un ensemble de dossiers de widgets : leur origine et l'adresse où le serveur publie leurs fichiers.</summary>
 public sealed record WidgetSource(string Origin, string BaseUrl, IReadOnlyList<IWidgetFolder> Folders)
 {
-    /// <summary>Les sous-dossiers d'un répertoire du disque (aucun s'il n'existe pas).</summary>
+    /// <summary>
+    /// Les sous-dossiers d'un répertoire du disque (aucun s'il n'existe pas). Un dossier dont le nom commence par un
+    /// point est ignoré : c'est là qu'une installation écrit avant de basculer (<see cref="WidgetInstaller"/>).
+    /// </summary>
     public static WidgetSource FromDirectory(string directory, string origin, string baseUrl) =>
         new(origin, baseUrl, System.IO.Directory.Exists(directory)
-            ? [.. System.IO.Directory.GetDirectories(directory).Select(d => new DossierDisque(d))]
+            ? [.. System.IO.Directory.GetDirectories(directory).Where(d => !Path.GetFileName(d).StartsWith('.')).Select(d => new DossierDisque(d))]
             : []);
 
     private sealed class DossierDisque(string chemin) : IWidgetFolder
@@ -134,6 +137,9 @@ public static partial class WidgetCatalog
     /// <summary>Contrat 2 : largeurs en douzièmes. Le contrat 1 (largeurs en sixièmes) est encore lu, converti.</summary>
     public const int ContractVersion = 2;
 
+    /// <summary>Lit un <c>widget.json</c> ; lève <see cref="JsonException"/> s'il est mal formé.</summary>
+    public static WidgetManifest? ReadManifest(string json) => JsonSerializer.Deserialize<WidgetManifest>(json, Json);
+
     /// <summary>Le premier contrat, dont la grille n'avait que 6 colonnes.</summary>
     public const int LegacyContractVersion = 1;
 
@@ -167,7 +173,7 @@ public static partial class WidgetCatalog
                 {
                     texte = dossier.ReadText("widget.json");
                     if (texte is null) continue;
-                    manifeste = JsonSerializer.Deserialize<WidgetManifest>(texte, Json);
+                    manifeste = ReadManifest(texte);
                 }
                 catch (Exception ex) when (ex is JsonException or IOException)
                 {
@@ -248,14 +254,37 @@ public static partial class WidgetCatalog
     /// À quel point un slot convient à une entité : -1 s'il la refuse, puis 0 (slot sans filtre), 1 (famille),
     /// 2 (classe d'appareil), 3 (usage). Sert au choix du widget par défaut (WIDGETS.md §6).
     /// </summary>
-    public static int Score(WidgetSlot slot, RegisteredEntity entity)
+    /// <param name="ignoreUsage">
+    /// Vrai pour un choix EXPLICITE (écran Entités, carte) : l'usage du slot ne refuse plus l'entité. Un widget
+    /// « spot » pour une lumière d'usage éclairage, un « chauffe-eau » pour une prise : c'est l'utilisateur qui sait.
+    /// La famille et la classe d'appareil, elles, restent exigées — le widget ne saurait pas lire une autre valeur.
+    /// </param>
+    public static int Score(WidgetSlot slot, RegisteredEntity entity, bool ignoreUsage = false)
     {
         if (slot.Kinds.Count > 0 && !slot.Kinds.Contains(entity.Kind)) return -1;
         if (slot.DeviceClasses.Count > 0 && (entity.DeviceClass is null || !slot.DeviceClasses.Contains(entity.DeviceClass))) return -1;
-        if (slot.Usages.Count > 0 && (EntityUsages.Of(entity) is not { } usage || !slot.Usages.Contains(usage))) return -1;
+        var usageAccepte = slot.Usages.Count == 0 || (EntityUsages.Of(entity) is { } usage && slot.Usages.Contains(usage));
+        if (!usageAccepte && !ignoreUsage) return -1;
 
-        return slot.Usages.Count > 0 ? 3 : slot.DeviceClasses.Count > 0 ? 2 : slot.Kinds.Count > 0 ? 1 : 0;
+        return usageAccepte && slot.Usages.Count > 0 ? 3 : slot.DeviceClasses.Count > 0 ? 2 : slot.Kinds.Count > 0 ? 1 : 0;
     }
+
+    /// <summary>
+    /// Les widgets qu'on peut CHOISIR pour une entité : ceux qui l'acceptent, le meilleur d'abord, puis ceux qui ne
+    /// diffèrent que par l'usage (voir <see cref="IsOtherUsage"/>), par nom. Le choix automatique, lui, ne prend que
+    /// les premiers (<see cref="CompatibleWith"/>).
+    /// </summary>
+    public static IReadOnlyList<CatalogWidget> ChoosableFor(WidgetCatalogSnapshot catalog, RegisteredEntity entity) =>
+    [
+        .. CompatibleWith(catalog, entity),
+        .. catalog.Widgets
+            .Where(w => IsOtherUsage(w, entity))
+            .OrderBy(w => w.Manifest.Name, StringComparer.CurrentCultureIgnoreCase),
+    ];
+
+    /// <summary>Vrai si le widget accepte l'entité seulement en ignorant l'usage de son slot principal.</summary>
+    public static bool IsOtherUsage(CatalogWidget widget, RegisteredEntity entity) =>
+        Score(widget.Manifest.Slots[0], entity) < 0 && Score(widget.Manifest.Slots[0], entity, ignoreUsage: true) >= 0;
 
     /// <summary>Les widgets dont le slot principal accepte l'entité, le meilleur d'abord.</summary>
     public static IReadOnlyList<CatalogWidget> CompatibleWith(WidgetCatalogSnapshot catalog, RegisteredEntity entity) =>

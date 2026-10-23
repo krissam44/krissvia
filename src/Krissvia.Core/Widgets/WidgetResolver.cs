@@ -30,10 +30,11 @@ public static class WidgetResolver
     }
 
     /// <summary>
-    /// Le widget d'une entité : celui qu'a choisi l'utilisateur s'il existe encore et l'accepte, sinon le plus précis.
+    /// Le widget d'une entité : celui qu'a choisi l'utilisateur s'il existe encore et l'accepte (usage mis à part : un
+    /// choix explicite fait foi), sinon le plus précis.
     /// </summary>
     public static CatalogWidget? ChooseFor(RegisteredEntity entity, WidgetCatalogSnapshot catalog) =>
-        entity.Widget is { } choix && catalog.Find(choix) is { } widget && WidgetCatalog.Score(widget.Manifest.Slots[0], entity) >= 0
+        entity.Widget is { } choix && catalog.Find(choix) is { } widget && WidgetCatalog.Score(widget.Manifest.Slots[0], entity, ignoreUsage: true) >= 0
             ? widget
             : WidgetCatalog.CompatibleWith(catalog, entity).FirstOrDefault();
 

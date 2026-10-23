@@ -32,7 +32,7 @@
                 <MudSelectItem Value="@Auto">@LibelleAuto</MudSelectItem>
                 @foreach (var w in _compatibles)
                 {
-                    <MudSelectItem Value="@w.Manifest.Id">@w.Manifest.Name@(w.IsStandard ? "" : $" — {(WidgetCatalog.PluginOf(w.Origin) is { } plugin ? $"plugin {plugin}" : w.Origin)}")</MudSelectItem>
+                    <MudSelectItem Value="@w.Manifest.Id">@ChoixWidget.Libelle(w, _principale)</MudSelectItem>
                 }
             </MudSelect>
         }
@@ -49,7 +49,7 @@
             {
                 <MudSelect Dense="true" T="string" Label="@Phrases.Majuscule(slot.Name)" @bind-Value="_liens[slot.Name]" Variant="Variant.Outlined" Class="mt-4"
                            Clearable="@(!slot.Required)" HelperText="@(slot.Required ? "Obligatoire" : "Facultatif")">
-                    @foreach (var e in Entites.Where(e => WidgetCatalog.Score(slot, e) >= 0))
+                    @foreach (var e in Entites.Where(e => WidgetCatalog.Score(slot, e, ignoreUsage: true) >= 0))
                     {
                         <MudSelectItem Value="@e.EntityId">@e.DisplayName (@e.EntityId)</MudSelectItem>
                     }

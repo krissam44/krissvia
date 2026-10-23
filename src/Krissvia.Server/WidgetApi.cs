@@ -24,6 +24,21 @@ internal sealed class WidgetCatalogService(IFileProvider webRoot, string localDi
 
     public string LocalDirectory => localDirectory;
 
+    private readonly Lock _installation = new();
+
+    /// <summary>Installe (ou met à jour) un widget local ; lève <see cref="WidgetInstallException"/> avec la raison d'un refus.</summary>
+    public string Install(IReadOnlyList<WidgetFile> fichiers)
+    {
+        // Deux installations simultanées du même widget se marcheraient dessus au moment de la bascule.
+        lock (_installation) return WidgetInstaller.Install(localDirectory, fichiers, Load());
+    }
+
+    /// <summary>Retire un widget local ; faux s'il n'y en a pas (un widget standard ou de plugin ne se retire pas d'ici).</summary>
+    public bool Uninstall(string id)
+    {
+        lock (_installation) return WidgetInstaller.Uninstall(localDirectory, id);
+    }
+
     public WidgetCatalogSnapshot Load()
     {
         var catalogue = WidgetCatalog.Load(
@@ -95,6 +110,26 @@ internal static class WidgetApi
             var instantane = catalogue.Load();
             return Json(new { widgets = instantane.Widgets.Select(Vue), errors = instantane.Errors });
         });
+
+        // Installation d'un widget local depuis une archive .zip (WIDGETS.md §14) ; l'écran Paramètres › Widgets fait de même.
+        api.MapPost("/widgets", async (HttpRequest requete, WidgetCatalogService catalogue, CancellationToken ct) =>
+        {
+            using var copie = new MemoryStream();
+            await requete.Body.CopyToAsync(copie, ct);
+            copie.Position = 0;
+            try
+            {
+                var id = catalogue.Install(WidgetInstaller.FromZip(copie));
+                return Results.Created($"/api/widgets/{id}", new { id });
+            }
+            catch (WidgetInstallException ex)
+            {
+                return Refus(ex.Message);
+            }
+        });
+
+        api.MapDelete("/widgets/{id}", (string id, WidgetCatalogService catalogue) =>
+            catalogue.Uninstall(id) ? Results.NoContent() : Results.NotFound(new { error = $"aucun widget local « {id} »" }));
 
         api.MapGet("/dashboards", async (DashboardService service, CancellationToken ct) =>
             Results.Json(await service.ListAsync(ct), DashboardService.Json));
