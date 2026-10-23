@@ -38,6 +38,7 @@
             </MudSelect>
         </div>
         <MudSpacer />
+        <MudSwitch T="bool" Value="_avecValeur" ValueChanged="AfficherValeurAsync" Color="Color.Primary" Label="Valeur" />
         <MudTextField @bind-Value="_recherche" Placeholder="Rechercher…" Immediate="true" DebounceInterval="200"
                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined"
                       Margin="Margin.Dense" Style="max-width: 240px" />
@@ -54,7 +55,10 @@
             <MudTh><MudTableSortLabel T="RegisteredEntity" InitialDirection="SortDirection.Ascending" SortBy="e => Piece(e)">Pièce</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel T="RegisteredEntity" SortBy="e => Categories.De(e).Libelle">Type</MudTableSortLabel></MudTh>
             <MudTh Style="text-align:center">Alim.</MudTh>
-            <MudTh>Valeur</MudTh>
+            @if (_avecValeur)
+            {
+                <MudTh>Valeur</MudTh>
+            }
             <MudTh><MudTableSortLabel T="RegisteredEntity" SortBy="e => Etats.Get(e.EntityId) == null ? DateTimeOffset.MinValue : Etats.Get(e.EntityId)!.MeasuredAt">Dernière donnée</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel T="RegisteredEntity" SortBy="e => e.Missing ? 2 : e.Enabled ? 0 : 1">Statut</MudTableSortLabel></MudTh>
             <MudTh Style="text-align:right">Actions</MudTh>
@@ -82,7 +86,10 @@
                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@($"color:{c.Couleur};border-color:{c.Couleur}44")">@c.Libelle</MudChip>
             </MudTd>
             <MudTd Style="text-align:center">@Alimentation(context)</MudTd>
-            <MudTd>@Categories.Valeur(context, etat)</MudTd>
+            @if (_avecValeur)
+            {
+                <MudTd>@Categories.Valeur(context, etat)</MudTd>
+            }
             <MudTd>@Fraicheur(etat)</MudTd>
             <MudTd>
                 @if (context.Missing)

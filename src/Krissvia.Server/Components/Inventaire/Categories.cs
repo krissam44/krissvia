@@ -28,10 +28,18 @@ internal static class Categories
     public static readonly Categorie Meteo = new("meteo", "Météo", Icons.Material.Filled.WbSunny, "#ffb300");
     public static readonly Categorie Presence = new("presence", "Présence", Icons.Material.Filled.Person, "#4caf50");
     public static readonly Categorie Reseau = new("reseau", "Réseau / Internet", Icons.Material.Filled.Router, "#26a69a");
+    public static readonly Categorie Probleme = new("probleme", "Problème", Icons.Material.Filled.ReportProblem, "#ef5350");
+    public static readonly Categorie Machine = new("machine", "Machine / serveur", Icons.Material.Filled.Dns, "#5c6bc0");
     public static readonly Categorie Autre = new("autre", "Autre mesure", Icons.Material.Filled.Sensors, "#78909c");
 
+    /// <summary>
+    /// Un nœud Proxmox (<c>DeviceClasses.HypervisorNode</c>, ajouté par la PR du plugin) : écrit en clair ici pour que
+    /// les deux changements ne se marchent pas dessus.
+    /// </summary>
+    private const string NoeudHyperviseur = "hypervisor_node";
+
     /// <summary>L'ordre des pastilles de filtre.</summary>
-    public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Prise, Compteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Presence, Reseau, Meteo, Autre];
+    public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Prise, Compteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Presence, Reseau, Meteo, Probleme, Machine, Autre];
 
     public static Categorie De(RegisteredEntity e) => e.Kind switch
     {
@@ -46,6 +54,8 @@ internal static class Categories
         EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Occupancy => Mouvement,
         EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Presence => Presence,
         EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Connectivity => Reseau,
+        // Un « arrêt inattendu », une sous-tension : rien à voir avec une porte, alors que c'était le classement par défaut.
+        EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Problem => Probleme,
         EntityKind.BinarySensor => Ouverture,
         _ => e.DeviceClass switch
         {
@@ -57,6 +67,7 @@ internal static class Categories
             DeviceClasses.Weather => Meteo,
             DeviceClasses.HomePresence => Presence,
             DeviceClasses.PublicIp or DeviceClasses.DataRate or DeviceClasses.InternetConnection or DeviceClasses.NetworkHosts => Reseau,
+            DeviceClasses.VirtualMachine or DeviceClasses.SystemHealth or DeviceClasses.DeviceTemperature or NoeudHyperviseur => Machine,
             _ => Autre,
         },
     };
@@ -75,6 +86,7 @@ internal static class Categories
                 EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Occupancy => b ? "Présence" : "Rien",
                 EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Presence => b ? "Présent" : "Absent",
                 EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Connectivity => b ? "En ligne" : "Hors ligne",
+                EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Problem => b ? "Problème" : "OK",
                 EntityKind.BinarySensor => b ? "Ouvert" : "Fermé",
                 _ => b ? "Oui" : "Non",
             };
@@ -103,9 +115,19 @@ internal static class Categories
             return string.Join(" · ", new[] { Nombre(v, "temperature", " °C"), Texte(v, "condition") }.Where(x => x is not null));
         if (e.Kind == EntityKind.Climate && v.ValueKind == JsonValueKind.Object)
             return string.Join(" · ", new[] { Nombre(v, "temperature", " °C"), Texte(v, "status_label") }.Where(x => x is not null));
+        if (e.DeviceClass == DeviceClasses.VirtualMachine && v.ValueKind == JsonValueKind.Object)
+            return Vrai(v, "unexpected_stop") ? "Arrêt inattendu"
+                : Texte(v, "status") != "running" ? "Arrêtée"
+                : string.Join(" · ", new[] { "En marche", Nombre(v, "cpu_percent", " % CPU"), Nombre(v, "memory_percent", " % RAM") }.Where(x => x is not null));
+        if (e.DeviceClass is DeviceClasses.SystemHealth or NoeudHyperviseur && v.ValueKind == JsonValueKind.Object)
+            return v.TryGetProperty("online", out var enLigne) && enLigne.ValueKind == JsonValueKind.False ? "Hors ligne"
+                : string.Join(" · ", new[] { Nombre(v, "cpu_percent", " % CPU"), Nombre(v, "memory_percent", " % RAM"), Nombre(v, "disk_percent", " % disque") }
+                    .Where(x => x is not null)) is { Length: > 0 } resume ? resume : "—";
         if (v.ValueKind == JsonValueKind.Object && v.TryGetProperty("on", out var on) && on.ValueKind is JsonValueKind.True or JsonValueKind.False)
             return on.GetBoolean() ? "Allumée" : "Éteinte";
         if (v.ValueKind == JsonValueKind.String) return v.GetString() ?? "";
+        // Un objet qu'on ne sait pas résumer : sa carte du tableau de bord le montre, le JSON brut n'aide personne ici.
+        if (v.ValueKind is JsonValueKind.Object or JsonValueKind.Array) return "données détaillées (voir sa carte)";
         return v.ToString();
     }
 
