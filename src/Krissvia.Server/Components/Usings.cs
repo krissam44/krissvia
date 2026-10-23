@@ -7,3 +7,4 @@ global using Krissvia.Server.Components.Thermostats;
 global using Krissvia.Core.Scheduling;
 global using Krissvia.Climate.Automations;
 global using Krissvia.Server.Components.Automatismes;
+global using Krissvia.Server.Components.Historique;

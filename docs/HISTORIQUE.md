@@ -73,9 +73,28 @@ point peut précéder `from` : c'est la valeur en vigueur au début de la fenêt
 
 Pour un widget : `kv.history(slot, from, to, { field })` rend `[{ value, measured_at, min, max }]` (WIDGETS.md §5).
 
-## 5. Pas encore
+## 5. Les courbes de l'interface (23/10/2026)
 
-- Écran de courbes (fiche d'une entité, thermostat 6 h / 24 h / 7 j comme DomoMud) : avec les retouches d'interface.
+Une fenêtre **Historique**, comme la courbe des thermostats de DomoMud. On l'ouvre depuis l'icône 📈 d'une ligne de
+l'écran Entités, le bouton 📈 d'une carte thermostat, ou un clic sur une carte de mesure (température, puissance,
+Linky, énergie, ouverture, valeur).
+
+- **Périodes** : 6 h (une case = 5 min), 24 h (15 min), 7 j (1 h), 30 j (6 h). Jusqu'à 3 jours les points bruts, au-delà
+  les heures consolidées.
+- **Une grille régulière**, quelle que soit la densité des points (`HistoryCurve`, pur et testé) : la moyenne d'une case
+  est **pondérée par le temps** passé à chaque valeur (la série est en escalier) ; un trou ne compte pas, et une case
+  sans valeur reste vide, la courbe s'interrompt au lieu de relier le capteur à son retour ; la dernière valeur court
+  jusqu'à « maintenant », pas au-delà. Les heures consolidées pèsent par leur couverture.
+- **Ce qui est tracé** dépend de l'entité : un thermostat montre ambiante (avec sa bande min / max), consigne en
+  pointillés et extérieure, puis sa puissance TPI en barres (à défaut, la part du temps en chauffe) ; une mesure, sa
+  courbe et sa bande ; un interrupteur ou un capteur tout-ou-rien, la part du temps où il était actif, en barres, et la
+  durée cumulée. Des tuiles résument la période ; survoler une case donne ses valeurs.
+- Tracé en SVG (`CourbeSvg`), comme DomoMud : `MudChart` ne sait pas laisser un trou dans une courbe.
+- Un widget ouvre la fenêtre par `kv.openHistory(slot)` (WIDGETS.md §5) ; un widget de mesure le fait d'un clic s'il
+  déclare `static historique = "slot"` (base `commun.js`).
+
+## 6. Pas encore
+
 - Consommation par jour d'un compteur (index croissant) : se déduira des heures (`last` de chaque heure), à écrire
   avec l'écran Électricité.
 - Widgets Blazor : `WidgetContext` n'a pas encore d'équivalent de `kv.history`.

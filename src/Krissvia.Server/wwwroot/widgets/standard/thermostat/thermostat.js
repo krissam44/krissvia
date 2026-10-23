@@ -115,6 +115,7 @@ class KvThermostat extends KvWidget {
                 ${!manque && v.status_label ? `<div class="badge" style="background:${statut}22;color:${statut};border:1px solid ${statut}44">${esc(v.status_label)}</div>` : ""}
                 ${!manque ? `<button class="icone-btn planning" title="${planning ? "Planning actif : passer en manuel" : "Mode manuel : reprendre le planning"}"
                         aria-pressed="${planning}" ${attente} style="${planning ? `color:${PLANNING}` : ""}">${ms("calendar_month", planning ? "font-variation-settings:'FILL' 1" : "")}</button>` : ""}
+                ${!manque && typeof this._kv?.openHistory === "function" ? `<button class="icone-btn historique" title="Courbes : ambiante, consigne, chauffe">${ms("show_chart")}</button>` : ""}
                 ${configuration ? `<button class="icone-btn reglages" title="Réglages du thermostat">${ms("settings")}</button>` : ""}
             </div>`;
 
@@ -205,6 +206,7 @@ class KvThermostat extends KvWidget {
         racine.querySelector(".planning")?.addEventListener("click", () =>
             this.ordonner("set_schedule", { active: !this._states.thermostat?.value?.schedule_active }));
         // Un chemin du site, jamais une URL venue d'ailleurs : la carte ne connaît pas le routeur de Blazor, le navigateur suffit.
+        racine.querySelector(".historique")?.addEventListener("click", () => this._kv?.openHistory("thermostat"));
         racine.querySelector(".reglages")?.addEventListener("click", () => {
             if (typeof extra.configuration === "string" && /^\/[^/\\]/.test(extra.configuration)) location.assign(extra.configuration);
         });

@@ -23,6 +23,7 @@ public partial class Thermostats : IAsyncDisposable
     [Inject] private IEntityRegistry Registre { get; set; } = default!;
     [Inject] private WidgetCatalogService Widgets { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private IDialogService Dialogues { get; set; } = default!;
 
     private sealed record Carte(string Id, string Nom, string? EntityId, string Widget, IReadOnlyDictionary<string, string> Entities);
 
@@ -30,6 +31,7 @@ public partial class Thermostats : IAsyncDisposable
     private WidgetCatalogSnapshot _catalogue = new([], []);
     private ElementReference _racine;
     private IJSObjectReference? _module;
+    private DotNetObjectReference<Thermostats>? _dotnet;
     private bool _aAppliquer = true;
     private string? _erreurNavigateur;
     private Timer? _minuterie;
@@ -79,7 +81,8 @@ public partial class Thermostats : IAsyncDisposable
             {
                 // « ./ » : un import de module veut une adresse relative explicite.
                 _module = await JS.InvokeAsync<IJSObjectReference>("import", "./" + Assets["js/tableau-de-bord.js"]);
-                await _module.InvokeVoidAsync("demarrer", _racine, _catalogue.Widgets.Select(WidgetApi.Vue).Select(PourJs));
+                _dotnet ??= DotNetObjectReference.Create(this);
+                await _module.InvokeVoidAsync("demarrer", _racine, _catalogue.Widgets.Select(WidgetApi.Vue).Select(PourJs), _dotnet);
             }
 
             if (_module is not null && _aAppliquer)
@@ -101,9 +104,17 @@ public partial class Thermostats : IAsyncDisposable
         System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object?>>(
             System.Text.Json.JsonSerializer.Serialize(vue, ThermostatService.Json))!;
 
+    /// <summary>La courbe d'un thermostat, demandée par sa carte (<c>kv.openHistory</c>).</summary>
+    [JSInvokable]
+    public async Task OuvrirHistorique(string entityId)
+    {
+        if (await Registre.GetAsync(entityId) is { } entite) await InvokeAsync(() => HistoriqueDialog.OuvrirAsync(Dialogues, entite));
+    }
+
     public async ValueTask DisposeAsync()
     {
         _minuterie?.Dispose();
+        _dotnet?.Dispose();
         if (_module is null) return;
         try
         {

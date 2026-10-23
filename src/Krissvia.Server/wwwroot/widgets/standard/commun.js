@@ -42,6 +42,22 @@ export class KvWidget extends HTMLElement {
             this.#prevu = false;
             this.#racine.innerHTML = `<style>${STYLE}${this.constructor.css ?? ""}</style>${this.rendu()}`;
             this.apresRendu?.(this.#racine);
+            this.#historique();
+        });
+    }
+
+    /**
+     * Une carte de mesure qui déclare `static historique = "slot"` ouvre l'historique de ce slot quand on clique dessus
+     * (ses boutons gardent leur clic). Rien si l'hôte ne sait pas le faire : un ancien hôte, ou une page sans fenêtre.
+     */
+    #historique() {
+        const slot = this.constructor.historique;
+        const carte = this.#racine.querySelector(".carte");
+        if (!slot || !carte || typeof this._kv?.openHistory !== "function" || !this._entities[slot]) return;
+        carte.style.cursor = "pointer";
+        carte.title = "Voir l'historique";
+        carte.addEventListener("click", e => {
+            if (!e.target.closest("button, input, a, select")) this._kv.openHistory(slot);
         });
     }
 
