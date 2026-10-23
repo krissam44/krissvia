@@ -20,11 +20,13 @@ secret ne s'affiche qu'une fois.
 |---|---|---|
 | chaque machine | Machine (objet : état, processeur, mémoire, disque, durée, surveillance, relance) — commandes `start`, `shutdown` (arrêt propre), `reboot`, `set_tracked`, `set_auto_restart` | `virtual_machine` |
 | | Arrêt inattendu | `problem` (binary_sensor) |
-| chaque nœud | Hors ligne | `problem` |
-| | Processeur, Mémoire | % |
+| chaque nœud | Nœud (objet : en ligne, processeur et cœurs, mémoire et disque système utilisé / total, durée, machines en marche) | `hypervisor_node` |
+| | Hors ligne | `problem` |
+| | Processeur, Mémoire, Disque système | % (pour l'historique) |
 
-Les modèles (`template`) sont ignorés. Une VM sans agent invité ne remonte pas son disque utilisé : la carte n'en
-montre alors pas la barre.
+Les modèles (`template`) sont ignorés. Une VM sans agent invité ne remonte pas son disque utilisé : la carte montre
+alors la taille allouée (« 64 Go alloués »), comme DomoMud ; un conteneur montre la barre et « utilisé / total ».
+Un nœud hors ligne n'a pas de pourcentages (nuls, pas zéro).
 
 ## Arrêt inattendu et relance automatique
 
@@ -38,10 +40,15 @@ montre alors pas la barre.
 - « Surveillée » et « Relance auto » se règlent depuis la carte ; le plugin les garde dans son dossier de données
   (`preferences.json`). Par défaut : surveillée, sans relance.
 
-## Carte
+## Cartes
 
-Livrée par le plugin (`widgets/proxmox-vm`, WIDGETS.md §13), choisie d'office pour l'entité Machine : état, barres,
-Démarrer / Arrêter / Redémarrer (un arrêt ou un redémarrage demande confirmation), et les deux cases.
+Livrées par le plugin (WIDGETS.md §13), choisies d'office :
+
+- `widgets/proxmox-vm`, pour l'entité Machine : état, barres, disque, Démarrer / Arrêter / Redémarrer (un arrêt ou un
+  redémarrage demande confirmation), et les deux cases.
+- `widgets/proxmox-noeud` (23/10/2026), pour l'entité Nœud : l'en-tête de la page Proxmox de DomoMud — trois tuiles
+  Processeur / Mémoire / Disque système avec pourcentage, jauge et détail, durée de fonctionnement et machines en
+  marche. Pleine largeur, 1,5 ligne par défaut.
 
 ## Réglages (page Services)
 

@@ -252,15 +252,38 @@ internal sealed partial class ProxmoxPlugin(
 
         foreach (var n in _noeuds)
         {
+            etats.Add(Noter($"noeud:{n.Name}", Objet(n)));
             etats.Add(Noter($"noeud:{n.Name}:hors_ligne", !n.Online));
             if (n.Online)
             {
                 etats.Add(Noter($"noeud:{n.Name}:processeur", Math.Round(n.CpuFraction * 100, 1)));
                 if (n.MaxMem > 0) etats.Add(Noter($"noeud:{n.Name}:memoire", Math.Round(100.0 * n.Mem / n.MaxMem, 1)));
+                if (n.MaxDisk > 0) etats.Add(Noter($"noeud:{n.Name}:disque", Math.Round(100.0 * n.Disk / n.MaxDisk, 1)));
             }
         }
 
         return etats;
+    }
+
+    /// <summary>
+    /// La valeur que dessine la carte « Nœud Proxmox », comme l'en-tête de la page Proxmox de DomoMud : processeur (et
+    /// cœurs), mémoire et disque système (utilisé / total), durée de fonctionnement, machines en marche. Les pourcentages
+    /// sont nuls hors ligne : un nœud injoignable n'a pas « 0 % » de charge, il n'a pas de mesure.
+    /// </summary>
+    private JsonObject Objet(ProxmoxNode n)
+    {
+        var invites = _invites.Values.Where(g => g.Node == n.Name).ToList();
+        return new JsonObject
+        {
+            ["name"] = n.Name, ["online"] = n.Online,
+            ["cpu_percent"] = n.Online ? Math.Round(n.CpuFraction * 100, 1) : null, ["max_cpu"] = n.MaxCpu,
+            ["memory_percent"] = n.Online && n.MaxMem > 0 ? Math.Round(100.0 * n.Mem / n.MaxMem, 1) : null,
+            ["memory_bytes"] = n.Online ? n.Mem : null, ["max_memory_bytes"] = n.MaxMem,
+            ["disk_percent"] = n.Online && n.MaxDisk > 0 ? Math.Round(100.0 * n.Disk / n.MaxDisk, 1) : null,
+            ["disk_bytes"] = n.Online ? n.Disk : null, ["max_disk_bytes"] = n.MaxDisk,
+            ["uptime_s"] = n.Online ? n.Uptime : null,
+            ["guests_running"] = invites.Count(g => g.Running), ["guests_total"] = invites.Count,
+        };
     }
 
     /// <summary>La valeur que dessine la carte « Machine virtuelle ».</summary>
@@ -275,6 +298,7 @@ internal sealed partial class ProxmoxPlugin(
             ["max_memory_bytes"] = g.MaxMem,
             // Une VM sans agent invité ne remonte pas son disque utilisé (0) : on ne connaît que la taille allouée.
             ["disk_percent"] = g.Disk > 0 && g.MaxDisk > 0 ? Math.Round(100.0 * g.Disk / g.MaxDisk, 1) : null,
+            ["disk_bytes"] = g.Disk > 0 ? g.Disk : null,
             ["max_disk_bytes"] = g.MaxDisk,
             ["uptime_s"] = g.Running ? g.Uptime : null,
             ["tracked"] = pref.Tracked, ["auto_restart"] = pref.AutoRestart,
@@ -313,9 +337,11 @@ internal sealed partial class ProxmoxPlugin(
                 UniqueId = $"noeud:{n.Name}", Name = $"Nœud {n.Name}", Manufacturer = "Proxmox", Model = "Nœud",
                 Entities =
                 [
+                    new EntityDescriptor { UniqueId = $"noeud:{n.Name}", Kind = EntityKind.Sensor, Name = "Nœud", DeviceClass = DeviceClasses.HypervisorNode },
                     new EntityDescriptor { UniqueId = $"noeud:{n.Name}:hors_ligne", Kind = EntityKind.BinarySensor, Name = "Hors ligne", DeviceClass = DeviceClasses.Problem },
                     new EntityDescriptor { UniqueId = $"noeud:{n.Name}:processeur", Kind = EntityKind.Sensor, Name = "Processeur", Unit = "%", StateClass = StateClass.Measurement },
                     new EntityDescriptor { UniqueId = $"noeud:{n.Name}:memoire", Kind = EntityKind.Sensor, Name = "Mémoire", Unit = "%", StateClass = StateClass.Measurement },
+                    new EntityDescriptor { UniqueId = $"noeud:{n.Name}:disque", Kind = EntityKind.Sensor, Name = "Disque système", Unit = "%", StateClass = StateClass.Measurement },
                 ],
             });
         }

@@ -81,10 +81,11 @@ public class ProxmoxPluginTests
         public List<(int VmId, string Action)> Actions { get; } = [];
         public Exception? Panne { get; set; }
         public bool ActionRefusee { get; set; }
+        public bool NoeudEnLigne { get; set; } = true;
 
         public Task<ProxmoxSnapshot> ResourcesAsync(CancellationToken ct) => Panne is { } p
             ? Task.FromException<ProxmoxSnapshot>(p)
-            : Task.FromResult(new ProxmoxSnapshot([new ProxmoxNode("pve0", true, 0.1, 8, 1, 2, 1, 2, 10)],
+            : Task.FromResult(new ProxmoxSnapshot([new ProxmoxNode("pve0", NoeudEnLigne, 0.1, 8, 1, 2, 3, 4, 10)],
                 [.. Etats.Select(kv => new ProxmoxGuest(kv.Key, "pve0", kv.Key < 200 ? "qemu" : "lxc", $"machine{kv.Key}", kv.Value, 0.1, 2, 1, 2, 0, 8, 60))], false));
 
         public Task ActionAsync(ProxmoxGuest guest, string action, CancellationToken ct)
@@ -252,6 +253,36 @@ public class ProxmoxPluginTests
         Assert.Contains(ProxmoxPlugin.Reboot, vm.Entities[0].Commands);
         Assert.Equal(DeviceClasses.Problem, vm.Entities[1].DeviceClass);
         Assert.Contains(declaration.Devices, d => d.UniqueId == "noeud:pve0" && d.Entities.Any(e => e.DeviceClass == DeviceClasses.Problem));
+    }
+
+    [Fact]
+    public async Task Le_noeud_publie_processeur_memoire_et_disque_systeme_comme_l_en_tete_de_domomud()
+    {
+        var b = new Banc();
+        b.Api.Etats[101] = "stopped";
+        await b.ReleveAsync();
+
+        var noeud = b.Valeur("noeud:pve0");
+        Assert.Equal((10.0, 8, 50.0, 75.0, 3L, 4L), (noeud.GetProperty("cpu_percent").GetDouble(), noeud.GetProperty("max_cpu").GetInt32(),
+            noeud.GetProperty("memory_percent").GetDouble(), noeud.GetProperty("disk_percent").GetDouble(),
+            noeud.GetProperty("disk_bytes").GetInt64(), noeud.GetProperty("max_disk_bytes").GetInt64()));
+        Assert.Equal((1, 2), (noeud.GetProperty("guests_running").GetInt32(), noeud.GetProperty("guests_total").GetInt32()));
+        Assert.Equal(75.0, b.Valeur("noeud:pve0:disque").GetDouble());
+        var declaration = b.Plugin.Snapshot().OfType<Declare>().Single().Devices.Single(d => d.UniqueId == "noeud:pve0");
+        Assert.Contains(declaration.Entities, e => e.UniqueId == "noeud:pve0" && e.DeviceClass == DeviceClasses.HypervisorNode);
+    }
+
+    [Fact]
+    public async Task Un_noeud_hors_ligne_n_a_pas_de_mesure_et_non_zero()
+    {
+        var b = new Banc();
+        b.Api.NoeudEnLigne = false;
+        await b.ReleveAsync();
+
+        var noeud = b.Valeur("noeud:pve0");
+        Assert.False(noeud.GetProperty("online").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, noeud.GetProperty("cpu_percent").ValueKind);
+        Assert.Equal(JsonValueKind.Null, noeud.GetProperty("disk_percent").ValueKind);
     }
 
     [Fact]

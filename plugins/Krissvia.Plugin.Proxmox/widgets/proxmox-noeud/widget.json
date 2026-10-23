@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "proxmox-noeud",
+  "name": "Nœud Proxmox",
+  "description": "Le serveur Proxmox : processeur (cœurs), mémoire et disque système (utilisé / total), durée de fonctionnement, machines en marche — l'en-tête de la page Proxmox de DomoMud. Livré par le plugin Proxmox.",
+  "version": "1.0.0",
+  "element": "kv-proxmox-noeud",
+  "script": "proxmox-noeud.js",
+  "slots": [ { "name": "noeud", "kinds": ["sensor"], "device_classes": ["hypervisor_node"], "required": true } ],
+  "size": { "cols": 12, "rows": 1.5 }
+}
