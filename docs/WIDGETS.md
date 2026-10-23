@@ -233,6 +233,10 @@ laisse rien ; replier une section hors édition s'enregistre aussitôt.
   du même appareil (l'humidité d'une sonde) ; les radiateurs pilotés par un thermostat ne sont pas proposés. Rien
   n'est écrit avant « Enregistrer » — DomoMud générait ses sections tout seul au premier affichage.
 - Widgets standards : `valeur`, `temperature`, `interrupteur`, `radiateur`, `eclairage`, `prise` et `compteur` (le même bouton, avec la flamme, l'ampoule, la fiche ou le compteur de leur usage ; base commune `bascule.js`), `ouverture`, `puissance`, `thermostat`, `meteo` (entité `weather` du plugin Météo : conditions et prévision sur 7 jours, à la manière de la carte de DomoMud),
+  `thermostat-cadran` (24/10/2026 : un cadran à la manière de Gladys — consigne sur un arc qu'on fait glisser, l'ordre
+  partant au lâcher en valeur exacte, ou − / + ; ambiante, humidité, flamme ; « Confort jusqu'à 22:30 » d'après `next_change`
+  ou « Éco en manuel » ; icône planning ; les six modes de Confort à Arrêt — à choisir sur la carte ou pour l'entité,
+  le widget `thermostat` restant celui par défaut),
   `linky` (puissance apparente et part de l'abonnement, HP/HC, courant, tension, index), `energie` (tuiles d'un compteur :
   puissance, tension, courant, index), `delesteur` (entité `load_shedding` publiée par le cœur) et `alarme` (entité `alarm` :
   état, décomptes, clavier qui arme et désarme avec un code, `ALARME.md` §6). À score égal, le widget
