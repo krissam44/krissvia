@@ -198,6 +198,33 @@ public sealed class EntityRegistry(IEntityRepository repository, Krissvia.Core.E
     public Task SetEnabledAsync(string entityId, bool enabled, CancellationToken ct = default) =>
         MettreAJourAsync(entityId, e => e with { Enabled = enabled }, ct);
 
+    public async Task<bool> DeleteAsync(string entityId, CancellationToken ct = default)
+    {
+        await _ecriture.WaitAsync(ct);
+        try
+        {
+            var courant = await ChargerSousVerrouAsync(ct);
+            if (!courant.Entities.TryGetValue(entityId, out var entite)) return false;
+            if (!entite.Missing)
+                throw new InvalidOperationException(
+                    $"« {entite.DisplayName} » est encore déclarée par son plugin : supprimée, elle reviendrait à sa prochaine connexion. Désactivez-la plutôt.");
+
+            var orpheline = courant.Entities.Values.Any(e => e.DeviceId == entite.DeviceId && e.EntityId != entityId) ? null : entite.DeviceId;
+            await repository.DeleteEntityAsync(entityId, orpheline, ct);
+
+            var entites = courant.Entities.Values.Where(e => e.EntityId != entityId);
+            var appareils = courant.Devices.Where(d => d.DeviceId != orpheline);
+            _instantane = Snapshot.Creer(appareils, entites);
+        }
+        finally
+        {
+            _ecriture.Release();
+        }
+
+        events?.Publish(new Krissvia.Core.Events.RegistryChanged());
+        return true;
+    }
+
     public async Task SetRoomAsync(string deviceId, string? room, CancellationToken ct = default)
     {
         await _ecriture.WaitAsync(ct);

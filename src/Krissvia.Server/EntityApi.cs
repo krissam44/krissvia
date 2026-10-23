@@ -2,6 +2,7 @@ using System.Net.WebSockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using Krissvia.Climate;
 using Krissvia.Climate.Thermostats;
 using Krissvia.Contracts;
 using Krissvia.Core.Commands;
@@ -51,6 +52,22 @@ internal static partial class EntityApi
 
         api.MapGet("/entities/{id}", async (string id, IEntityRegistry registre, IEntityStateReader etats, CancellationToken ct) =>
             (await VuesAsync(registre, etats, [id], ct)).FirstOrDefault() is { } vue ? Json(vue) : Inconnue(id));
+
+        // Seulement une entité disparue, et que plus rien ne vise : 409 avec la liste de ce qui s'en sert, sinon 400.
+        api.MapDelete("/entities/{id}", async (string id, EntityRemoval suppression, CancellationToken ct) =>
+        {
+            try
+            {
+                var r = await suppression.DeleteAsync(id, ct);
+                return r.Deleted ? Results.NoContent()
+                    : r.UsedBy.Count > 0 ? Results.Json(new { error = "entité encore utilisée", used_by = r.UsedBy }, ThermostatService.Json, statusCode: StatusCodes.Status409Conflict)
+                    : Inconnue(id);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Refus(ex.Message);
+            }
+        });
 
         // L'ordre est VÉRIFIÉ (ARCHITECTURE.md §7.3) : « accepted » dit que le plugin l'a pris, « confirmed » que l'état
         // a suivi. Un widget attend l'état suivant au lieu d'afficher « allumé » parce qu'il a cliqué.

@@ -10,6 +10,7 @@ using Krissvia.Core.Notifications;
 using Krissvia.Core.Registry;
 using Krissvia.Core.States;
 using Krissvia.Core.Tests;
+using Krissvia.Core.Widgets;
 using Microsoft.Extensions.Time.Testing;
 
 namespace Krissvia.Climate.Tests;
@@ -419,5 +420,39 @@ public class AutomationTests
     {
         for (var i = 0; i < 200 && !condition(); i++) await Task.Delay(10);
         Assert.True(condition());
+    }
+
+    private sealed class SourceFixe(params EntityReference[] references) : IEntityReferenceSource
+    {
+        public Task<IReadOnlyList<EntityReference>> GetReferencesAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<EntityReference>>(references);
+    }
+
+    [Fact]
+    public async Task Une_entite_disparue_encore_visee_ne_se_supprime_pas_et_dit_par_qui()
+    {
+        var b = new Banc();
+        await b.AjouterAsync(new AutomationAction { Type = ActionType.TurnOn, EntityId = "switch.prise" });
+        var tableaux = new DashboardService(b.Magasin);
+        DashboardSection Section(params DashboardCard[] cartes) => new() { Id = "s", Title = "Prises", Cards = cartes };
+        await tableaux.SaveAsync(new Dashboard { Id = "accueil", Name = "Accueil", Sections = [Section(new DashboardCard { Id = "c", Entity = "switch.prise" })] });
+        var thermostat = new SourceFixe(new EntityReference("thermostat", "salon", "radiateur", "switch.prise", "Thermostat Salon"));
+        // Encore déclarée : c'est ce refus-là qui compte, pas la liste des usages.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => new EntityRemoval(b.Registre, [thermostat], b.Service, tableaux).DeleteAsync("switch.prise"));
+        await b.Registre.RegisterAsync("test", []);   // le plugin ne déclare plus rien : la prise a disparu
+
+        var refus = await new EntityRemoval(b.Registre, [thermostat], b.Service, tableaux).DeleteAsync("switch.prise");
+
+        Assert.False(refus.Deleted);
+        Assert.Equal(["Thermostat Salon", "Automatisme « Essai »", "Tableau de bord « Accueil » (1 carte)"], refus.UsedBy);
+        Assert.NotNull(await b.Registre.GetAsync("switch.prise"));
+
+        // Retirée de partout : elle part.
+        await b.Service.DeleteAsync("essai");
+        await tableaux.SaveAsync(new Dashboard { Id = "accueil", Name = "Accueil", Sections = [Section()] });
+        var accord = await new EntityRemoval(b.Registre, [], b.Service, tableaux).DeleteAsync("switch.prise");
+
+        Assert.True(accord.Deleted);
+        Assert.Null(await b.Registre.GetAsync("switch.prise"));
     }
 }

@@ -111,6 +111,12 @@
         </div>
     </DialogContent>
     <DialogActions>
+        @if (Entite.Missing)
+        {
+            @* Seulement une entité disparue : celle que son plugin déclare encore reviendrait à sa prochaine connexion. *@
+            <MudButton Variant="Variant.Text" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="SupprimerAsync">Supprimer</MudButton>
+        }
+        <MudSpacer />
         <MudButton OnClick="() => MudDialog.Cancel()">Annuler</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="EnregistrerAsync">Enregistrer</MudButton>
     </DialogActions>

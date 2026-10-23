@@ -25,6 +25,13 @@ public partial class Entites : IDisposable
     private bool _avecValeur;
     private const string CleValeur = "krissvia.entites.valeur";
 
+    /// <summary>
+    /// Entités désactivées : montrées par défaut. Masquées, la liste ne garde que ce qui sert — l'entité « événement »
+    /// d'un module Zigbee dont on n'utilise que le relais, par exemple. Même mémoire que la colonne Valeur.
+    /// </summary>
+    private bool _avecDesactivees = true;
+    private const string CleDesactivees = "krissvia.entites.desactivees";
+
     private IReadOnlyList<RegisteredEntity> _entites = [];
     private Dictionary<string, RegisteredDevice> _appareils = [];
     private Categorie? _categorie;
@@ -52,11 +59,9 @@ public partial class Entites : IDisposable
         if (!premierRendu) return;
         try
         {
-            if (await JS.InvokeAsync<string?>("localStorage.getItem", CleValeur) == "1")
-            {
-                _avecValeur = true;
-                StateHasChanged();
-            }
+            _avecValeur = await JS.InvokeAsync<string?>("localStorage.getItem", CleValeur) == "1";
+            _avecDesactivees = await JS.InvokeAsync<string?>("localStorage.getItem", CleDesactivees) != "0";
+            StateHasChanged();
         }
         catch (JSException)
         {
@@ -64,12 +69,23 @@ public partial class Entites : IDisposable
         }
     }
 
-    private async Task AfficherValeurAsync(bool oui)
+    private Task AfficherValeurAsync(bool oui)
     {
         _avecValeur = oui;
+        return RetenirAsync(CleValeur, oui);
+    }
+
+    private Task AfficherDesactiveesAsync(bool oui)
+    {
+        _avecDesactivees = oui;
+        return RetenirAsync(CleDesactivees, oui);
+    }
+
+    private async Task RetenirAsync(string cle, bool oui)
+    {
         try
         {
-            await JS.InvokeVoidAsync("localStorage.setItem", CleValeur, oui ? "1" : "0");
+            await JS.InvokeVoidAsync("localStorage.setItem", cle, oui ? "1" : "0");
         }
         catch (JSException)
         {
@@ -91,6 +107,7 @@ public partial class Entites : IDisposable
         var texte = _recherche?.Trim();
         return _entites
             .Where(e => _categorie is null || Categories.De(e) == _categorie)
+            .Where(e => _avecDesactivees || e.Enabled)
             .Where(e => string.IsNullOrEmpty(texte)
                         || e.DisplayName.Contains(texte, StringComparison.CurrentCultureIgnoreCase)
                         || e.EntityId.Contains(texte, StringComparison.OrdinalIgnoreCase)

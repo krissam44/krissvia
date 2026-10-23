@@ -27,6 +27,12 @@ Le nom proposé par le plugin n'est utilisé qu'à la **création**.
 - Une entité absente de l'instantané devient **manquante** (`missing`). Elle n'est pas supprimée, ses références
   restent résolubles, et elle redevient normale si le plugin la redéclare.
 - Une déclaration invalide (même entité deux fois) est refusée entièrement : rien n'est écrit.
+- **Supprimer** (23/10/2026) : seulement une entité **manquante** (bouton « Supprimer » de sa fenêtre dans l'écran
+  Entités, ou `DELETE /api/entities/{id}`). Une entité encore déclarée reviendrait à la prochaine connexion de son
+  plugin : refusée, la désactiver est le moyen de l'écarter (l'écran Entités masque les désactivées sur demande).
+  Refusée aussi tant que quelque chose la vise — thermostat, programmation, délestage, alarme, réglages d'un plugin,
+  automatisme, carte du tableau de bord — avec la liste de ces usages (`EntityRemoval`). Partent avec elle : ses
+  alias, son dernier état, et son appareil s'il n'a plus d'autre entité. Son historique de mesures reste en base.
 
 ## Contrôle d'intégrité
 

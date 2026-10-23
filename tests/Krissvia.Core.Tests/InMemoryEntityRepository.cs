@@ -22,6 +22,14 @@ internal sealed class InMemoryEntityRepository : IEntityRepository
         return Task.CompletedTask;
     }
 
+    public Task DeleteEntityAsync(string entityId, string? orphanDeviceId, CancellationToken ct = default)
+    {
+        _entities.Remove(entityId);
+        foreach (var alias in _aliases.Where(kv => kv.Value == entityId).Select(kv => kv.Key).ToList()) _aliases.Remove(alias);
+        if (orphanDeviceId is not null) _devices.Remove(orphanDeviceId);
+        return Task.CompletedTask;
+    }
+
     public Task AddAliasAsync(string alias, string entityId, CancellationToken ct = default)
     {
         _aliases[alias] = entityId;
