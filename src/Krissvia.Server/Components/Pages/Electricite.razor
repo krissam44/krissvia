@@ -1,0 +1,25 @@
+@page "/electricite"
+
+<PageTitle>Électricité · Krissvia</PageTitle>
+
+<div class="d-flex flex-wrap align-center gap-3 mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.Bolt" Style="color:#ffb300; font-size:2rem" />
+    <MudText Typo="Typo.h5">Consommation électrique</MudText>
+    <MudSpacer />
+    <MudNumericField T="double?" Value="_prix" ValueChanged="ChangerPrixAsync" Label="Prix du kWh (€ TTC)" Format="0.#####"
+                     Variant="Variant.Outlined" Margin="Margin.Dense" Step="0.001" Min="0" Max="10" Clearable="true" Style="max-width: 200px"
+                     HelperText="Pour le coût du jour ; vide : pas de coût" />
+</div>
+
+@if (_compteurs.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">
+        Aucun compteur : il faut un index d'énergie en kWh (un Linky par le plugin Téléinfo, un Shelly EM, une prise qui mesure sa
+        consommation). Sa courbe et sa consommation par jour se lisent ensuite ici, tirées de l'historique.
+    </MudAlert>
+}
+
+@foreach (var compteur in _compteurs)
+{
+    <CompteurElectrique @key="compteur.Index.EntityId" Compteur="compteur" Prix="_prix" />
+}

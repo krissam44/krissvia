@@ -31,7 +31,7 @@ public partial class CourbeSvg
     private int H => Hauteur;
     private const int G = 46, D = 8, Haut = 8, Bas = 24;
 
-    private double _bas, _haut;
+    private double _bas, _haut, _pas;
 
     protected override void OnParametersSet()
     {
@@ -46,12 +46,16 @@ public partial class CourbeSvg
         _bas = YMin ?? Math.Floor(bas / pas) * pas;
         _haut = YMax ?? Math.Ceiling(haut / pas) * pas;
         if (_haut <= _bas) _haut = _bas + pas;
+        // Bornes imposées (0 à 100 %) : le pas se recalcule sur elles, pour que les graduations y tombent aussi.
+        _pas = YMin is not null && YMax is not null ? PasRond((_haut - _bas) / 4) : pas;
     }
 
     private static double PasRond(double brut)
     {
         var p = Math.Pow(10, Math.Floor(Math.Log10(brut)));
-        return brut / p switch { <= 1 => 1, <= 2 => 2, <= 5 => 5, _ => 10 } * p;
+        // Parenthèses obligatoires : « brut / p switch {…} » divise par le résultat du switch (appliqué à p seul).
+        var mantisse = brut / p;
+        return (mantisse switch { <= 1 => 1, <= 2 => 2, <= 5 => 5, _ => 10 }) * p;
     }
 
     private double X(int i) => G + (L - G - D) * i / (double)Math.Max(1, Temps.Count);
@@ -64,13 +68,14 @@ public partial class CourbeSvg
     /// <summary>SVG veut un point décimal, jamais la virgule française.</summary>
     private static string S(double v) => v.ToString("0.#", CultureInfo.InvariantCulture);
 
+    /// <summary>Une graduation par pas rond (1, 2 ou 5 × 10ⁿ), de la borne basse à la haute : « 0 · 500 · 1000 », pas « 823 ».</summary>
     private IEnumerable<(double Y, string Libelle)> Graduations()
     {
-        var pas = (_haut - _bas) / 4;
-        for (var k = 0; k <= 4; k++)
+        var nombre = (int)Math.Round((_haut - _bas) / _pas);
+        for (var k = 0; k <= nombre; k++)
         {
-            var v = _bas + k * pas;
-            yield return (Y(v), v.ToString(Math.Abs(pas) >= 1 ? "0" : "0.#", Fr) + (k == 4 && Unite is { Length: > 0 } u ? $" {u}" : ""));
+            var v = _bas + k * _pas;
+            yield return (Y(v), v.ToString(_pas >= 1 ? "#,0" : "0.#", Fr) + (k == nombre && Unite is { Length: > 0 } u ? $" {u}" : ""));
         }
     }
 

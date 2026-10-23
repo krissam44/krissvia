@@ -93,7 +93,25 @@ Linky, énergie, ouverture, valeur).
 - Un widget ouvre la fenêtre par `kv.openHistory(slot)` (WIDGETS.md §5) ; un widget de mesure le fait d'un clic s'il
   déclare `static historique = "slot"` (base `commun.js`).
 
-## 6. Pas encore
+## 6. Électricité (23/10/2026)
+
+L'écran **Électricité** (menu, `/electricite`), comme celui de DomoMud : une carte par compteur, c'est-à-dire par
+appareil qui publie un index en kWh (Linky par Téléinfo, Shelly EM, prise mesurée). Rien de plus à enregistrer : l'index
+et la puissance le sont déjà à la minute (§2), puis heure par heure sans limite (§3).
+
+- **Chiffres** : puissance (W, ou VA pour un Linky) et tension en direct ; **depuis minuit** = index maintenant − index
+  en vigueur à minuit (points bruts) ; **coût du jour** si un prix du kWh est saisi en haut de l'écran (un seul prix
+  TTC, collection `electricite`).
+- **Puissance du jour** : de minuit à maintenant, par cases de 5 min, avec la bande min / max (`CourbeSvg`).
+- **Conso 30 jours** en barres, et un **tableau** jour par jour : consommation, part de chaque index partiel (index 1 /
+  index 2 d'un Linky : heures creuses et pleines selon le contrat), coût, puissance maximale.
+- **Un jour = la somme des hausses d'index d'heure en heure** (`EnergyDays`, pur et testé), en jour **local** : une
+  baisse se lit comme une remise à zéro, et seule la nouvelle valeur compte — « max − min » (DomoMud) gonflait ce
+  jour-là de tout l'index. Aujourd'hui vient des points bruts, plus frais que l'heure consolidée toutes les 10 min.
+- Un appareil qui a un index « total » est un seul compteur (les autres index en sont les parts) ; sinon chaque index est
+  un compteur, avec la puissance de la même voie (les deux voies d'un Shelly EM).
+
+## 7. Pas encore
 
 - Consommation par jour d'un compteur (index croissant) : se déduira des heures (`last` de chaque heure), à écrire
   avec l'écran Électricité.
