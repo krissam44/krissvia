@@ -11,11 +11,19 @@ public sealed class SqliteDatabase(string connectionString)
 {
     private const int VersionSchema = 6;
 
+    /// <remarks>
+    /// <c>synchronous = FULL</c>, pas NORMAL, et sans réglage pour le changer : NORMAL n'est sûr en WAL que si chaque
+    /// <c>fsync</c> atteint vraiment le support. Le SSD du Pi est derrière un pont USB-SATA qui annonce un cache
+    /// d'écriture sans FUA ; ces ponts acquittent des vidages qu'ils ne font pas, et la corruption de la base de DomoMud
+    /// sur ce Pi (02/10/2026) portait la signature d'écritures perdues ou réordonnées. Au rythme d'écriture de Krissvia
+    /// (des lots toutes les 30 s), FULL ne coûte rien de mesurable. Le réglage vaut par connexion : il est posé à chaque
+    /// ouverture.
+    /// </remarks>
     public async Task<SqliteConnection> OpenAsync(CancellationToken ct = default)
     {
         var connexion = new SqliteConnection(connectionString);
         await connexion.OpenAsync(ct);
-        await connexion.ExecuteAsync("PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;");
+        await connexion.ExecuteAsync("PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON; PRAGMA synchronous = FULL;");
         return connexion;
     }
 
