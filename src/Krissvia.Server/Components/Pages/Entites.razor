@@ -38,6 +38,8 @@
             </MudSelect>
         </div>
         <MudSpacer />
+        <MudSwitch T="bool" Value="_avecDesactivees" ValueChanged="AfficherDesactiveesAsync" Color="Color.Primary"
+                   Label="@($"Désactivées ({_entites.Count(e => !e.Enabled)})")" />
         <MudSwitch T="bool" Value="_avecValeur" ValueChanged="AfficherValeurAsync" Color="Color.Primary" Label="Valeur" />
         <MudTextField @bind-Value="_recherche" Placeholder="Rechercher…" Immediate="true" DebounceInterval="200"
                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined"

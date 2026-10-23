@@ -51,6 +51,36 @@ public sealed class SqliteEntityRepositoryTests : IDisposable
     };
 
     [Fact]
+    public async Task Supprimer_une_entite_efface_alias_dernier_etat_et_appareil_orphelin_et_survit_au_redemarrage()
+    {
+        var registre = await OuvrirRegistreAsync();
+        await registre.RegisterAsync("z2m", [Prise()]);
+        var ids = (await registre.ListAsync()).Select(e => e.EntityId).ToList();
+        await registre.AddAliasAsync("vieille_prise", ids[0]);
+        var db = await OuvrirAsync();
+        await using (var c = await db.OpenAsync())
+        {
+            await using var cmd = c.CreateCommand();
+            cmd.CommandText = $"INSERT INTO entity_states (entity_id, value_json, measured_at_ticks) VALUES ('{ids[0]}', 'true', 1)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        await registre.RegisterAsync("z2m", []);
+        foreach (var id in ids) Assert.True(await registre.DeleteAsync(id));   // l'alias (clé étrangère) ne bloque pas
+
+        var relu = await OuvrirRegistreAsync();
+        Assert.Empty(await relu.ListAsync());
+        Assert.Empty(await relu.ListDevicesAsync());
+        Assert.Null(await relu.ResolveAliasAsync("vieille_prise"));
+        await using (var c = await db.OpenAsync())
+        {
+            await using var cmd = c.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM entity_states";
+            Assert.Equal(0L, (long)(await cmd.ExecuteScalarAsync())!);
+        }
+    }
+
+    [Fact]
     public async Task Le_schema_s_initialise_deux_fois_sans_erreur()
     {
         await OuvrirAsync();

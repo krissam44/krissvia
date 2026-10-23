@@ -33,6 +33,37 @@ public class EntityRegistryTests
     };
 
     [Fact]
+    public async Task Une_entite_disparue_se_supprime_et_son_appareil_part_avec_la_derniere()
+    {
+        var registre = NouveauRegistre();
+        await registre.RegisterAsync(Plugin, [Prise()]);
+        var ids = (await registre.ListAsync()).Select(e => e.EntityId).ToList();
+        await registre.AddAliasAsync("ancienne_prise", ids[0]);
+        await registre.RegisterAsync(Plugin, []);   // le plugin ne déclare plus la prise : ses deux entités disparaissent
+
+        Assert.True(await registre.DeleteAsync(ids[0]));
+        Assert.Single(await registre.ListDevicesAsync());   // l'appareil garde son autre entité
+        Assert.Null(await registre.ResolveAliasAsync("ancienne_prise"));
+
+        Assert.True(await registre.DeleteAsync(ids[1]));
+        Assert.Empty(await registre.ListAsync());
+        Assert.Empty(await registre.ListDevicesAsync());
+        Assert.False(await registre.DeleteAsync(ids[1]));   // déjà partie
+    }
+
+    [Fact]
+    public async Task Une_entite_encore_declaree_ne_se_supprime_pas_elle_reviendrait()
+    {
+        var registre = NouveauRegistre();
+        await registre.RegisterAsync(Plugin, [Prise()]);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => registre.DeleteAsync("switch.prise_salon"));
+
+        Assert.Contains("Désactivez-la", ex.Message);
+        Assert.Equal(2, (await registre.ListAsync()).Count);
+    }
+
+    [Fact]
     public async Task La_puissance_declaree_se_regle_s_efface_et_refuse_le_negatif()
     {
         var registre = NouveauRegistre();

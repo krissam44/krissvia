@@ -91,6 +91,26 @@ public sealed class SqliteEntityRepository(SqliteDatabase db) : IEntityRepositor
         await transaction.CommitAsync(ct);
     }
 
+    public async Task DeleteEntityAsync(string entityId, string? orphanDeviceId, CancellationToken ct = default)
+    {
+        await using var connexion = await db.OpenAsync(ct);
+        await using var transaction = await connexion.BeginTransactionAsync(ct);
+        // Les alias d'abord : ils référencent l'entité (clé étrangère).
+        foreach (var sql in new[]
+                 {
+                     "DELETE FROM entity_aliases WHERE entity_id = @entityId;",
+                     "DELETE FROM entity_states WHERE entity_id = @entityId;",
+                     "DELETE FROM entities WHERE entity_id = @entityId;",
+                 })
+            await connexion.ExecuteAsync(new CommandDefinition(sql, new { entityId }, transaction, cancellationToken: ct));
+
+        if (orphanDeviceId is not null)
+            await connexion.ExecuteAsync(new CommandDefinition("DELETE FROM devices WHERE device_id = @orphanDeviceId;",
+                new { orphanDeviceId }, transaction, cancellationToken: ct));
+
+        await transaction.CommitAsync(ct);
+    }
+
     public async Task AddAliasAsync(string alias, string entityId, CancellationToken ct = default)
     {
         await using var connexion = await db.OpenAsync(ct);

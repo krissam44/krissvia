@@ -143,6 +143,7 @@ builder.Services.AddSingleton<PluginSettingsService>();
 builder.Services.AddSingleton<IPluginSettingsProvider>(sp => sp.GetRequiredService<PluginSettingsService>());
 // Ce que visent les modules et les plugins : la supervision signale une référence cassée (renommage, suppression).
 builder.Services.AddSingleton<IEntityReferenceSource, ClimateEntityReferences>();
+builder.Services.AddSingleton<EntityRemoval>();
 builder.Services.AddSingleton<IEntityReferenceSource, PluginSettingsReferences>();
 builder.Services.AddSingleton<SharedBrokerService>();   // le broker MQTT commun (pastille de la barre du haut)
 builder.Services.AddSingleton<PluginSupervisor>();

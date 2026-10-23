@@ -27,6 +27,13 @@ public interface IEntityRegistry
 
     Task SetEnabledAsync(string entityId, bool enabled, CancellationToken ct = default);
 
+    /// <summary>
+    /// Supprime une entité DISPARUE (son plugin ne la déclare plus), avec son appareil s'il n'a plus d'autre entité.
+    /// Faux si elle n'existe pas. Une entité encore déclarée reviendrait à la prochaine connexion de son plugin : elle est
+    /// refusée (<see cref="InvalidOperationException"/>), la désactiver est le seul moyen de l'écarter.
+    /// </summary>
+    Task<bool> DeleteAsync(string entityId, CancellationToken ct = default);
+
     /// <summary>Puissance consommée allumé, en W ; null l'efface. Refuse une valeur négative.</summary>
     Task SetNominalPowerAsync(string entityId, double? watts, CancellationToken ct = default);
 

@@ -1,3 +1,4 @@
+using Krissvia.Climate;
 using Krissvia.Contracts;
 using Krissvia.Core.Commands;
 using Krissvia.Core.Registry;
@@ -19,6 +20,8 @@ public partial class EntiteDialog
     [Inject] private IEntityRegistry Registre { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private WidgetCatalogService Widgets { get; set; } = default!;
+    [Inject] private EntityRemoval Suppression { get; set; } = default!;
+    [Inject] private IDialogService Dialogues { get; set; } = default!;
 
     /// <summary>Entité publiée par un module du cœur (thermostat) : son nom vient de la configuration du module.</summary>
     private bool DuCoeur => CoreIntegrations.IsCore(Entite.IntegrationId);
@@ -77,5 +80,34 @@ public partial class EntiteDialog
 
         Snackbar.Add($"« {_nom.Trim()} » enregistrée.", Severity.Success);
         MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    /// <summary>
+    /// Une entité disparue (son plugin ne la déclare plus). Refusé tant qu'un thermostat, un automatisme, une carte… la
+    /// vise : la liste dit où aller la retirer.
+    /// </summary>
+    private async Task SupprimerAsync()
+    {
+        if (await Dialogues.ShowMessageBoxAsync("Supprimer l'entité",
+                $"« {Entite.DisplayName} » ne sera plus dans le registre ; son historique de mesures reste en base.",
+                yesText: "Supprimer", cancelText: "Annuler") != true)
+            return;
+
+        try
+        {
+            var r = await Suppression.DeleteAsync(Entite.EntityId);
+            if (r.UsedBy.Count > 0)
+            {
+                _erreur = $"Encore utilisée par : {string.Join(", ", r.UsedBy)}. Retirez-la d'abord de ces réglages.";
+                return;
+            }
+
+            Snackbar.Add($"« {Entite.DisplayName} » supprimée.", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (InvalidOperationException ex)
+        {
+            _erreur = ex.Message;
+        }
     }
 }
