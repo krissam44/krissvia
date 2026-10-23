@@ -1,0 +1,43 @@
+@using Krissvia.PluginHost.Services
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">
+            Le broker de cette installation, saisi une fois pour tous les plugins MQTT (Zigbee2MQTT, openHASP, Téléinfo…).
+            Une adresse IP plutôt qu'un nom : la résolution DNS échoue parfois en silence sous systemd.
+        </MudText>
+
+        <MudGrid Spacing="2">
+            <MudItem xs="8"><MudTextField @bind-Value="_hote" Label="Adresse" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" /></MudItem>
+            <MudItem xs="4"><MudNumericField @bind-Value="_port" Label="Port" Min="1" Max="65535" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+            <MudItem xs="6"><MudTextField @bind-Value="_utilisateur" Label="Utilisateur" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_motDePasse" Label="Mot de passe" InputType="InputType.Password" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              HelperText="@(_motDePasseEnregistre ? "Vide : inchangé" : null)" />
+            </MudItem>
+        </MudGrid>
+
+        @if (_propres.Count > 0)
+        {
+            <MudCheckBox T="bool" @bind-Value="_unifier" Color="Color.Primary" Class="mt-2"
+                         Label="@(_propres.Count == 1
+                                    ? $"Que {_propres[0].Name} l'utilise aussi (son broker propre est retiré)"
+                                    : $"Que {string.Join(", ", _propres.Select(p => p.Name))} l'utilisent aussi (leur broker propre est retiré)")" />
+        }
+
+        <MudText Typo="Typo.subtitle2" Class="mt-4 mb-1">État</MudText>
+        @foreach (var ligne in _etat.Lines)
+        {
+            <MudText Typo="Typo.body2">@ligne</MudText>
+        }
+
+        @if (_erreur is not null)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-3">@_erreur</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Annuler">Annuler</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_occupe" OnClick="EnregistrerAsync">Enregistrer et relancer</MudButton>
+    </DialogActions>
+</MudDialog>

@@ -85,6 +85,7 @@ public class MessageSerializationTests
         yield return new EntityStateUpdate { EntityId = "sensor.cave", Name = "Cave", Kind = EntityKind.Sensor, Available = false };
         yield return new EntityCommandRequest { Id = "c1", EntityId = "climate.salon", Command = "set_mode", Args = Json(new { mode = "eco" }) };
         yield return new EntityCommandResponse { Id = "c1", Outcome = CommandOutcome.Accepted, Verification = "not_applicable" };
+        yield return new LinkState { Link = "mqtt", Connected = false, Detail = "identifiant ou mot de passe refusé par le broker" };
     }
 
     [Fact]
@@ -108,6 +109,13 @@ public class MessageSerializationTests
         var json = Ecrire(new CommandRequest { Id = "1", EntityUniqueId = "e", Command = StandardCommands.TurnOn });
 
         Assert.Contains("\"type\":\"command\"", json);
+    }
+
+    [Fact]
+    public void L_etat_d_un_lien_s_ecrit_link_state()
+    {
+        Assert.Equal("""{"type":"link_state","link":"mqtt","connected":true}""",
+            Ecrire(new LinkState { Link = "mqtt", Connected = true }));
     }
 
     [Fact]

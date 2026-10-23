@@ -24,6 +24,15 @@ internal sealed class PluginSession(
     IPluginGateway? gateway = null)
 {
     private readonly CancellationTokenSource _fin = new();
+
+    /// <summary>
+    /// Contrat 0.3 : l'état des liens du plugin (<c>mqtt</c>), le temps de la session — un plugin déconnecté ne répond
+    /// plus de son broker.
+    /// </summary>
+    public ConcurrentDictionary<string, LinkState> Links { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Un lien a changé d'état.</summary>
+    public Action? LinksChanged { get; set; }
     private readonly ConcurrentDictionary<string, TaskCompletionSource<CommandOutcome>> _enAttente = new(StringComparer.Ordinal);
 
     // Entités dont une valeur a été reçue pendant CETTE session : seules elles redeviennent disponibles sur
@@ -189,6 +198,10 @@ internal sealed class PluginSession(
                 break;
             case Availability joignabilite:
                 await AppliquerJoignabiliteAsync(joignabilite, ct);
+                break;
+            case LinkState lien when !string.IsNullOrWhiteSpace(lien.Link):
+                Links[lien.Link] = lien;
+                LinksChanged?.Invoke();
                 break;
             case CommandResult resultat:
                 if (_enAttente.TryGetValue(resultat.Id, out var attente)) attente.TrySetResult(resultat.Outcome);

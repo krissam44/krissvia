@@ -70,6 +70,6 @@ prend 10 s par essai, et la protection électrique ne doit jamais l'attendre.
 - Les automatismes et le tableau de bord ne déclarent pas encore leurs références : une carte ou une règle qui vise une
   entité disparue ne se signale pas.
 
-- MQTT perdu (famille DomoMud) : le MQTT est l'affaire des plugins. Un plugin qui perd son broker reste connecté au
-  cœur ; ses capteurs, indisponibles ou simplement silencieux, finissent signalés un par un comme muets. Une alerte
-  unique « broker perdu » demanderait que le plugin le publie (une entité `connectivity` à lui, par exemple).
+- MQTT perdu (famille DomoMud) : depuis le 23/10/2026 les plugins le disent au cœur (`link_state`, contrat 0.3 §4) et
+  la pastille MQTT passe au rouge, avec le motif. Il manque encore l'alerte (ntfy) qui le signalerait à distance :
+  aujourd'hui les capteurs d'un plugin sans broker finissent signalés un par un comme muets.

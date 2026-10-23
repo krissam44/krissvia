@@ -1,0 +1,17 @@
+@using Krissvia.PluginHost.Services
+@implements IDisposable
+
+@* La pastille MQTT de la barre du haut, comme dans DomoMud : sa couleur dit ce que les plugins disent de leur lien au
+   broker ; un clic ouvre la saisie du broker commun. *@
+<MudTooltip>
+    <TooltipContent>
+        @foreach (var ligne in _etat.Lines)
+        {
+            <div>@ligne</div>
+        }
+    </TooltipContent>
+    <ChildContent>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@Couleur" OnClick="OuvrirAsync"
+                 Icon="@Icone" Class="mx-1" aria-label="@($"MQTT : {_etat.Lines.FirstOrDefault()}")">MQTT</MudChip>
+    </ChildContent>
+</MudTooltip>

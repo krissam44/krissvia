@@ -30,9 +30,10 @@ var coeur = builder.Configuration.GetSection("Krissvia").Get<CoreClientOptions>(
 if (string.IsNullOrEmpty(coeur.PluginId)) coeur.PluginId = "openhasp";
 coeur.PluginVersion = typeof(OpenHaspPlugin).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
 
-if (string.IsNullOrWhiteSpace(mqtt.Host) || coeur.Url is null)
+// Sans broker, le plugin démarre quand même : il le signale au cœur (pastille MQTT rouge) au lieu de redémarrer en boucle.
+if (coeur.Url is null)
 {
-    Console.Error.WriteLine("Configuration incomplète : Mqtt:Host (page Services) et Krissvia:Url sont obligatoires.");
+    Console.Error.WriteLine("Configuration incomplète : Krissvia:Url est obligatoire.");
     return 2;
 }
 

@@ -14,6 +14,7 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" />
     <PackageVersion Include="MQTTnet" Version="5.2.0.1603" />
+    <PackageVersion Include="MQTTnet.Server" Version="5.2.0.1603" />
     <PackageVersion Include="MudBlazor" Version="9.11.0" />
   </ItemGroup>
 </Project>

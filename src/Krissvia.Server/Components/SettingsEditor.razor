@@ -11,6 +11,13 @@
             {
                 <MudText Typo="Typo.caption" Class="mud-text-secondary">@aide</MudText>
             }
+            @if (champ.Shared == "mqtt")
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="my-1">
+                    Laisser l'adresse vide pour utiliser le broker commun (pastille MQTT de la barre du haut) ; la renseigner
+                    seulement pour un broker propre à ce plugin.
+                </MudAlert>
+            }
             <div class="pl-3">
                 <SettingsEditor Champ="champ" Valeur="SousObjet(champ)" />
             </div>

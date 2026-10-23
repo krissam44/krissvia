@@ -68,7 +68,8 @@ public sealed partial class PluginSupervisor(
     IPluginLauncher launcher,
     TimeProvider clock,
     ILogger<PluginSupervisor> logger,
-    IPluginSettingsProvider? settings = null)
+    IPluginSettingsProvider? settings = null,
+    SharedBrokerService? sharedBroker = null)
 {
     public const string Collection = "services";
     private const int LignesGardees = 200;
@@ -191,6 +192,16 @@ public sealed partial class PluginSupervisor(
         }
     }
 
+    /// <summary>Les plugins activés dont une section se règle par le broker commun de cette nature (<c>mqtt</c>).</summary>
+    public IReadOnlyList<ServiceSnapshot> UsingShared(string nature) =>
+        [.. Snapshots().Where(s => s.Enabled && GetManifest(s.Id) is { } fiche
+                                   && SettingsSchema.SharedSections(SettingsSchema.Parse(fiche.Settings)).Any(x => x.Kind == nature))];
+
+    /// <summary>La pastille MQTT : chaque plugin MQTT activé, et ce qu'il dit de son lien au broker.</summary>
+    public MqttOverview MqttStatus() =>
+        MqttOverview.Evaluate(UsingShared("mqtt").Select(s => new MqttPluginLink(s.Id, s.Name,
+            s.Status is ServiceStatus.Connected or ServiceStatus.External, hub.GetLink(s.Id, "mqtt"))));
+
     /// <summary>Arrête puis relance un plugin activé.</summary>
     public async Task<string?> RestartAsync(string id, CancellationToken ct = default)
     {
@@ -282,7 +293,10 @@ public sealed partial class PluginSupervisor(
         try
         {
             // Les réglages de la page d'abord ; l'adresse, le jeton et l'identité ensuite, que rien ne peut écraser.
-            var environnement = new Dictionary<string, string>(settings?.EnvironmentFor(service.Id) ?? new Dictionary<string, string>(), StringComparer.Ordinal)
+            // Puis le broker commun dans les sections partagées (pastille MQTT), sauf si le plugin a saisi le sien.
+            var propres = settings?.EnvironmentFor(service.Id) ?? new Dictionary<string, string>();
+            var partages = SharedSettings.Merge(propres, SettingsSchema.SharedSections(SettingsSchema.Parse(fiche.Settings)), sharedBroker?.Current);
+            var environnement = new Dictionary<string, string>(partages, StringComparer.Ordinal)
             {
                 ["Krissvia__Url"] = CoreUrl,
                 ["Krissvia__Token"] = jeton,

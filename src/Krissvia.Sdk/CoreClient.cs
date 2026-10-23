@@ -70,6 +70,7 @@ public sealed partial class CoreClient(
 
     // Contrat 0.3 : les entités suivies (renvoyées à chaque session) et les ordres en attente de leur résultat.
     private volatile IReadOnlyList<string> _abonnements = [];
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, LinkState> _liens = new(StringComparer.Ordinal);
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, TaskCompletionSource<EntityCommandResponse>> _ordres = new(StringComparer.Ordinal);
 
     /// <summary>Délai d'attente du résultat d'un <see cref="CommandEntityAsync"/> : la vérification du cœur peut prendre 10 s.</summary>
@@ -228,6 +229,9 @@ public sealed partial class CoreClient(
             // Un abonnement ne survit pas à la session : il repart après la resynchronisation.
             if (_abonnements.Count > 0)
                 await TextFrames.SendAsync(ws, ContractJson.Encode(new Subscribe { EntityIds = _abonnements }), ct);
+            // L'état des liens aussi : le cœur l'oublie à chaque fin de session, et le broker a pu se connecter avant le cœur.
+            foreach (var lien in _liens.Values)
+                await TextFrames.SendAsync(ws, ContractJson.Encode(lien), ct);
             Volatile.Write(ref _session, ws);
         }
         finally
@@ -259,6 +263,23 @@ public sealed partial class CoreClient(
     /// Les entités à suivre (la liste COMPLÈTE) : seules celles choisies dans les réglages du plugin sont accordées
     /// (docs/CONTRACT-V0.3.md). Retenue et renvoyée à chaque (re)connexion ; envoyée tout de suite si une session est ouverte.
     /// </summary>
+    /// <summary>
+    /// Contrat 0.3 : l'état d'un lien du plugin (<c>mqtt</c>) — ce qui colore la pastille MQTT du cœur. Retenu et renvoyé
+    /// à chaque session. Un même état sans motif garde le motif précédent : une connexion refusée puis la déconnexion qui
+    /// suit ne doivent pas effacer « identifiants refusés » au profit d'un « coupé » sans explication.
+    /// </summary>
+    public Task<bool> ReportLinkAsync(string link, bool connected, string? detail = null, CancellationToken ct = default)
+    {
+        var etat = _liens.AddOrUpdate(link,
+            _ => new LinkState { Link = link, Connected = connected, Detail = detail },
+            (_, avant) => new LinkState
+            {
+                Link = link, Connected = connected,
+                Detail = detail ?? (avant.Connected == connected ? avant.Detail : null),
+            });
+        return SendAsync(etat, ct);
+    }
+
     public async Task SetSubscriptionsAsync(IEnumerable<string> entityIds, CancellationToken ct = default)
     {
         _abonnements = [.. entityIds.Where(i => !string.IsNullOrWhiteSpace(i)).Distinct(StringComparer.Ordinal)];

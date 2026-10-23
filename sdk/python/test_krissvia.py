@@ -256,6 +256,17 @@ class Contrat03Tests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual("availability", coeur.recus[coeur.recus.index(coeur.de_type("subscribe")[0]) - 1]["type"])  # après la resynchro
             self.assertEqual({"mode": "eco"}, recus[0]["value"])
 
+    async def test_l_etat_du_lien_part_a_chaque_session_et_garde_son_motif(self):
+        async with FauxCoeur() as coeur:
+            client = krissvia.CoreClient(Cave(), url=coeur.url, plugin_id="openhasp", reconnect_delays=(0.01,))
+            self.assertFalse(await client.report_link("mqtt", False, "broker injoignable (adresse ou port)"))  # hors session
+            await client.report_link("mqtt", False)   # sans motif : on garde celui qu'on connaît
+            self.taches.append(asyncio.create_task(client.run()))
+
+            await coeur.attendre(lambda: coeur.de_type("link_state"))
+            self.assertEqual([{"type": "link_state", "link": "mqtt", "connected": False,
+                               "detail": "broker injoignable (adresse ou port)"}], coeur.de_type("link_state"))
+
     async def test_un_ordre_rend_son_resultat_et_hors_session_jamais_un_faux_succes(self):
         hors_session = await krissvia.CoreClient(Cave(), url="ws://127.0.0.1:1/x", plugin_id="openhasp").command("switch.lampe", "turn_on")
         self.assertEqual("unreachable", hors_session["outcome"])
