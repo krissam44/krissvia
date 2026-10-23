@@ -1,0 +1,255 @@
+@* Un automatisme dans une fenêtre à trois onglets, comme dans DomoMud. Chaque onglet commence par sa phrase. *@
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Bolt" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">@(Creation ? "Nouvel automatisme" : $"Automatisme · {(_existant?.Name is { Length: > 0 } n ? n : Id)}")</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        @if (_introuvable)
+        {
+            <MudAlert Severity="Severity.Info">Aucun automatisme « @Id ».</MudAlert>
+        }
+        else if (_m is not null)
+        {
+            @if (_erreur is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">@_erreur</MudAlert>
+            }
+            <div style="min-height: 380px">
+            <MudTabs @bind-ActivePanelIndex="_onglet" Rounded="true" Centered="true" Color="Color.Primary" TabPanelsClass="pt-3">
+                <MudTabPanel Text="Déclencheur" Icon="@Icons.Material.Filled.Bolt">
+                    <MudAlert Severity="Severity.Normal" Dense="true" Icon="@Icons.Material.Filled.Bolt" Class="mb-3">@ResumeDeclencheur</MudAlert>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" sm="8">
+                            <MudTextField T="string" Value="_m.Nom" ValueChanged="NomChange" Immediate="true" Label="Nom de l'automatisme" Required="true"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Label" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4" Class="d-flex align-center">
+                            <MudSwitch T="bool" @bind-Value="_m.Actif" Color="Color.Success" Label="Actif" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField T="string" Value="_m.Id" ValueChanged="IdChange" Label="Identifiant" Disabled="@(!Creation)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                          HelperText="@(Creation ? "Tiré du nom ; minuscules, chiffres, « _ » et « - ». Il ne change plus ensuite." : "Utilisé par l'API, ne change pas.")" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudSelect Dense="true" T="TriggerType" @bind-Value="_m.Declencheur" Label="Type de déclencheur" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Bolt">
+                                @foreach (var t in Enum.GetValues<TriggerType>())
+                                {
+                                    <MudSelectItem Value="t">@LibellesAutomatisme.TypeDeclencheur(t)</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        @switch (_m.Declencheur)
+                        {
+                            case TriggerType.Button:
+                                <MudItem xs="12">
+                                    <MudSelect Dense="true" T="string" @bind-Value="_m.EntiteDeclencheur" Label="Équipement déclencheur" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.SettingsRemote" HelperText="Les entités « Bouton / événement »">
+                                        @foreach (var e in Options(_evenements, _m.EntiteDeclencheur))
+                                        {
+                                            <MudSelectItem Value="e.EntityId">@e.DisplayName</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudTextField @bind-Value="_m.Action" Label="Action déclenchante" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.TouchApp" HelperText="@AideAction" />
+                                </MudItem>
+                                break;
+                            case TriggerType.Time:
+                                <MudItem xs="12" sm="4">
+                                    <MudTimePicker @bind-Time="_m.Heure" Label="Heure" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                </MudItem>
+                                <MudItem xs="12" sm="8" Class="d-flex align-center flex-wrap">
+                                    @foreach (var j in LibellesAutomatisme.Jours)
+                                    {
+                                        <div @key="j"><MudCheckBox T="bool" @bind-Value="_m.Jours[j]" Label="@LibellesAutomatisme.Jour(j)" Dense="true" /></div>
+                                    }
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Aucun jour coché : tous les jours. Pas de rattrapage si le serveur était arrêté.</MudText>
+                                </MudItem>
+                                break;
+                            default:
+                                <MudItem xs="12" sm="7">
+                                    <MudSelect Dense="true" T="string" @bind-Value="_m.EntiteDeclencheur" Label="Équipement" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                               HelperText="Radar, porte, lampe, prise…">
+                                        @foreach (var e in Options(_toutOuRien, _m.EntiteDeclencheur))
+                                        {
+                                            <MudSelectItem Value="e.EntityId">@e.DisplayName</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </MudItem>
+                                <MudItem xs="12" sm="5">
+                                    <MudSelect Dense="true" T="StateTransition" @bind-Value="_m.Transition" Label="Quand il…" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                        @foreach (var t in Enum.GetValues<StateTransition>())
+                                        {
+                                            <MudSelectItem Value="t">@LibellesAutomatisme.Transition(t)</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </MudItem>
+                                break;
+                        }
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Conditions" Icon="@Icons.Material.Filled.Rule" BadgeData="@(_m.Conditions.Count > 0 ? _m.Conditions.Count : null)" BadgeColor="Color.Secondary">
+                    <MudAlert Severity="Severity.Normal" Dense="true" Icon="@Icons.Material.Filled.Rule" Class="mb-3">@ResumeConditions</MudAlert>
+                    @foreach (var c in _m.Conditions)
+                    {
+                        <MudPaper @key="c.Cle" Outlined="true" Class="pa-3 mb-2 rounded-lg">
+                            <MudGrid Spacing="2" Class="align-center">
+                                <MudItem xs="12" sm="6">
+                                    <MudSelect Dense="true" T="ConditionType" @bind-Value="c.Type" Label="Condition" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                        @foreach (var t in Enum.GetValues<ConditionType>())
+                                        {
+                                            <MudSelectItem Value="t">@LibellesAutomatisme.TypeCondition(t)</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </MudItem>
+                                <MudItem xs="9" sm="5">
+                                    <MudSwitch T="bool" @bind-Value="c.Inverse" Color="Color.Primary" Label="Inverser (NON)" />
+                                </MudItem>
+                                <MudItem xs="3" sm="1" Class="d-flex justify-end">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" aria-label="Retirer la condition" OnClick="() => _m.Conditions.Remove(c)" />
+                                </MudItem>
+                                @switch (c.Type)
+                                {
+                                    case ConditionType.TimeRange:
+                                        <MudItem xs="6"><MudTimePicker @bind-Time="c.Debut" Label="De" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                                        <MudItem xs="6"><MudTimePicker @bind-Time="c.Fin" Label="À" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Avant le début : la nuit" /></MudItem>
+                                        break;
+                                    case ConditionType.ThermostatMode:
+                                        <MudItem xs="12" sm="6">
+                                            <MudSelect Dense="true" T="string" @bind-Value="c.Thermostat" Label="Thermostat" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                                @foreach (var t in Thermostats.List())
+                                                {
+                                                    <MudSelectItem Value="t.Id">@NomThermostat(t)</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6">
+                                            <MudSelect Dense="true" T="ThermostatMode" @bind-Value="c.Mode" Label="Mode" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                                @foreach (var mode in LibellesThermostat.Modes)
+                                                {
+                                                    <MudSelectItem Value="mode">@LibellesThermostat.Mode(mode)</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        break;
+                                    case ConditionType.EntityActive:
+                                        <MudItem xs="12">
+                                            <MudSelect Dense="true" T="string" @bind-Value="c.Entite" Label="Équipement" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                                @foreach (var e in Options(_toutOuRien, c.Entite))
+                                                {
+                                                    <MudSelectItem Value="e.EntityId">@e.DisplayName</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        break;
+                                    case ConditionType.Above or ConditionType.Below:
+                                        <MudItem xs="12" sm="8">
+                                            <MudSelect Dense="true" T="string" @bind-Value="c.Entite" Label="Mesure" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                                @foreach (var e in Options(_mesures, c.Entite))
+                                                {
+                                                    <MudSelectItem Value="e.EntityId">@e.DisplayName@(e.Unit is { } u ? $" ({u})" : "")</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="4"><MudNumericField @bind-Value="c.Seuil" Label="Seuil" Step="0.5" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                                        break;
+                                }
+                            </MudGrid>
+                        </MudPaper>
+                    }
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" OnClick="() => _m.Conditions.Add(new())">Ajouter une condition</MudButton>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mt-2">
+                        Toutes les conditions doivent être vraies. Pour un « OU », créez deux automatismes sur le même déclencheur.
+                    </MudText>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Commandes" Icon="@Icons.Material.Filled.PlayArrow" BadgeData="@(_m.Actions.Count > 0 ? _m.Actions.Count : null)" BadgeColor="Color.Secondary">
+                    <MudAlert Severity="@(_m.Actions.Count == 0 ? Severity.Warning : Severity.Normal)" Dense="true" Icon="@Icons.Material.Filled.PlayArrow" Class="mb-3">@ResumeActions</MudAlert>
+                    @foreach (var a in _m.Actions)
+                    {
+                        var i = _m.Actions.IndexOf(a);
+                        <MudPaper @key="a.Cle" Outlined="true" Class="pa-3 mb-2 rounded-lg">
+                            <MudGrid Spacing="2" Class="align-center">
+                                <MudItem xs="12" sm="5">
+                                    <MudSelect Dense="true" T="ActionType" @bind-Value="a.Type" Label="Commande" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                        @foreach (var t in Enum.GetValues<ActionType>())
+                                        {
+                                            <MudSelectItem Value="t">@LibellesAutomatisme.TypeAction(t)</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </MudItem>
+                                <MudItem xs="6" sm="3">
+                                    <MudNumericField @bind-Value="a.DelaiMinutes" Label="Après (min)" Min="0" Max="1440" Step="1" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                </MudItem>
+                                <MudItem xs="6" sm="4" Class="d-flex justify-end">
+                                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Disabled="@(i == 0)" aria-label="Monter" OnClick="() => Deplacer(a, -1)" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Disabled="@(i == _m.Actions.Count - 1)" aria-label="Descendre" OnClick="() => Deplacer(a, 1)" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" aria-label="Retirer la commande" OnClick="() => _m.Actions.Remove(a)" />
+                                </MudItem>
+                                @switch (a.Type)
+                                {
+                                    case ActionType.ThermostatMode:
+                                        <MudItem xs="12" sm="7">
+                                            <MudSelect Dense="true" T="string" @bind-Value="a.Thermostat" Label="Thermostat" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                       HelperText="Comme le bouton de sa carte : le planning est suspendu">
+                                                @foreach (var t in Thermostats.List())
+                                                {
+                                                    <MudSelectItem Value="t.Id">@NomThermostat(t)</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="5">
+                                            <MudSelect Dense="true" T="ThermostatMode" @bind-Value="a.Mode" Label="Mode" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                                @foreach (var mode in LibellesThermostat.Modes)
+                                                {
+                                                    <MudSelectItem Value="mode">@LibellesThermostat.Mode(mode)</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        break;
+                                    case ActionType.Notify:
+                                        <MudItem xs="12" sm="5"><MudTextField @bind-Value="a.Titre" Label="Titre" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                                        <MudItem xs="12" sm="7"><MudTextField @bind-Value="a.Message" Label="Message" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                                        break;
+                                    default:
+                                        <MudItem xs="12">
+                                            <MudSelect Dense="true" T="string" @bind-Value="a.Entite" Label="Équipement" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                                @foreach (var e in Options(_pilotables, a.Entite))
+                                                {
+                                                    <MudSelectItem Value="e.EntityId">@e.DisplayName</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        break;
+                                }
+                            </MudGrid>
+                        </MudPaper>
+                    }
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" OnClick="() => _m.Actions.Add(new())">Ajouter une commande</MudButton>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mt-2">Exécutées dans l'ordre ; « Après » retarde une commande par rapport au déclenchement.</MudText>
+                </MudTabPanel>
+            </MudTabs>
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (!Creation && _existant is not null)
+        {
+            <MudButton Variant="Variant.Text" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="SupprimerAsync">Supprimer</MudButton>
+        }
+        <MudSpacer />
+        <MudButton OnClick="() => Dialogue.Cancel()">Annuler</MudButton>
+        @if (_m is not null)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="Incomplet" OnClick="EnregistrerAsync">@(Creation ? "Créer" : "Enregistrer")</MudButton>
+        }
+    </DialogActions>
+</MudDialog>

@@ -53,8 +53,11 @@ Un équipement renommé ne laisse donc pas un automatisme agir dans le vide en s
 
 - `/automatismes` : une carte par automatisme (« Quand… Si… Alors… »), sa dernière exécution, l'interrupteur Actif, le
   bouton **Exécuter** (conditions évaluées comme pour un vrai déclenchement), et le journal des 20 dernières exécutions.
-- `/automatismes/{id}` : le formulaire. Pour un bouton, l'aide affiche la dernière action reçue : appuyer une fois donne le
-  mot à recopier.
+- Le formulaire est une **fenêtre** (« Nouveau », ou la roue d'une carte ; 23/10/2026), à trois onglets comme dans
+  DomoMud : **Déclencheur**, **Conditions**, **Commandes**. Chaque onglet commence par sa phrase (« S'exécute si entre
+  22:00 et 06:00 ») ; « Créer » reste grisé tant que le nom ou l'équipement déclencheur manque, et une erreur du service
+  ramène sur l'onglet concerné. Pour un bouton, l'aide affiche la dernière action reçue : appuyer une fois donne le mot
+  à recopier. (L'ancienne page `/automatismes/{id}` n'existe plus.)
 - API : `GET /api/automations`, `GET|PUT|DELETE /api/automations/{id}`, `POST /api/automations/{id}/run`,
   `GET /api/automations/journal`. Format : celui de la base (snake_case, énumérations en texte).
 
