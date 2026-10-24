@@ -14,6 +14,10 @@ const PLANNING = "#00b4d8";
 
 // L'arc : 270° ouverts à droite, comme Gladys. Le minimum est en bas à droite (−), le maximum en haut à droite (+).
 const DEBUT = 45, ETENDUE = 270, R = 84, CX = 110, CY = 110;
+// Le cadre du dessin, serré sur l'anneau et les boutons : pas de marge vide qui volerait de la hauteur à la roue.
+const VUE = "16 16 194 194";
+// Les boutons − / + dans l'ouverture de l'arc, près de ses deux bouts. Dessinés DANS le SVG, ils suivent sa taille.
+const BOUTONS = [{ pas: -1, angle: 22, signe: "−", nom: "Baisser la consigne" }, { pas: 1, angle: -22, signe: "+", nom: "Augmenter la consigne" }];
 
 const ms = (nom, style = "") => `<span class="ms" aria-hidden="true"${style ? ` style="${style}"` : ""}>${nom}</span>`;
 
@@ -32,50 +36,58 @@ function arc(de, a) {
 /**
  * Thermostat en cadran, à la manière de Gladys : la consigne est un curseur sur un arc — on le fait glisser (l'ordre part
  * au lâcher, en valeur exacte), ou on la règle par − / + (pas relatif, calculé par le cœur : deux clics font deux pas).
- * Au centre l'ambiante, l'humidité, la consigne en grand et la flamme quand il chauffe. Dessous le mode « jusqu'à »
- * la prochaine bascule du planning, ou « en manuel » ; en haut à droite, le planning ; en bas, les six modes.
+ * Dans la roue, la consigne seule et la flamme quand il chauffe ; à sa droite l'ambiante et l'humidité. Dessous le mode
+ * « jusqu'à » la prochaine bascule du planning, ou « en manuel » ; en haut à droite, le planning ; en bas, les six modes.
+ * Consigne, flamme et boutons sont dessinés dans le SVG : ils grandissent avec la roue, sans calcul de position.
  * Comme les autres cartes, rien n'est affiché parce qu'on a cliqué : la carte attend l'état suivant.
  */
 class KvThermostatCadran extends KvWidget {
     static historique = "thermostat";
 
     static css = `
-        .carte { padding: 12px 14px 10px; gap: 6px; }
+        .carte { padding: 10px 12px 8px; gap: 4px; }
         .entete { display: flex; align-items: center; gap: 6px; }
-        .entete .nom { flex: 1; min-width: 0; font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+        .entete .nom { flex: 1; min-width: 0; font-size: .74rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
                        color: var(--kv-text-secondary, #777); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .icone-btn { border: 0; background: transparent; padding: 4px; border-radius: 50%; display: inline-flex; color: var(--kv-text-secondary, #777); }
-        .icone-btn .ms { font-size: 1.3rem; }
+        .icone-btn { border: 0; background: transparent; padding: 3px; border-radius: 50%; display: inline-flex; color: var(--kv-text-secondary, #777); }
+        .icone-btn .ms { font-size: 1.2rem; }
         .icone-btn:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
-        .cadran { position: relative; flex: 1 1 auto; min-height: 150px; display: flex; justify-content: center; }
-        .cadran svg { height: 100%; max-height: 240px; width: auto; max-width: 100%; touch-action: none; overflow: visible; }
+        .cadran { flex: 1 1 auto; min-height: 110px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .cadran svg { height: 100%; max-height: 260px; aspect-ratio: 1; width: auto; max-width: 72%; min-width: 0; touch-action: none; }
         .fond { fill: none; stroke: color-mix(in srgb, var(--kv-text-secondary, #888) 22%, transparent); stroke-width: 12; stroke-linecap: round; }
         .rempli { fill: none; stroke-width: 12; stroke-linecap: round; }
         .curseur { fill: var(--kv-surface, #fff); stroke-width: 4; cursor: grab; }
         .glisse .curseur { cursor: grabbing; }
-        .pas { position: absolute; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-               background: var(--kv-surface, #fff); color: var(--kv-text, #222); font-size: 1.2rem; line-height: 1;
-               border: 1.5px solid color-mix(in srgb, var(--kv-text-secondary, #888) 45%, transparent); }
-        .pas:hover { border-color: var(--kv-text, #222); }
-        .pas[disabled] { opacity: .45; cursor: progress; }
-        .centre { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
-        .ambiante { font-size: .95rem; font-weight: 600; }
-        .ambiante .ms { font-size: 1.05rem; color: var(--kv-text-secondary, #777); }
-        .humidite { font-size: .8rem; color: var(--kv-text-secondary, #777); }
-        .humidite .ms { font-size: .9rem; color: #42a5f5; }
-        .consigne { display: flex; align-items: flex-start; line-height: 1; margin-top: 4px; }
-        .consigne .entier { font-size: 3.4rem; font-weight: 300; letter-spacing: -.02em; }
-        .consigne .cote { display: flex; flex-direction: column; margin-left: 2px; font-size: 1.1rem; line-height: 1.05; }
-        .flamme { margin-top: 4px; font-size: 1.6rem; }
-        .statut { align-self: center; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 22px; font-size: .9rem; }
+        .entier { font-size: 62px; font-weight: 300; letter-spacing: -.02em; fill: var(--kv-text, #222); }
+        .cote { font-size: 17px; fill: var(--kv-text, #222); }
+        .flamme { font-family: 'Material Symbols Outlined'; font-size: 26px; fill: #ff7a00; filter: drop-shadow(0 0 4px #ff7a0088); }
+        .pas { cursor: pointer; outline: none; }
+        .pas circle { fill: var(--kv-surface, #fff); stroke: color-mix(in srgb, var(--kv-text-secondary, #888) 45%, transparent); stroke-width: 1.5; }
+        .pas text { font-size: 20px; fill: var(--kv-text, #222); pointer-events: none; }
+        .pas:hover circle, .pas:focus-visible circle { stroke: var(--kv-text, #222); }
+        .pas.occupe { opacity: .45; cursor: progress; }
+        .mesures { flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; }
+        .ambiante { font-size: 1.15rem; font-weight: 600; white-space: nowrap; }
+        .ambiante .ms { font-size: 1.15rem; color: var(--kv-text-secondary, #777); vertical-align: -3px; }
+        .humidite { font-size: .85rem; color: var(--kv-text-secondary, #777); white-space: nowrap; }
+        .humidite .ms { font-size: .95rem; color: #42a5f5; vertical-align: -2px; }
+        .statut { align-self: center; display: inline-flex; align-items: center; gap: 5px; padding: 3px 12px; border-radius: 18px; font-size: .78rem; }
+        .statut .ms { font-size: 1rem; }
         .statut b { font-weight: 600; }
         .modes { display: flex; justify-content: space-between; gap: 2px; }
-        .mode { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--kv-text-secondary, #666); padding: 4px 0;
-                display: flex; flex-direction: column; align-items: center; gap: 3px; font: inherit; font-size: .72rem; border-radius: 10px; }
-        .mode .ms { font-size: 1.6rem; }
-        .mode .lib { padding: 1px 7px; border-radius: 10px; white-space: nowrap; }
+        .mode { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--kv-text-secondary, #666); padding: 2px 0;
+                display: flex; flex-direction: column; align-items: center; gap: 2px; font: inherit; font-size: .64rem; border-radius: 8px; }
+        .mode .ms { font-size: 1.25rem; }
+        .mode .lib { max-width: 100%; box-sizing: border-box; padding: 0 5px; border-radius: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .mode.actif .lib { font-weight: 700; color: #1d1d1d; }
-        .mode[disabled] { cursor: progress; }`;
+        .mode[disabled] { cursor: progress; }
+        /* Carte étroite : les icônes seules (le nom reste en infobulle), sauf le mode en cours, dont le libellé déborde
+           sur la place laissée vide par ses voisins au lieu d'être coupé. */
+        .carte { container-type: inline-size; }
+        @container (max-width: 360px) {
+            .mode:not(.actif) .lib { visibility: hidden; }
+            .mode.actif .lib { max-width: none; overflow: visible; }
+        }`;
 
     #attente = false;
     #erreur = null;
@@ -118,10 +130,18 @@ class KvThermostatCadran extends KvWidget {
         const entier = consigne === null ? "—" : Math.trunc(consigne);
         const decimale = consigne === null ? "" : Math.round((consigne - Math.trunc(consigne)) * 10);
         const ambiante = typeof v.temperature === "number"
-            ? `<div class="ambiante">${ms("device_thermostat")} ${nombre(v.temperature)} °C</div>` : `<div class="ambiante">—</div>`;
-        const humidite = typeof v.humidity === "number" ? `<div class="humidite">${ms("water_drop")} ${nombre(v.humidity, 0)} %</div>` : "";
-        const flamme = v.heating ? ms("local_fire_department", `color:#ff7a00;filter:drop-shadow(0 0 6px #ff7a0088)`) : "";
+            ? `<div class="ambiante" title="Température ambiante">${ms("device_thermostat")} ${nombre(v.temperature)} °C</div>`
+            : `<div class="ambiante" title="Température ambiante">—</div>`;
+        const humidite = typeof v.humidity === "number" ? `<div class="humidite" title="Humidité">${ms("water_drop")} ${nombre(v.humidity, 0)} %</div>` : "";
+        // Au-dessus de la consigne, dans l'anneau : en bas, l'arc la cacherait.
+        const flamme = v.heating ? `<text class="flamme" x="${CX}" y="${CY - 34}" text-anchor="middle">local_fire_department</text>` : "";
         const occupe = this.#attente ? "disabled" : "";
+        const boutons = BOUTONS.map(b => {
+            const [x, y] = point(b.angle);
+            return `<g class="pas ${this.#attente ? "occupe" : ""}" data-pas="${b.pas}" role="button" tabindex="0" aria-label="${b.nom}"
+                       aria-disabled="${this.#attente}"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="15"/>
+                <text x="${x.toFixed(1)}" y="${(y + 7).toFixed(1)}" text-anchor="middle">${b.signe}</text></g>`;
+        }).join("");
 
         const libelleMode = id => (extra.modes ?? []).find(m => m.id === id)?.label ?? id;
         const nomMode = libelleMode(v.mode);
@@ -141,18 +161,17 @@ class KvThermostatCadran extends KvWidget {
 
         return `<div class="carte">${entete}
             <div class="cadran">
-                <svg viewBox="0 0 220 220" class="arc" role="slider" aria-label="Consigne" aria-valuemin="${min}" aria-valuemax="${max}" aria-valuenow="${consigne ?? ""}">
+                <svg viewBox="${VUE}" class="arc" role="slider" aria-label="Consigne" aria-valuemin="${min}" aria-valuemax="${max}" aria-valuenow="${consigne ?? ""}">
                     <path class="fond" d="${arc(DEBUT, DEBUT + ETENDUE)}"/>
                     <path class="rempli" d="${part > 0 ? arc(DEBUT, angle) : ""}" stroke="${couleur}" style="filter:drop-shadow(0 0 5px ${couleur}99)"/>
+                    ${flamme}
+                    <text class="entier" x="${CX + 14}" y="${CY + 21}" text-anchor="end">${entier}</text>
+                    <text class="cote" x="${CX + 17}" y="${CY - 7}">°C</text>
+                    <text class="cote decimale" x="${CX + 17}" y="${CY + 20}">${consigne === null ? "" : `.${decimale}`}</text>
                     <circle class="curseur" cx="${kx.toFixed(1)}" cy="${ky.toFixed(1)}" r="10" stroke="${couleur}"/>
+                    ${boutons}
                 </svg>
-                <div class="centre">
-                    ${ambiante}${humidite}
-                    <div class="consigne"><span class="entier">${entier}</span><span class="cote"><span>°C</span><span>${consigne === null ? "" : `.${decimale}`}</span></span></div>
-                    <div class="flamme">${flamme}</div>
-                </div>
-                <button class="pas plus" data-pas="1" aria-label="Augmenter la consigne" ${occupe}>+</button>
-                <button class="pas moins" data-pas="-1" aria-label="Baisser la consigne" ${occupe}>−</button>
+                <div class="mesures">${ambiante}${humidite}</div>
             </div>
             ${statut}
             <div class="modes">${modes}</div>
@@ -165,27 +184,21 @@ class KvThermostatCadran extends KvWidget {
         const pas = Number(extra.target_step) || 0.5;
         const min = Number(extra.min_target) || 5, max = Number(extra.max_target) || 30;
 
-        // Les boutons − / + aux deux bouts de l'arc, placés d'après la taille réelle du cadran.
         const svg = racine.querySelector("svg.arc");
-        const cadran = racine.querySelector(".cadran");
-        if (svg && cadran) {
-            const placer = () => {
-                const b = svg.getBoundingClientRect(), c = cadran.getBoundingClientRect();
-                const echelle = b.width / 220;
-                for (const [sel, angle] of [[".plus", DEBUT + ETENDUE], [".moins", DEBUT]]) {
-                    const [x, y] = point(angle);
-                    const bouton = racine.querySelector(sel);
-                    if (!bouton) continue;
-                    bouton.style.left = `${b.left - c.left + x * echelle + 6 * echelle - 17}px`;
-                    bouton.style.top = `${b.top - c.top + y * echelle - 17}px`;
-                }
+        racine.querySelectorAll(".pas").forEach(b => {
+            const ajuster = () => {
+                if (!this.#attente) this.ordonner("adjust_target", { delta: Number(b.dataset.pas) * pas });
             };
-            placer();
-            requestAnimationFrame(placer);
-        }
-
-        racine.querySelectorAll(".pas").forEach(b =>
-            b.addEventListener("click", () => this.ordonner("adjust_target", { delta: Number(b.dataset.pas) * pas })));
+            // Le bouton est dans le SVG : sans cela, l'appui démarrerait aussi un glisser du curseur.
+            b.addEventListener("pointerdown", e => e.stopPropagation());
+            b.addEventListener("click", ajuster);
+            b.addEventListener("keydown", e => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    ajuster();
+                }
+            });
+        });
         racine.querySelectorAll(".mode").forEach(b =>
             b.addEventListener("click", () => this.ordonner("set_mode", { mode: b.dataset.mode })));
         racine.querySelector(".planning")?.addEventListener("click", () =>
@@ -194,9 +207,9 @@ class KvThermostatCadran extends KvWidget {
         // Glisser le curseur (ou toucher l'arc) : la consigne suit, l'ordre part au lâcher, en valeur exacte.
         if (!svg) return;
         const valeur = e => {
-            const r = svg.getBoundingClientRect();
-            const x = (e.clientX - r.left) / r.width * 220, y = (e.clientY - r.top) / r.height * 220;
-            let a = Math.atan2(y - CY, x - CX) * 180 / Math.PI;
+            // Coordonnées de l'écran → celles du dessin (le cadre ne commence pas à 0).
+            const { x, y } = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse());
+            const a = Math.atan2(y - CY, x - CX) * 180 / Math.PI;
             let rel = ((a - DEBUT) % 360 + 360) % 360;
             if (rel > ETENDUE) rel = rel > ETENDUE + (360 - ETENDUE) / 2 ? 0 : ETENDUE;   // dans l'ouverture : la borne la plus proche
             const brute = min + rel / ETENDUE * (max - min);
@@ -211,8 +224,8 @@ class KvThermostatCadran extends KvWidget {
             const curseur = racine.querySelector(".curseur");
             curseur?.setAttribute("cx", x.toFixed(1));
             curseur?.setAttribute("cy", y.toFixed(1));
-            racine.querySelector(".consigne .entier").textContent = Math.trunc(v);
-            racine.querySelector(".consigne .cote span:last-child").textContent = `.${Math.round((v - Math.trunc(v)) * 10)}`;
+            racine.querySelector(".entier").textContent = Math.trunc(v);
+            racine.querySelector(".decimale").textContent = `.${Math.round((v - Math.trunc(v)) * 10)}`;
         };
         svg.addEventListener("pointerdown", e => {
             if (this.#attente) return;

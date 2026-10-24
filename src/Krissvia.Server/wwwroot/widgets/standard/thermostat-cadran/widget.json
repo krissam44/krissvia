@@ -3,7 +3,7 @@
   "id": "thermostat-cadran",
   "name": "Thermostat (cadran)",
   "description": "Un cadran à la manière de Gladys : la consigne sur un arc qu'on fait glisser ou règle par − / +, l'ambiante et l'humidité, la flamme quand il chauffe, le mode « jusqu'à » la prochaine bascule du planning, et les six modes.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "element": "kv-thermostat-cadran",
   "script": "thermostat-cadran.js",
   "slots": [ { "name": "thermostat", "kinds": ["climate"], "required": true } ],
