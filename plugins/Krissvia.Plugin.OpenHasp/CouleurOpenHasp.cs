@@ -55,6 +55,18 @@ public static class CouleurOpenHasp
         return extreme;
     }
 
+    /// <summary>
+    /// La couleur rapprochée du blanc de <paramref name="part"/> (0 à 1) : le panneau de la consigne, un ton au-dessus du
+    /// fond quel qu'il soit, comme le vert clair sur vert sombre de DomoMud. Une valeur qui n'est pas #RRGGBB passe telle quelle.
+    /// </summary>
+    public static string Eclaircir(string couleur, double part)
+    {
+        if (!EstHex(couleur)) return couleur;
+        var (r, g, b) = Composantes(couleur);
+        int Vers(int c) => (int)Math.Round(c + (255 - c) * Math.Clamp(part, 0, 1));
+        return Hex(Vers(r), Vers(g), Vers(b));
+    }
+
     private static bool EstHex(string? s) =>
         s is { Length: 7 } && s[0] == '#' && int.TryParse(s.AsSpan(1), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out _);
 

@@ -61,10 +61,16 @@ public static class Ecran
                 _ => $"Mode: {LibelleMode(climat.Mode)}",
             }));
             a.Add((Objets.Attribut(p, Objets.Mode, "text_color"), Lisible(couleurMode)));
+            // L'icône du mode en cours (flamme, feuille, flocon, arrêt), de la couleur de son texte.
+            a.Add((Objets.Attribut(p, Objets.IconeMode, "text"), climat is { Ajustee: false, Mode: { } mi }
+                ? Objets.Modes.FirstOrDefault(x => x.Mode == mi).Icone ?? Icones.Flamme
+                : Icones.Flamme));
+            a.Add((Objets.Attribut(p, Objets.IconeMode, "text_color"), Lisible(couleurMode)));
 
             var couleurStatut = climat is null ? Rouge : CouleursStatuts.GetValueOrDefault(climat.Statut ?? "", Gris);
             a.Add((Objets.Attribut(p, Objets.Statut, "text"), climat is null ? "Statut: indisponible" : $"Statut: {climat.LibelleStatut ?? "--"}"));
             a.Add((Objets.Attribut(p, Objets.Statut, "text_color"), Lisible(couleurStatut)));
+            a.Add((Objets.Attribut(p, Objets.IconeStatut, "text_color"), Lisible(couleurStatut)));
 
             // Le bandeau suit le relais, pas le mode : un Confort qui a atteint sa consigne ne chauffe pas.
             var chauffe = climat?.Chauffe == true;
@@ -72,7 +78,7 @@ public static class Ecran
             if (chauffe) a.Add((Objets.Attribut(p, Objets.BandeauChauffe, "bg_color"), couleurStatut));
 
             // Les boutons sont des aplats : couleur du mode telle quelle, seul le texte passe par le contraste.
-            foreach (var (mode, objet, _) in Objets.Modes)
+            foreach (var (mode, objet, _, _, _) in Objets.Modes)
             {
                 var actif = climat is { Ajustee: false } && climat.Mode == mode;
                 a.Add((Objets.Attribut(p, objet, "bg_color"), actif ? CouleursModes[mode] : Inactif));
