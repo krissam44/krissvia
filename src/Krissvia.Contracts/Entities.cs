@@ -150,6 +150,13 @@ public static class DeviceClasses
     /// </summary>
     public const string HypervisorNode = "hypervisor_node";
 
+    /// <summary>
+    /// sensor dont la valeur est un OBJET : une imprimante (plugin IPP) — état, motifs et alertes, consommables avec leur
+    /// niveau, le plus bas, l'heure du dernier relevé. Commande <c>refresh</c> : relever tout de suite. Sa carte est
+    /// livrée par le plugin ; les niveaux sont aussi publiés en entités numériques, pour l'historique.
+    /// </summary>
+    public const string Printer = "printer";
+
     /// <summary>binary_sensor : true = OUVERT (le plugin inverse les conventions contraires).</summary>
     public const string Opening = "opening";
 

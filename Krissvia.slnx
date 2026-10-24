@@ -18,6 +18,7 @@
     <Project Path="src/Krissvia.Widgets.Blazor/Krissvia.Widgets.Blazor.csproj" />
   </Folder>
   <Folder Name="/plugins/">
+    <Project Path="plugins/Krissvia.Plugin.Ipp/Krissvia.Plugin.Ipp.csproj" />
     <Project Path="plugins/Krissvia.Plugin.Livebox/Krissvia.Plugin.Livebox.csproj" />
     <Project Path="plugins/Krissvia.Plugin.MqttDiscovery/Krissvia.Plugin.MqttDiscovery.csproj" />
     <Project Path="plugins/Krissvia.Plugin.OpenHasp/Krissvia.Plugin.OpenHasp.csproj" />
@@ -36,6 +37,7 @@
     <Project Path="tests/Krissvia.Core.Tests/Krissvia.Core.Tests.csproj" />
     <Project Path="tests/Krissvia.Persistence.Tests/Krissvia.Persistence.Tests.csproj" />
     <Project Path="tests/Krissvia.PluginHost.Tests/Krissvia.PluginHost.Tests.csproj" />
+    <Project Path="tests/Krissvia.Plugin.Ipp.Tests/Krissvia.Plugin.Ipp.Tests.csproj" />
     <Project Path="tests/Krissvia.Plugin.Livebox.Tests/Krissvia.Plugin.Livebox.Tests.csproj" />
     <Project Path="tests/Krissvia.Plugin.MqttDiscovery.Tests/Krissvia.Plugin.MqttDiscovery.Tests.csproj" />
     <Project Path="tests/Krissvia.Plugin.OpenHasp.Tests/Krissvia.Plugin.OpenHasp.Tests.csproj" />

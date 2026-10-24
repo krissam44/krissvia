@@ -1,0 +1,16 @@
+12 34 84 00 00 00 00 01 00 00 00 03                                                               # en-tête : id 0x1234, réponse, 1 réponse, 3 additionnelles
+04 5f 69 70 70 04 5f 74 63 70 05 6c 6f 63 61 6c 00                                                # nom : _ipp._tcp.local (position 12)
+00 0c 00 01 00 00 11 94 00 29                                                                     # PTR, IN, TTL 4500
+26 53 61 6d 73 75 6e 67 20 4d 32 30 32 30 20 53 65 72 69 65 73 20 28 53 45 43 33 30 43 44 41 37   # cible : « Samsung M2020 Series (SEC30CDA71CE2F2) » + pointeur vers _ipp._tcp.local
+31 43 45 32 46 32 29 c0 0c
+c0 27                                                                                             # nom : pointeur vers l'instance
+00 21 80 01 00 00 00 78 00 1d                                                                     # SRV, IN + cache-flush, TTL 120
+00 00 00 00 02 77 0f 53 45 43 33 30 43 44 41 37 31 43 45 32 46 32 05 6c 6f 63 61 6c 00            # priorité 0, poids 0, port 631, cible SEC30CDA71CE2F2.local
+c0 27                                                                                             # nom : pointeur vers l'instance
+00 10 80 01 00 00 11 94 00 77                                                                     # TXT, IN + cache-flush
+09 74 78 74 76 65 72 73 3d 31 0c 72 70 3d 69 70 70 2f 70 72 69 6e 74 17 74 79 3d 53 61 6d 73 75   # txtvers, rp, ty, UUID, pdl
+6e 67 20 4d 32 30 32 30 20 53 65 72 69 65 73 29 55 55 49 44 3d 31 36 61 36 35 37 30 30 2d 30 30 
+37 63 2d 31 30 30 30 2d 62 62 34 39 2d 33 30 63 64 61 37 31 63 65 32 66 32 1d 70 64 6c 3d 61 70 
+70 6c 69 63 61 74 69 6f 6e 2f 70 64 66 2c 69 6d 61 67 65 2f 75 72 66
+c0 62                                                                                             # nom : pointeur vers SEC30CDA71CE2F2.local
+00 01 80 01 00 00 00 78 00 04 c0 a8 01 3f                                                         # A, IN + cache-flush, 192.168.1.63

@@ -72,7 +72,7 @@ fonctionne dans DomoMud (moteurs de chauffage, délestage, alarme, présence) et
 | Zigbee2MQTT, MQTT générique (+ modèles Theengs, Shelly), RFXCom | plugins |
 | Shelly HTTP (relais, EM) | plugin |
 | Linky (trame MQTT) | plugin |
-| Livebox (présence, WAN), Proxmox, Raspberry, météo, Tempo | plugins (produisent des entités) |
+| Livebox (présence, WAN), Proxmox, Raspberry, météo, Tempo, imprimantes IPP | plugins (produisent des entités) |
 | ntfy, publication Home Assistant | services sortants (contrat 2) |
 | openHASP (platines) | plugin à deux sens (entités + affichage) |
 
@@ -204,6 +204,13 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
   leur dernière volonté. Identité = appareil + `unique_id` (ESPHome répète le même d'un module à l'autre),
   déclaration complète différée d'une seconde, abonnements ajoutés à mesure (`IMqttLink.SubscribeAsync`). Voir son
   README, qui donne le YAML d'une sonde ESPHome.
+- **Plugin Imprimantes IPP** (24/10/2026, `plugins/Krissvia.Plugin.Ipp`, C#) — imprimantes réseau découvertes en
+  mDNS (`_ipp._tcp`, `_ipps._tcp`) ou saisies par leur adresse, relevées par `Get-Printer-Attributes` (IPP binaire de
+  la RFC 8010, implémentation maison d'une centaine de lignes : le plugin ne sait que lire, jamais imprimer). Un
+  appareil par imprimante (clé = son UUID), l'objet de classe `printer` pour la carte, l'état en `enum`, un capteur en
+  % par consommable et un `problem` (arrêtée, panne, consommable bas) que la supervision signale ; éteinte, elle
+  devient indisponible sans alerte, et reste déclarée au lancement suivant. Carte « Imprimante » livrée par le plugin,
+  d'après celle de Gladys. Voir son README.
 - **Alarme : `ALARME.md`** (22/10/2026) — machine à états de DomoMud, sonneries du §9, codes PBKDF2 et blocage,
   page `/alarme`, API `/api/alarm` par code.
 - **Présence et supervision : `PRESENCE.md`** (19/10/2026) — présence du foyer calculée par le cœur sur les capteurs
