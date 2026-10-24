@@ -199,6 +199,11 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
   Guition 480×480 sont **générées** depuis les réglages et poussées à chaque `online` : thermostat de la pièce,
   températures communes, horloge avec les interrupteurs de la platine ; republication filtrée, veille et luminosité
   repris de DomoMud. Voir son README.
+- **Plugin MQTT Discovery** (24/10/2026, `plugins/Krissvia.Plugin.MqttDiscovery`, C#) — les appareils qui s'annoncent
+  à la manière de Home Assistant (ESPHome, Tasmota…) : sondes, capteurs, interrupteurs, lumières, joignabilité par
+  leur dernière volonté. Identité = appareil + `unique_id` (ESPHome répète le même d'un module à l'autre),
+  déclaration complète différée d'une seconde, abonnements ajoutés à mesure (`IMqttLink.SubscribeAsync`). Voir son
+  README, qui donne le YAML d'une sonde ESPHome.
 - **Alarme : `ALARME.md`** (22/10/2026) — machine à états de DomoMud, sonneries du §9, codes PBKDF2 et blocage,
   page `/alarme`, API `/api/alarm` par code.
 - **Présence et supervision : `PRESENCE.md`** (19/10/2026) — présence du foyer calculée par le cœur sur les capteurs

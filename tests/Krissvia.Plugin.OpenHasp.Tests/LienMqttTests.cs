@@ -84,4 +84,54 @@ public class LienMqttTests
         Assert.Equal(["identifiant ou mot de passe refusé par le broker", "déconnecté"], evenements);
         await serveur.StopAsync();
     }
+
+    /// <summary>Retient les messages reçus, et s'abonne à un topic de plus dès la connexion, hors du fil de réception.</summary>
+    private sealed class Abonneur(Func<MqttNetLink> lien, string topic) : IMqttHandler
+    {
+        public ConcurrentQueue<(string Topic, string Charge)> Recus { get; } = new();
+        public Task<bool>? Abonnement { get; private set; }
+
+        public Task ConnecteAsync()
+        {
+            Abonnement = Task.Run(() => lien().SubscribeAsync(topic, CancellationToken.None));
+            return Task.CompletedTask;
+        }
+
+        public Task DeconnecteAsync() => Task.CompletedTask;
+
+        public Task MessageAsync(string t, string charge)
+        {
+            Recus.Enqueue((t, charge));
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task Un_abonnement_ajoute_en_cours_de_connexion_recoit_les_messages_retenus()
+    {
+        // Le plugin MQTT Discovery n'apprend les topics d'état qu'en lisant les configurations : il s'y abonne après coup.
+        var port = PortLibre();
+        using var serveur = new MqttServerFactory().CreateMqttServer(
+            new MqttServerOptionsBuilder().WithDefaultEndpoint().WithDefaultEndpointBoundIPAddress(IPAddress.Loopback).WithDefaultEndpointPort(port).Build());
+        await serveur.StartAsync();
+        await serveur.InjectApplicationMessage(new InjectedMqttApplicationMessage(
+            new MQTTnet.MqttApplicationMessageBuilder().WithTopic("esp/etage/temperature").WithPayload("17.2").WithRetainFlag().Build()));
+
+        var options = new MqttOptions { Host = "127.0.0.1", Port = port };
+        var lien = new MqttNetLink(options, TimeProvider.System, NullLogger<MqttNetLink>.Instance);
+        Assert.False(await lien.SubscribeAsync("esp/etage/temperature", CancellationToken.None));   // pas encore connecté
+
+        var abonneur = new Abonneur(() => lien, "esp/etage/temperature");
+        using var arret = new CancellationTokenSource();
+        var boucle = lien.RunAsync("homeassistant/#", abonneur, arret.Token);
+
+        var limite = DateTime.UtcNow.AddSeconds(10);
+        while (abonneur.Recus.IsEmpty && DateTime.UtcNow < limite) await Task.Delay(20);
+        await arret.CancelAsync();
+        await boucle.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.True(await abonneur.Abonnement!);
+        Assert.Equal([("esp/etage/temperature", "17.2")], abonneur.Recus);
+        await serveur.StopAsync();
+    }
 }

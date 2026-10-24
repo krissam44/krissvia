@@ -17,6 +17,14 @@ public interface IMqttLink
     /// <summary>Se connecte, s'abonne, se reconnecte, jusqu'à l'annulation.</summary>
     Task RunAsync(string abonnement, IMqttHandler handler, CancellationToken ct);
 
+    /// <summary>
+    /// Ajoute un abonnement à la connexion EN COURS (topics connus seulement à l'exécution : ceux qu'annonce une
+    /// configuration MQTT Discovery). Faux si le broker n'est pas joignable. Une reconnexion le perd : le plugin le refait
+    /// depuis <see cref="IMqttHandler.ConnecteAsync"/>. À appeler hors de <see cref="IMqttHandler.MessageAsync"/>, qui
+    /// bloque la réception des accusés.
+    /// </summary>
+    Task<bool> SubscribeAsync(string filtre, CancellationToken ct);
+
     /// <summary>Faux si le broker n'est pas joignable : l'ordre n'est pas parti.</summary>
     Task<bool> PublishAsync(string topic, string charge, CancellationToken ct);
 }
