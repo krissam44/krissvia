@@ -39,6 +39,8 @@ internal sealed class SimulateurZ2m : IMqttLink
         }
     }
 
+    public Task<bool> SubscribeAsync(string filtre, CancellationToken ct) => Task.FromResult(true);
+
     public async Task<bool> PublishAsync(string topic, string charge, CancellationToken ct)
     {
         if (!BrokerJoignable) return false;

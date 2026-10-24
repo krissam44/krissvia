@@ -1,0 +1,24 @@
+{
+  "id": "mqtt-discovery",
+  "name": "MQTT Discovery",
+  "description": "Appareils qui s'annoncent à la manière de Home Assistant : modules ESPHome, Tasmota, OpenMQTTGateway… Sondes, capteurs, interrupteurs et lumières, via le broker MQTT.",
+  "executable": "Krissvia.Plugin.MqttDiscovery",
+  "settings": {
+    "type": "object",
+    "properties": {
+      "Mqtt": {
+        "type": "object",
+        "x-shared": "mqtt",
+        "title": "Broker MQTT",
+        "required": [ "Host" ],
+        "properties": {
+          "Host": { "type": "string", "title": "Adresse IP", "description": "Une adresse IP plutôt qu'un nom : la résolution DNS échoue parfois en silence sous systemd." },
+          "Port": { "type": "integer", "title": "Port", "default": 1883, "minimum": 1, "maximum": 65535 },
+          "Username": { "type": "string", "title": "Utilisateur" },
+          "Password": { "type": "string", "title": "Mot de passe", "format": "password" },
+          "DiscoveryPrefix": { "type": "string", "title": "Préfixe de découverte", "default": "homeassistant", "description": "Le discovery_prefix des appareils (ESPHome : homeassistant par défaut)." }
+        }
+      }
+    }
+  }
+}

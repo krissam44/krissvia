@@ -168,6 +168,25 @@ public sealed partial class MqttNetLink(MqttOptions options, TimeProvider clock,
         return ex.Message;
     }
 
+    public async Task<bool> SubscribeAsync(string filtre, CancellationToken ct)
+    {
+        if (_client is not { IsConnected: true } client) return false;
+
+        try
+        {
+            await client.SubscribeAsync(
+                new MqttTopicFilterBuilder().WithTopic(filtre).WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce).Build(),
+                ct);
+            Abonne(logger, filtre);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            AbonnementImpossible(logger, filtre, ex.Message);
+            return false;
+        }
+    }
+
     public async Task<bool> PublishAsync(string topic, string charge, CancellationToken ct)
     {
         if (_client is not { IsConnected: true } client) return false;
@@ -200,6 +219,12 @@ public sealed partial class MqttNetLink(MqttOptions options, TimeProvider clock,
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Traitement du message {Topic} en échec.")]
     private static partial void MessageEnEchec(ILogger logger, string topic, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Abonné à {Filtre}.")]
+    private static partial void Abonne(ILogger logger, string filtre);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Abonnement à {Filtre} impossible : {Error}.")]
+    private static partial void AbonnementImpossible(ILogger logger, string filtre, string error);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Publication sur {Topic} impossible : {Error}.")]
     private static partial void PublicationImpossible(ILogger logger, string topic, string error);

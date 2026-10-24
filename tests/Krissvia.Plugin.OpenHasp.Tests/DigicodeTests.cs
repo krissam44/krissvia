@@ -72,6 +72,8 @@ public class DigicodeTests
 
         public Task RunAsync(string abonnement, IMqttHandler handler, CancellationToken ct) => Task.Delay(Timeout.Infinite, ct);
 
+        public Task<bool> SubscribeAsync(string filtre, CancellationToken ct) => Task.FromResult(true);
+
         public Task<bool> PublishAsync(string topic, string charge, CancellationToken ct)
         {
             Publications.Enqueue((topic, charge));
