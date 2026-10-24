@@ -296,6 +296,16 @@ public partial class TableauDeBord
 
     private void RenommerSection(string id, string titre) => ChangerSection(id, s => s with { Title = titre });
 
+    /// <summary>Largeurs proposées pour une section : toute la ligne, puis les fractions qui en mettent plusieurs côte à côte.</summary>
+    private static readonly int[] LargeursSection = [DashboardService.GridColumns, 9, 8, 6, 4, 3];
+
+    private static string LibelleSection(int cols) =>
+        cols >= DashboardService.GridColumns ? "Toute la ligne" : Krissvia.Server.Components.Widgets.Largeurs.Libelle(cols);
+
+    /// <summary>Toute la ligne s'enregistre comme une absence de largeur : une page d'avant reste identique.</summary>
+    private void ElargirSection(string id, int cols) =>
+        ChangerSection(id, s => s with { Cols = cols >= DashboardService.GridColumns ? null : cols });
+
     private void DeplacerSection(string id, int sens) => ChangerPage(p =>
     {
         var sections = p.Sections.ToList();

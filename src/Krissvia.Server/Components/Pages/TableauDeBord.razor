@@ -86,12 +86,14 @@
     <div class="kv-bandeau-hors-ligne">Connexion au serveur perdue : les valeurs ne sont plus à jour. Reconnexion…</div>
     <div class="@(_edition ? "kv-edition" : "")">
 
+    <div class="kv-sections">
     @for (var s = 0; s < Page.Sections.Count; s++)
     {
         var sec = Page.Sections[s];
         var premiere = s == 0;
         var derniere = s == Page.Sections.Count - 1;
-        <section @key="sec.Id" class="kv-section">
+        var largeurSection = sec.Cols ?? DashboardService.GridColumns;
+        <section @key="sec.Id" class="kv-section s@(largeurSection)" style="--kv-cols: @largeurSection">
             <div class="kv-section-entete">
                 @if (_edition)
                 {
@@ -115,6 +117,13 @@
                 <span class="kv-section-compte">@sec.Cards.Count carte(s)</span>
                 @if (_edition)
                 {
+                    <MudMenu Icon="@Icons.Material.Filled.AspectRatio" Size="Size.Small" Dense="true" aria-label="Largeur de la section">
+                        @foreach (var largeur in LargeursSection)
+                        {
+                            <MudMenuItem OnClick="() => ElargirSection(sec.Id, largeur)"
+                                         Icon="@(largeurSection == largeur ? Icons.Material.Filled.Check : null)">@LibelleSection(largeur)</MudMenuItem>
+                        }
+                    </MudMenu>
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
                                    OnClick="() => SupprimerSection(sec.Id)" aria-label="Supprimer la section et ses cartes" />
                 }
@@ -127,7 +136,8 @@
                     {
                         var index = i;
                         var carte = sec.Cards[i];
-                        var (cols, rows) = Taille(carte);
+                        var (colsCarte, rows) = Taille(carte);
+                        var cols = Math.Min(colsCarte, largeurSection);
                         var resolue = Resoudre(carte);
                         var composant = Composant(resolue);
                         @* La clé change avec le widget : passer d'un Web Component à un widget Blazor recrée la carte, au lieu de
@@ -201,7 +211,7 @@
                     }
                     @if (_edition)
                     {
-                        <button type="button" class="kv-ajout c3 h2" @onclick="() => AjouterCarteAsync(sec.Id)">
+                        <button type="button" class="kv-ajout c@(Math.Min(3, largeurSection)) h2" @onclick="() => AjouterCarteAsync(sec.Id)">
                             <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" /> Ajouter une carte
                         </button>
                     }
@@ -209,6 +219,7 @@
             }
         </section>
     }
+    </div>
 
     @if (_edition)
     {
@@ -221,7 +232,11 @@
 
 <style>
     /* Cadre des cartes et variables du contrat : css/cartes.css, partagé avec l'écran Thermostats. */
-    .kv-section { margin-bottom: 20px; }
+    .kv-section { margin-bottom: 20px; min-width: 0; }
+    /* Les sections dans la même grille de 12 que les cartes, et le même écart : une demi-section (6) a exactement les
+       colonnes d'une demi-ligne de cartes, ses cartes de 1/12 gardent leur taille. Grand écran seulement : en dessous,
+       chaque section reprend toute la ligne. */
+    .kv-sections { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 12px; }
     .kv-section-entete { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; min-height: 36px; }
     .kv-section-titre { font-size: 1.15rem; font-weight: 500; white-space: nowrap; }
     .kv-section-titre-saisie { flex: 0 1 260px; }
@@ -241,7 +256,14 @@
         .kv-grille .c5, .kv-grille .c6 { grid-column: span 3; }
     }
     @@media (min-width: 1280px) {
-        .kv-grille { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+        .kv-sections { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+        .kv-section { grid-column: span 12; }
+        .kv-section.s3 { grid-column: span 3; } .kv-section.s4 { grid-column: span 4; } .kv-section.s6 { grid-column: span 6; }
+        .kv-section.s8 { grid-column: span 8; } .kv-section.s9 { grid-column: span 9; }
+        .kv-section.s1 { grid-column: span 1; } .kv-section.s2 { grid-column: span 2; } .kv-section.s5 { grid-column: span 5; }
+        .kv-section.s7 { grid-column: span 7; } .kv-section.s10 { grid-column: span 10; } .kv-section.s11 { grid-column: span 11; }
+        /* Autant de colonnes que la section en a : une colonne de carte a la même largeur partout sur la page. */
+        .kv-grille { grid-template-columns: repeat(var(--kv-cols, 12), minmax(0, 1fr)); }
         .kv-grille .c1 { grid-column: span 1; } .kv-grille .c2 { grid-column: span 2; } .kv-grille .c3 { grid-column: span 3; }
         .kv-grille .c4 { grid-column: span 4; } .kv-grille .c5 { grid-column: span 5; } .kv-grille .c6 { grid-column: span 6; }
         .kv-grille .c7 { grid-column: span 7; } .kv-grille .c8 { grid-column: span 8; } .kv-grille .c9 { grid-column: span 9; }

@@ -231,7 +231,7 @@ ouvrirait le flux avec le cookie de session.
 {
   "name": "Confort", "order": 0,
   "sections": [
-    { "id": "thermo", "title": "Thermostats", "collapsed": false,
+    { "id": "thermo", "title": "Thermostats", "collapsed": false, "cols": 6,
       "cards": [ { "id": "a1", "widget": "thermostat", "entities": { "thermostat": "climate.salon" }, "cols": 3 } ] }
   ]
 }
@@ -246,3 +246,5 @@ section). `cols` (1 à 12, en douzièmes d'un grand écran : 3 = quatre cartes p
 facultatifs : sans eux, la taille du manifeste. La réponse porte `"grid": 12`, le nombre de colonnes dans lequel
 `cols` est compté ; à l'envoi, `grid` est facultatif, mais toute autre valeur que 12 est refusée. Un widget ou une
 entité disparus ne bloquent pas l'enregistrement : la carte affiche le widget « valeur » et un bandeau.
+Une **section** peut aussi avoir un `cols` (1 à 12, absent = toute la ligne) : deux sections de 6 se partagent une
+ligne sur grand écran. Ses cartes gardent les colonnes de la page ; une carte plus large que la section en prend la largeur.
