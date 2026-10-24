@@ -52,6 +52,7 @@ public class BrokerCommunTests
     [InlineData("Krissvia.Plugin.Zigbee2Mqtt")]
     [InlineData("Krissvia.Plugin.OpenHasp")]
     [InlineData("Krissvia.Plugin.Teleinfo")]
+    [InlineData("Krissvia.Plugin.MqttDiscovery")]
     public void Les_plugins_mqtt_declarent_leur_section_mqtt_partagee(string projet)
     {
         Assert.Equal([("Mqtt", "mqtt")], SettingsSchema.SharedSections(SettingsSchema.Parse(Fiche(projet).Settings)));
@@ -119,6 +120,24 @@ public class BrokerCommunTests
 
         var env = Assert.Single(lanceur.Lancements).Env;
         Assert.Equal(("192.168.1.60", "1884", "krissvia"), (env["Mqtt__Host"], env["Mqtt__Port"], env["Mqtt__Username"]));
+        Assert.True(superviseur.MqttStatus().SharedSaved);
+    }
+
+    [Fact]
+    public async Task Sans_broker_commun_le_superviseur_le_signale_a_la_pastille()
+    {
+        var banc = await BancPlugins.CreerAsync();
+        await using var _ = banc;
+        var magasin = new Magasin();
+        var superviseur = new PluginSupervisor(magasin, banc.Hub, banc.Options, new SuperviseurTests.FauxLanceur(), banc.Horloge,
+            NullLogger<PluginSupervisor>.Instance, new PluginSettingsService(magasin), new SharedBrokerService(magasin));
+        await superviseur.LoadAsync([Fiche("Krissvia.Plugin.MqttDiscovery") with { Directory = "/plugins/disco" }]);
+
+        await superviseur.SetEnabledAsync("mqtt-discovery", true);
+
+        var etat = superviseur.MqttStatus();
+        Assert.False(etat.SharedSaved);
+        Assert.Equal(MqttOverview.NotSavedLine, etat.Lines[0]);
     }
 
     // ── Pastille ─────────────────────────────────────────────────────────────
@@ -137,6 +156,21 @@ public class BrokerCommunTests
         var rouge = MqttOverview.Evaluate([P("Zigbee2MQTT", lien: false, motif: "identifiant ou mot de passe refusé par le broker"), P("openHASP", lien: null)]);
         Assert.Equal(MqttHealth.Problem, rouge.Health);
         Assert.Equal(["openHASP : en attente du broker", "Zigbee2MQTT : identifiant ou mot de passe refusé par le broker"], rouge.Lines);
+    }
+
+    [Fact]
+    public void Sans_broker_commun_enregistre_la_pastille_le_dit_en_tete_et_n_est_pas_verte()
+    {
+        var sans = MqttOverview.Evaluate([P("Zigbee2MQTT"), P("MQTT Discovery")], sharedSaved: false);
+
+        Assert.Equal(MqttHealth.Waiting, sans.Health);   // tout le monde est connecté, mais il reste quelque chose à faire
+        Assert.False(sans.SharedSaved);
+        Assert.Equal(MqttOverview.NotSavedLine, sans.Lines[0]);
+
+        // Une vraie panne reste rouge ; sans plugin MQTT, rien à signaler.
+        Assert.Equal(MqttHealth.Problem, MqttOverview.Evaluate([P("MQTT Discovery", lien: false, motif: "aucun broker réglé")], sharedSaved: false).Health);
+        Assert.Equal(MqttHealth.NoPlugin, MqttOverview.Evaluate([], sharedSaved: false).Health);
+        Assert.True(MqttOverview.Evaluate([P("Zigbee2MQTT")]).SharedSaved);
     }
 
     [Fact]

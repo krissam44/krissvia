@@ -29,6 +29,12 @@ public partial class BrokerMqttDialog
     private string? _erreur;
     private MqttOverview _etat = new(MqttHealth.NoPlugin, []);
 
+    /// <summary>Vrai tant que rien n'est enregistré : ce qu'on voit est une proposition, pas le broker commun.</summary>
+    private bool _nonEnregistre;
+
+    /// <summary>Le plugin dont la saisie est reprise, quand rien de commun n'est encore enregistré.</summary>
+    private string? _reprisDe;
+
     /// <summary>Les plugins MQTT qui ont saisi leur propre broker, avec la section concernée.</summary>
     private List<(string Id, string Name, PluginManifest Fiche, string Section)> _propres = [];
 
@@ -50,9 +56,12 @@ public partial class BrokerMqttDialog
             return;
         }
 
-        // Rien de commun encore : on reprend le broker du premier plugin qui en a un.
+        // Rien de commun encore : on reprend le broker du premier plugin qui en a un — et on le DIT, sinon la saisie
+        // pré-remplie passe pour le broker commun déjà enregistré.
+        _nonEnregistre = true;
         if (_propres.FirstOrDefault() is { Fiche: not null } premier && Section(Reglages.Get(premier.Fiche), premier.Section) is { } s)
         {
+            _reprisDe = premier.Name;
             _hote = s["Host"]?.GetValue<string>() ?? "";
             _port = s["Port"] is JsonValue p && p.TryGetValue<int>(out var port) ? port : 1883;
             _utilisateur = s["Username"]?.GetValue<string>();

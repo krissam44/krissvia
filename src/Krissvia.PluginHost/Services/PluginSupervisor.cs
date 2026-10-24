@@ -200,7 +200,8 @@ public sealed partial class PluginSupervisor(
     /// <summary>La pastille MQTT : chaque plugin MQTT activé, et ce qu'il dit de son lien au broker.</summary>
     public MqttOverview MqttStatus() =>
         MqttOverview.Evaluate(UsingShared("mqtt").Select(s => new MqttPluginLink(s.Id, s.Name,
-            s.Status is ServiceStatus.Connected or ServiceStatus.External, hub.GetLink(s.Id, "mqtt"))));
+            s.Status is ServiceStatus.Connected or ServiceStatus.External, hub.GetLink(s.Id, "mqtt"))),
+            sharedBroker?.Current.IsConfigured ?? true);
 
     /// <summary>Arrête puis relance un plugin activé.</summary>
     public async Task<string?> RestartAsync(string id, CancellationToken ct = default)

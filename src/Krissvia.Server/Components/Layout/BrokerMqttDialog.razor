@@ -7,6 +7,20 @@
             Une adresse IP plutôt qu'un nom : la résolution DNS échoue parfois en silence sous systemd.
         </MudText>
 
+        @if (_nonEnregistre)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
+                @if (_reprisDe is not null)
+                {
+                    <text>Pas encore enregistré : ces valeurs sont reprises de la fiche de @_reprisDe. « Enregistrer et relancer » pour en faire le broker commun.</text>
+                }
+                else
+                {
+                    <text>Aucun broker commun enregistré : un plugin sans broker propre ne se connectera pas.</text>
+                }
+            </MudAlert>
+        }
+
         <MudGrid Spacing="2">
             <MudItem xs="8"><MudTextField @bind-Value="_hote" Label="Adresse" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" /></MudItem>
             <MudItem xs="4"><MudNumericField @bind-Value="_port" Label="Port" Min="1" Max="65535" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
