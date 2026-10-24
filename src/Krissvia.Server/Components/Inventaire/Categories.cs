@@ -51,7 +51,11 @@ internal static class Categories
         EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Connectivity => Reseau,
         // Un « arrêt inattendu », une sous-tension : rien à voir avec une porte, alors que c'était le classement par défaut.
         EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Problem => Probleme,
-        EntityKind.BinarySensor => Ouverture,
+        // Une pile faible (sondes RFXCom, MQTT Discovery) n'est pas une porte non plus.
+        EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Battery => Batterie,
+        // Ouverture seulement quand c'en est une, ou que rien ne dit le contraire (les premiers contacts sans classe).
+        EntityKind.BinarySensor when e.DeviceClass is null or DeviceClasses.Opening => Ouverture,
+        EntityKind.BinarySensor => Autre,
         _ => e.DeviceClass switch
         {
             DeviceClasses.Temperature => Temperature,
@@ -82,7 +86,11 @@ internal static class Categories
                 EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Presence => b ? "Présent" : "Absent",
                 EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Connectivity => b ? "En ligne" : "Hors ligne",
                 EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Problem => b ? "Problème" : "OK",
-                EntityKind.BinarySensor => b ? "Ouvert" : "Fermé",
+                EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Battery => b ? "Pile faible" : "Pile OK",
+                EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Moisture => b ? "Fuite" : "Sec",
+                EntityKind.BinarySensor when e.DeviceClass == DeviceClasses.Smoke => b ? "Fumée" : "OK",
+                EntityKind.BinarySensor when e.DeviceClass is null or DeviceClasses.Opening => b ? "Ouvert" : "Fermé",
+                EntityKind.BinarySensor => b ? "Détecté" : "Rien",
                 _ => b ? "Oui" : "Non",
             };
         if (etat.TryGetNumber(out var n))
