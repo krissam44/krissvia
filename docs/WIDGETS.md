@@ -106,6 +106,68 @@ MudBlazor, déjà dans Krissvia). Le manifeste s'écrit en attributs :
 - `settings` : options propres à chaque carte, décrites avec le même sous-ensemble de JSON Schema que les réglages
   des plugins — le tableau de bord en tire le formulaire.
 
+### 3.1 Familles et classes, pour `kinds` et `device_classes`
+
+Un slot filtre les entités par **famille** (`kinds`) et par **classe** (`device_classes`). Les deux listes ci-dessous sont
+celles du contrat (`Krissvia.Contracts`, `EntityKind` et `DeviceClasses`), avec ce que vaut l'état et qui le publie
+aujourd'hui. Une classe est une chaîne **ouverte** : le plugin MQTT Discovery transmet telles quelles celles de Home
+Assistant qu'il ne traduit pas (`signal_strength`…), et un widget peut les viser aussi.
+
+Familles (`kinds`) : `sensor`, `binary_sensor`, `switch`, `light`, `cover`, `event`, `climate`.
+
+**Capteurs binaires** (`binary_sensor`, état `true` / `false`) :
+
+| Classe | `true` veut dire | Publiée par |
+|---|---|---|
+| `opening` | **ouvert** (le plugin inverse les conventions contraires) | Zigbee2MQTT (contact), MQTT Discovery (`door`, `window`, `garage_door`, `opening`) |
+| `occupancy` | mouvement détecté dans la pièce | Zigbee2MQTT, MQTT Discovery (`motion`, `occupancy`) |
+| `presence` | la personne (son téléphone) est à la maison | Livebox, MQTT Discovery |
+| `connectivity` | en ligne / connecté | Livebox (Internet), **openHASP (une entité « Connexion » par platine)**, MQTT Discovery |
+| `problem` | un problème (sous-tension, VM arrêtée…) : la supervision alerte | Raspberry, Proxmox, MQTT Discovery |
+| `battery` | pile faible | Zigbee2MQTT (`battery_low`), MQTT Discovery |
+| `moisture` | fuite d'eau | Zigbee2MQTT, MQTT Discovery |
+| `smoke` | fumée | Zigbee2MQTT, MQTT Discovery |
+| `tamper` | boîtier ouvert ou arraché | Zigbee2MQTT, MQTT Discovery |
+| `vibration` | vibration | Zigbee2MQTT, MQTT Discovery |
+
+**Mesures** (`sensor`, nombre dans l'unité indiquée) :
+
+| Classe | Unité | Publiée par |
+|---|---|---|
+| `temperature` | °C — d'une pièce ou de l'extérieur | Zigbee2MQTT, MQTT Discovery, Météo, moyennes par pièce du cœur |
+| `device_temperature` | °C — d'un appareil (processeur) : hors des sondes de pièce | Raspberry, MQTT Discovery (sonde de diagnostic d'un ESP32) |
+| `humidity` | % | Zigbee2MQTT, MQTT Discovery, Météo |
+| `pressure` | hPa | Zigbee2MQTT, MQTT Discovery, Météo |
+| `illuminance` | lx | Zigbee2MQTT, MQTT Discovery |
+| `carbon_dioxide` | ppm | Zigbee2MQTT, MQTT Discovery |
+| `power` | W | Zigbee2MQTT, Shelly, MQTT Discovery |
+| `apparent_power` | VA — ce que compare l'abonnement | Téléinfo, Shelly (pince) |
+| `energy` | kWh, en index qui ne fait que croître (`total_increasing`) | Zigbee2MQTT, Shelly, Téléinfo, MQTT Discovery |
+| `voltage` | V | Zigbee2MQTT, Shelly, Téléinfo, MQTT Discovery |
+| `current` | A | Zigbee2MQTT, Shelly, Téléinfo, MQTT Discovery |
+| `battery` | % | Zigbee2MQTT, MQTT Discovery |
+| `wind_speed` | km/h | Météo |
+| `data_rate` | kbit/s | Livebox |
+| `public_ip` | chaîne : l'adresse IP publique | Livebox |
+| `enum` | chaîne : un libellé (tarif en cours, version…) | Téléinfo, MQTT Discovery (capteur sans unité) |
+
+**Objets** (`sensor` dont l'état est un objet JSON, une carte dédiée le dessine) :
+
+| Classe | Contenu | Publiée par |
+|---|---|---|
+| `weather` | conditions et prévision d'un lieu | Météo |
+| `load_shedding` | état du délesteur | le cœur (`sensor.maison_delesteur`) |
+| `home_presence` | présence du foyer | le cœur (`sensor.maison_presence`) |
+| `alarm` | état de l'alarme ; commandes `arm` / `disarm` avec code | le cœur (`sensor.maison_alarme`) |
+| `system_health` | santé d'une machine | Raspberry |
+| `virtual_machine` | une VM ou un conteneur ; commandes du plugin | Proxmox |
+| `hypervisor_node` | un nœud d'hyperviseur | Proxmox |
+| `internet_connection` | l'état complet de la connexion | Livebox |
+| `network_hosts` | les appareils du réseau local ; commande `set_tracked` | Livebox |
+
+Les **usages** (`usages`) ne sont pas des classes : l'utilisateur les choisit dans l'écran Entités pour un interrupteur
+(`radiateur`, `eclairage`, `prise`, `compteur`, ou ceux d'un widget local comme `ampoule`).
+
 ## 4. Ce que le widget reçoit
 
 Le tableau de bord crée l'élément, puis lui affecte des **propriétés** (pas des attributs) à chaque changement :
