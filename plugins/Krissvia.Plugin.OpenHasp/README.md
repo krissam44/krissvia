@@ -8,7 +8,7 @@ entités choisies dans ses réglages et transmet les appuis au cœur comme des o
 
 | Page | Contenu | Présente si |
 |---|---|---|
-| 1 Thermostat | titre, ambiante, consigne −/+, mode et statut, bandeau de chauffe, six modes, bouton « Prog » (planning) | la platine a un thermostat |
+| 1 Thermostat | la mise en page de DomoMud : titre, ambiante, mode et statut avec leur icône, consigne −/+ sur un panneau un ton au-dessus du fond, bandeau de chauffe, six modes de Confort (en haut à gauche) à Off, bouton planning (calendrier) | la platine a un thermostat |
 | 2 Températures | jusqu'à six sondes en arcs, en rangées de trois (la dernière rangée est centrée), **les mêmes sur toutes les platines** | au moins une sonde |
 | 3 Horloge | heure (tenue par la platine), date et température extérieure, prochaine bascule du planning (« Confort à 18:00 »), jusqu'à trois interrupteurs **propres à chaque platine**, curseur de luminosité | toujours |
 | 4 Alarme | digicode : état et décompte, capteur en cause ou défaut, code masqué, clavier 0-9 / C / ⌫, **Armer** et **Désarmer** | une alarme est choisie et la platine a « Digicode » coché (par défaut) |
@@ -61,8 +61,13 @@ les mêmes nœuds se repeindraient l'un l'autre en continu.
   de mode, bandeau) gardent leur couleur, sinon le code couleur se délave.
 - Couleur d'un arc : `line_color10`. `arc_color` n'existe pas, et openHASP ignore en silence un attribut inconnu.
 - Fond : un objet plein écran déclaré en premier sur chaque page, uni (`bg_grad_color` = `bg_color`, `bg_grad_dir` 0).
-- Polices 16, 24, 32 et 48 seulement, celles de la mise en page déployée ; séparateurs en ASCII (« · » sort en carré
-  vide). Les libellés de mode sont ceux de la platine (« Confort -1 ») : le « − » du cœur n'est pas dans sa police.
+- Polices : les tailles de l'écran de DomoMud (`MiseEnPage.Polices` : 16, 20, 24, 28, 32, 48, et 84 pour l'heure). Le
+  firmware des Guition (ESP32-S3) rend toute taille par FreeType, mais chacune coûte un cache de glyphes : la liste
+  est fermée, et un test la fait respecter. Séparateurs en ASCII (« · » sort en carré vide). Les libellés de mode sont
+  ceux de la platine (« Confort -1 », « Conf. -1 » sur les boutons) : le « − » du cœur n'est pas dans sa police.
+- Icônes : celles de `Icones`, toutes dans le sous-ensemble MDI compilé dans openHASP (codepoint F0xxxx écrit Exxxx).
+  L'icône du mode suit le mode (flamme, feuille, flocon, arrêt) et prend la couleur de son texte. Page 2 : la grille
+  des sondes est centrée en hauteur. Page 3 : le pourcentage de luminosité est affiché dès la génération.
 - Luminosité : plancher 20 (à 1 l'écran est noir, et le curseur qui le rallumerait est dessus) ; gardée en mémoire
   seulement : tant que personne n'a touché le curseur, rien n'est imposé à la platine.
 - Veille : une platine endormie est exclue de la republication périodique, sinon elle se rallumerait dix secondes plus

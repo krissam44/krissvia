@@ -24,6 +24,20 @@ public class EcranTests
         Assert.Equal("#0A84FF", a["p1b21.bg_color"]);   // planning actif
     }
 
+    [Theory]
+    [InlineData("comfort1", Icones.Flamme)]
+    [InlineData("eco", Icones.Feuille)]
+    [InlineData("frost_protection", Icones.Flocon)]
+    [InlineData("off", Icones.Arret)]
+    public void L_icone_du_mode_suit_le_mode_et_sa_couleur(string mode, string icone)
+    {
+        var a = Attributs(Donnees.Etats(Donnees.Climat(mode: mode)));
+
+        Assert.Equal(icone, a["p1b16.text"]);
+        Assert.Equal(a["p1b20.text_color"], a["p1b16.text_color"]);
+        Assert.Equal(a["p1b9.text_color"], a["p1b17.text_color"]);
+    }
+
     [Fact]
     public void Une_consigne_ajustee_n_allume_aucun_mode()
     {

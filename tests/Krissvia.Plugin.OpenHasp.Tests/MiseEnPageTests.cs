@@ -20,7 +20,7 @@ public class MiseEnPageTests
             Assert.InRange(Int(o, "x"), 0, 480);
             Assert.InRange(Int(o, "x") + Int(o, "w"), 0, 480);
             Assert.InRange(Int(o, "y") + Int(o, "h"), 0, 480);
-            if (o.TryGetProperty("text_font", out var police)) Assert.Contains(police.GetInt32(), new[] { 16, 24, 32, 48 });
+            if (o.TryGetProperty("text_font", out var police)) Assert.Contains(police.GetInt32(), MiseEnPage.Polices);
         });
         var doublons = objets.GroupBy(o => (Int(o, "page"), Int(o, "id"))).Where(g => g.Count() > 1).Select(g => g.Key);
         Assert.Empty(doublons);
@@ -48,7 +48,8 @@ public class MiseEnPageTests
     {
         var arcs = Objets(Donnees.Salon(), Donnees.Reglages()).Where(o => o.GetProperty("obj").GetString() == "arc").ToList();
 
-        Assert.Equal([(15, 40), (170, 40), (325, 40), (92, 215), (247, 215)], arcs.Select(a => (Int(a, "x"), Int(a, "y"))));
+        // Centrées en hauteur entre le titre (44) et la barre (435) : 25 px au-dessus, 25 px au-dessous.
+        Assert.Equal([(15, 69), (170, 69), (325, 69), (92, 244), (247, 244)], arcs.Select(a => (Int(a, "x"), Int(a, "y"))));
         Assert.Equal(-10, Int(arcs[4], "min"));
         Assert.Equal(40, Int(arcs[4], "max"));
     }
@@ -104,6 +105,53 @@ public class MiseEnPageTests
         Assert.Equal([.. Enumerable.Range(0, 10).Select(d => 10 + d), 20, 21, 30, 31], boutons.Keys.Order());
         Assert.All(Enumerable.Range(0, 10), d => Assert.Equal(d.ToString(), boutons[10 + d]));
         Assert.Equal("Désarmer", boutons[31]);
+    }
+
+    [Fact]
+    public void Une_seule_rangee_de_sondes_descend_au_milieu_de_l_ecran()
+    {
+        Assert.Equal([(15, 156), (170, 156), (325, 156)], MiseEnPage.Grille(3).Select(g => (g.X, g.Y)));
+    }
+
+    [Fact]
+    public void Les_modes_vont_de_Confort_en_haut_a_gauche_a_Off_en_bas_a_droite_avec_leur_icone()
+    {
+        var modes = Objets(Donnees.Salon(), Donnees.Reglages())
+            .Where(o => Int(o, "page") == 1 && Int(o, "id") is >= 10 and <= 15)
+            .OrderBy(o => Int(o, "y")).ThenBy(o => Int(o, "x"))
+            .Select(o => o.GetProperty("text").GetString())
+            .ToList();
+
+        Assert.Equal(
+        [
+            $"{Icones.Flamme} Confort", $"{Icones.Flamme} Conf. -1", $"{Icones.Flamme} Conf. -2",
+            $"{Icones.Feuille} Éco", $"{Icones.Flocon} Hors-gel", $"{Icones.Arret} Off",
+        ], modes);
+    }
+
+    [Fact]
+    public void Le_panneau_de_consigne_est_un_ton_au_dessus_du_fond()
+    {
+        var reglages = Donnees.Reglages();
+        reglages.Affichage.CouleurFond = "#133B34";
+
+        var panneau = Objets(Donnees.Salon(), reglages).Single(o => Int(o, "page") == 1 && Int(o, "id") == global::Krissvia.Plugin.OpenHasp.Objets.Panneau);
+
+        var couleur = panneau.GetProperty("bg_color").GetString()!;
+        Assert.True(CouleurOpenHasp.Luminance(couleur) > CouleurOpenHasp.Luminance("#133B34"));
+        Assert.Equal(couleur, panneau.GetProperty("bg_grad_color").GetString());   // uni : pas de dégradé du thème
+    }
+
+    [Fact]
+    public void Le_pourcentage_de_luminosite_est_affiche_des_le_depart()
+    {
+        var reglages = Donnees.Reglages();
+        reglages.Affichage.LuminositeDefaut = 128;
+
+        var pourcentage = Objets(Donnees.Salon(), reglages)
+            .Single(o => Int(o, "page") == 3 && Int(o, "id") == global::Krissvia.Plugin.OpenHasp.Objets.Pourcentage);
+
+        Assert.Equal("50 %", pourcentage.GetProperty("text").GetString());
     }
 
     [Fact]
