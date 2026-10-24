@@ -257,7 +257,9 @@ pas d'une panne du support — prévoir une recopie hors du Pi.
 | L'API répond 503 | `Api__Key` absent de `/etc/krissvia/krissvia.env` |
 | Le service redémarre en boucle | `journalctl -u krissvia -n 50 --no-pager` ; souvent `dotnet` absent de `/usr/bin` ou le runtime 10 manquant |
 
-Le journal du cœur : `journalctl -u krissvia -f`. Ce qu'écrit chaque plugin est dans sa carte de la page Services.
+Le journal du cœur : `journalctl -u krissvia -f`. Ce qu'écrit chaque plugin y est aussi, préfixé de son identifiant
+(`[mqtt-discovery] Aucun broker MQTT réglé…`) et à son niveau : `journalctl -u krissvia | grep '\[mqtt-discovery\]'`.
+La carte de la page Services en garde les 200 dernières lignes.
 
 ## 10. Essai sur une machine virtuelle x64 (avant le Pi)
 

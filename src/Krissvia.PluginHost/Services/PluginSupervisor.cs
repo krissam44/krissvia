@@ -310,7 +310,13 @@ public sealed partial class PluginSupervisor(
                 environnement["Krissvia__DataDirectory"] = dossier;
             }
 
-            var processus = launcher.Start(fiche, environnement, ligne => Noter(service, ligne));
+            // Chaque ligne du plugin va sur sa fiche ET dans le journal du cœur (journalctl), au niveau qu'elle annonce.
+            var journal = new PluginJournal();
+            var processus = launcher.Start(fiche, environnement, ligne =>
+            {
+                Noter(service, ligne);
+                if (journal.Read(ligne) is { } entree) SortiePlugin(logger, entree.Level, service.Id, entree.Text);
+            });
 
             service.Processus = processus;
             service.DemarreLe = clock.GetUtcNow();
@@ -403,6 +409,9 @@ public sealed partial class PluginSupervisor(
         service.Journal.Enqueue(ligne);
         while (service.Journal.Count > LignesGardees && service.Journal.TryDequeue(out _)) { }
     }
+
+    [LoggerMessage(Message = "[{Id}] {Texte}")]
+    private static partial void SortiePlugin(ILogger logger, LogLevel level, string id, string texte);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Service {Id} lancé (processus {Pid}).")]
     private static partial void Lance(ILogger logger, string id, int pid);
