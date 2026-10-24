@@ -61,6 +61,9 @@ les mêmes nœuds se repeindraient l'un l'autre en continu.
   de mode, bandeau) gardent leur couleur, sinon le code couleur se délave.
 - Couleur d'un arc : `line_color10`. `arc_color` n'existe pas, et openHASP ignore en silence un attribut inconnu.
 - Fond : un objet plein écran déclaré en premier sur chaque page, uni (`bg_grad_color` = `bg_color`, `bg_grad_dir` 0).
+- **Un texte vide part en espace.** Pour openHASP, une commande à charge vide est une LECTURE : `p4b3.text` vide ne vidait
+  rien, et le dernier « * » du code restait affiché après le retour arrière. Même chose pour la ligne « prochaine
+  bascule » ou la date. `OpenHaspPlugin.Charge` remplace donc tout `.text` vide par une espace.
 - Polices : les tailles de l'écran de DomoMud (`MiseEnPage.Polices` : 16, 20, 24, 28, 32, 48, et 84 pour l'heure). Le
   firmware des Guition (ESP32-S3) rend toute taille par FreeType, mais chacune coûte un cache de glyphes : la liste
   est fermée, et un test la fait respecter. Séparateurs en ASCII (« · » sort en carré vide). Les libellés de mode sont
