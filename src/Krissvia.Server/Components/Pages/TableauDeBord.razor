@@ -93,7 +93,7 @@
         var premiere = s == 0;
         var derniere = s == Page.Sections.Count - 1;
         var largeurSection = sec.Cols ?? DashboardService.GridColumns;
-        <section @key="sec.Id" class="kv-section s@(largeurSection)" style="--kv-cols: @largeurSection">
+        <section @key="sec.Id" class="@ClasseSection(sec, largeurSection)" style="@StyleSection(sec, largeurSection)">
             <div class="kv-section-entete">
                 @if (_edition)
                 {
@@ -122,6 +122,21 @@
                         {
                             <MudMenuItem OnClick="() => ElargirSection(sec.Id, largeur)"
                                          Icon="@(largeurSection == largeur ? Icons.Material.Filled.Check : null)">@LibelleSection(largeur)</MudMenuItem>
+                        }
+                    </MudMenu>
+                    <MudMenu Icon="@Icons.Material.Filled.Palette" Size="Size.Small" Dense="true" aria-label="Couleur de la section">
+                        @foreach (var (couleur, nom) in CouleursSection)
+                        {
+                            <MudMenuItem OnClick="() => ColorerSection(sec.Id, couleur)">
+                                <span class="d-flex align-center gap-2">
+                                    <MudIcon Icon="@(couleur is null ? Icons.Material.Outlined.Circle : Icons.Material.Filled.Circle)" Size="Size.Small" Style="@StyleCouleur(couleur)" />
+                                    @nom
+                                    @if (sec.Color == couleur)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" />
+                                    }
+                                </span>
+                            </MudMenuItem>
                         }
                     </MudMenu>
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
@@ -233,6 +248,12 @@
 <style>
     /* Cadre des cartes et variables du contrat : css/cartes.css, partagé avec l'écran Thermostats. */
     .kv-section { margin-bottom: 20px; min-width: 0; }
+    /* Une section colorée : une teinte légère de sa couleur derrière l'en-tête et les cartes, et un liseré. Le mélange
+       avec le transparent garde le fond lisible en thème clair comme en sombre. */
+    .kv-section-teinte { padding: 4px 12px 12px; border-radius: 14px;
+                         background: color-mix(in srgb, var(--kv-teinte) 12%, transparent);
+                         border: 1px solid color-mix(in srgb, var(--kv-teinte) 35%, transparent); }
+    .kv-section-teinte .kv-section-titre { color: color-mix(in srgb, var(--kv-teinte) 55%, var(--mud-palette-text-primary)); }
     /* Les sections dans la même grille de 12 que les cartes, et le même écart : une demi-section (6) a exactement les
        colonnes d'une demi-ligne de cartes, ses cartes de 1/12 gardent leur taille. Grand écran seulement : en dessous,
        chaque section reprend toute la ligne. */

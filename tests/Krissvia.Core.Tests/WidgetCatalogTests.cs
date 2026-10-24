@@ -441,6 +441,20 @@ public class DashboardServiceTests
     }
 
     [Fact]
+    public async Task Une_section_garde_sa_couleur_et_une_couleur_mal_ecrite_est_refusee()
+    {
+        var magasin = new Magasin();
+        var service = new DashboardService(magasin);
+
+        await service.SaveAsync(Page("sondes", Section("salon") with { Color = "#42A5F5" }, Section("terrasse")));
+
+        var relue = (await new DashboardService(magasin).GetAsync("sondes"))!;
+        Assert.Equal(["#42A5F5", null], relue.Sections.Select(s => s.Color));
+        foreach (var fausse in new[] { "bleu", "#42A5F", "42A5F5", "#42A5F5;background:red" })
+            await Assert.ThrowsAsync<DashboardValidationException>(() => service.SaveAsync(Page("sondes", Section("salon") with { Color = fausse })));
+    }
+
+    [Fact]
     public async Task Une_page_comptee_dans_une_autre_grille_est_refusee()
     {
         var service = new DashboardService(new Magasin());

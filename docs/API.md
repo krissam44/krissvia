@@ -246,5 +246,6 @@ section). `cols` (1 à 12, en douzièmes d'un grand écran : 3 = quatre cartes p
 facultatifs : sans eux, la taille du manifeste. La réponse porte `"grid": 12`, le nombre de colonnes dans lequel
 `cols` est compté ; à l'envoi, `grid` est facultatif, mais toute autre valeur que 12 est refusée. Un widget ou une
 entité disparus ne bloquent pas l'enregistrement : la carte affiche le widget « valeur » et un bandeau.
-Une **section** peut aussi avoir un `cols` (1 à 12, absent = toute la ligne) : deux sections de 6 se partagent une
+Une **section** peut avoir une `color` (`#RRGGBB`, absente = sans fond : l'écran en peint une teinte légère derrière
+ses cartes), et un `cols` (1 à 12, absent = toute la ligne) : deux sections de 6 se partagent une
 ligne sur grand écran. Ses cartes gardent les colonnes de la page ; une carte plus large que la section en prend la largeur.

@@ -49,6 +49,12 @@ public sealed record DashboardSection
     /// </summary>
     public int? Cols { get; init; }
 
+    /// <summary>
+    /// Couleur de la section (#RRGGBB) ; null : aucun fond. L'écran n'en peint qu'une teinte légère derrière les cartes,
+    /// pour regrouper visuellement sans écraser leurs propres couleurs, en thème clair comme en sombre.
+    /// </summary>
+    public string? Color { get; init; }
+
     public IReadOnlyList<DashboardCard> Cards { get; init; } = [];
 }
 
@@ -237,6 +243,8 @@ public sealed partial class DashboardService(IConfigurationStore store)
             if (!sections.Add(section.Id)) throw new DashboardValidationException($"deux sections portent l'identifiant « {section.Id} »");
             if (section.Cols is < 1 or > GridColumns)
                 throw new DashboardValidationException($"section « {section.Id} » : de 1 à {GridColumns} colonnes");
+            if (section.Color is { } couleur && !HexColor().IsMatch(couleur))
+                throw new DashboardValidationException($"section « {section.Id} » : couleur au format #RRGGBB");
 
             foreach (var carte in section.Cards)
             {
@@ -260,4 +268,7 @@ public sealed partial class DashboardService(IConfigurationStore store)
 
     [GeneratedRegex("^[a-z0-9][a-z0-9-]{0,63}$")]
     private static partial Regex PageId();
+
+    [GeneratedRegex("^#[0-9A-Fa-f]{6}$")]
+    private static partial Regex HexColor();
 }

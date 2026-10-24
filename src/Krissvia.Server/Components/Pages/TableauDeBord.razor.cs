@@ -302,6 +302,24 @@ public partial class TableauDeBord
     private static string LibelleSection(int cols) =>
         cols >= DashboardService.GridColumns ? "Toute la ligne" : Krissvia.Server.Components.Widgets.Largeurs.Libelle(cols);
 
+    /// <summary>Couleurs proposées pour une section ; null : sans fond.</summary>
+    private static readonly (string? Couleur, string Nom)[] CouleursSection =
+    [
+        (null, "Sans couleur"), ("#42A5F5", "Bleu"), ("#26A69A", "Turquoise"), ("#66BB6A", "Vert"), ("#FFCA28", "Jaune"),
+        ("#FFA726", "Orange"), ("#EF5350", "Rouge"), ("#EC407A", "Rose"), ("#AB47BC", "Violet"), ("#8D6E63", "Brun"), ("#78909C", "Gris"),
+    ];
+
+    private void ColorerSection(string id, string? couleur) => ChangerSection(id, s => s with { Color = couleur });
+
+    private static string ClasseSection(DashboardSection s, int largeur) =>
+        s.Color is null ? $"kv-section s{largeur}" : $"kv-section s{largeur} kv-section-teinte";
+
+    /// <summary>La couleur passe par une variable CSS : la feuille de style en tire la teinte du fond et du liseré.</summary>
+    private static string StyleSection(DashboardSection s, int largeur) =>
+        s.Color is { } couleur ? $"--kv-cols: {largeur}; --kv-teinte: {couleur}" : $"--kv-cols: {largeur}";
+
+    private static string StyleCouleur(string? couleur) => couleur is null ? "" : $"color: {couleur}";
+
     /// <summary>Toute la ligne s'enregistre comme une absence de largeur : une page d'avant reste identique.</summary>
     private void ElargirSection(string id, int cols) =>
         ChangerSection(id, s => s with { Cols = cols >= DashboardService.GridColumns ? null : cols });
