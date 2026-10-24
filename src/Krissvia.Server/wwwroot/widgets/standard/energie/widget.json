@@ -3,7 +3,7 @@
   "id": "energie",
   "name": "Compteur d'énergie",
   "description": "Puissance, tension, courant et index d'une prise ou d'une pince mesurée, en tuiles : la carte compteur de DomoMud.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "element": "kv-energie",
   "script": "energie.js",
   "slots": [
