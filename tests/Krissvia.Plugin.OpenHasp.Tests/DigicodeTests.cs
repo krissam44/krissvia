@@ -140,9 +140,34 @@ public class DigicodeTests
 
         Assert.Equal((Donnees.Alarme, StandardCommands.Disarm, """{"code":"1234"}"""), Assert.Single(b.Ordres));
         Assert.DoesNotContain(b.Broker.Publications, p => p.Charge.Contains("1234", StringComparison.Ordinal));
-        Assert.Equal("", b.Dernier("p4b3.text"));            // oublié aussitôt envoyé
+        Assert.Equal(" ", b.Dernier("p4b3.text"));           // oublié aussitôt envoyé (une espace : voir le test suivant)
         Assert.Equal("Code accepté", b.Dernier("p4b2.text"));
     }
+
+    [Fact]
+    public async Task Effacer_le_dernier_chiffre_vide_vraiment_l_affichage()
+    {
+        // openHASP prend une commande à charge vide pour une LECTURE : « p4b3.text » vide laissait le dernier « * ».
+        var b = new Banc();
+        await b.EnLigneAsync();
+
+        await b.AppuyerAsync("p4b11");
+        await b.AppuyerAsync("p4b12");
+        await b.AppuyerAsync("p4b21");
+        Assert.Equal("*", b.Dernier("p4b3.text"));
+        await b.AppuyerAsync("p4b21");
+
+        Assert.Equal(" ", b.Dernier("p4b3.text"));
+        Assert.DoesNotContain(b.Broker.Publications, p => p.Topic.EndsWith(".text", StringComparison.Ordinal) && p.Charge.Length == 0);
+    }
+
+    [Theory]
+    [InlineData("p4b3.text", "", " ")]
+    [InlineData("p3b42.text", "", " ")]
+    [InlineData("p4b3.text", "* *", "* *")]
+    [InlineData("p1b18.hidden", "", "")]
+    public void Un_texte_vide_part_en_espace_et_rien_d_autre_ne_change(string attribut, string valeur, string attendu) =>
+        Assert.Equal(attendu, OpenHaspPlugin.Charge(attribut, valeur));
 
     [Fact]
     public async Task Un_refus_du_coeur_s_affiche_tel_quel()

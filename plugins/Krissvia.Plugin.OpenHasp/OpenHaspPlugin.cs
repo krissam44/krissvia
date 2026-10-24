@@ -311,11 +311,20 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
 
     private async Task<bool> EnvoyerAsync(string noeud, string attribut, string valeur)
     {
+        valeur = Charge(attribut, valeur);
         if (!_republication.AEnvoyer(noeud, attribut, valeur)) return true;
         if (!await _mqtt.PublishAsync(Commande(noeud, attribut), valeur, CancellationToken.None)) return false;
         _republication.Noter(noeud, attribut, valeur);
         return true;
     }
+
+    /// <summary>
+    /// Pour openHASP, une commande à charge VIDE est une lecture (<c>update = length &gt; 0</c> dans son répartiteur) :
+    /// <c>p4b3.text</c> vide ne vide rien, la platine renvoie l'ancien texte — le dernier « * » du code restait affiché
+    /// après le retour arrière. Un texte vide part donc en espace, invisible et bien une écriture.
+    /// </summary>
+    internal static string Charge(string attribut, string valeur) =>
+        valeur.Length == 0 && attribut.EndsWith(".text", StringComparison.Ordinal) ? " " : valeur;
 
     internal async Task ReagirAsync(Platine platine, Reaction reaction)
     {
