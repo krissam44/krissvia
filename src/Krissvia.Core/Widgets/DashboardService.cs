@@ -41,6 +41,14 @@ public sealed record DashboardSection
     public required string Id { get; init; }
     public string Title { get; init; } = "";
     public bool Collapsed { get; init; }
+
+    /// <summary>
+    /// Largeur de la section en douzièmes d'un grand écran ; null : toute la ligne. Deux sections de 6 se partagent une
+    /// ligne (« Radiateurs » et « Éclairage » côte à côte). Les colonnes de ses cartes restent celles de la page : une
+    /// carte de 1/12 garde sa taille, une carte plus large que la section est ramenée à sa largeur.
+    /// </summary>
+    public int? Cols { get; init; }
+
     public IReadOnlyList<DashboardCard> Cards { get; init; } = [];
 }
 
@@ -227,6 +235,8 @@ public sealed partial class DashboardService(IConfigurationStore store)
         {
             if (string.IsNullOrWhiteSpace(section.Id)) throw new DashboardValidationException("une section n'a pas d'identifiant");
             if (!sections.Add(section.Id)) throw new DashboardValidationException($"deux sections portent l'identifiant « {section.Id} »");
+            if (section.Cols is < 1 or > GridColumns)
+                throw new DashboardValidationException($"section « {section.Id} » : de 1 à {GridColumns} colonnes");
 
             foreach (var carte in section.Cards)
             {

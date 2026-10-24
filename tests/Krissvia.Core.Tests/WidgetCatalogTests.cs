@@ -425,6 +425,22 @@ public class DashboardServiceTests
     }
 
     [Fact]
+    public async Task Une_section_garde_sa_largeur_et_une_largeur_hors_grille_est_refusee()
+    {
+        var magasin = new Magasin();
+        var service = new DashboardService(magasin);
+
+        await service.SaveAsync(Page("accueil", Section("radiateurs") with { Cols = 6 }, Section("eclairage") with { Cols = 6 }, Section("meteo")));
+
+        var relue = (await new DashboardService(magasin).GetAsync("accueil"))!;
+        Assert.Equal([6, 6, null], relue.Sections.Select(s => s.Cols));
+        var refus = await Assert.ThrowsAsync<DashboardValidationException>(() =>
+            service.SaveAsync(Page("accueil", Section("radiateurs") with { Cols = 13 })));
+        Assert.Contains("radiateurs", refus.Message);
+        await Assert.ThrowsAsync<DashboardValidationException>(() => service.SaveAsync(Page("accueil", Section("radiateurs") with { Cols = 0 })));
+    }
+
+    [Fact]
     public async Task Une_page_comptee_dans_une_autre_grille_est_refusee()
     {
         var service = new DashboardService(new Magasin());
