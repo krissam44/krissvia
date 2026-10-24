@@ -1,0 +1,57 @@
+01 01 00 00 00 00 00 2a                                                                           # IPP/1.1, successful-ok, request-id 42
+01                                                                                                # operation-attributes-tag
+47 00 12 61 74 74 72 69 62 75 74 65 73 2d 63 68 61 72 73 65 74 00 05 75 74 66 2d 38               # 0x47 attributes-charset
+48 00 1b 61 74 74 72 69 62 75 74 65 73 2d 6e 61 74 75 72 61 6c 2d 6c 61 6e 67 75 61 67 65 00 02   # 0x48 attributes-natural-language
+65 6e
+04                                                                                                # printer-attributes-tag
+23 00 0d 70 72 69 6e 74 65 72 2d 73 74 61 74 65 00 04 00 00 00 03                                 # printer-state = 3
+44 00 15 70 72 69 6e 74 65 72 2d 73 74 61 74 65 2d 72 65 61 73 6f 6e 73 00 04 6e 6f 6e 65         # printer-state-reasons : none
+35 00 0c 70 72 69 6e 74 65 72 2d 69 6e 66 6f 00 1a 00 02 65 6e 00 14 53 61 6d 73 75 6e 67 20 4d   # printer-info (textWithLanguage, en)
+32 30 32 30 20 53 65 72 69 65 73
+42 00 0c 70 72 69 6e 74 65 72 2d 6e 61 6d 65 00 0f 53 45 43 33 30 43 44 41 37 31 43 45 32 46 32   # 0x42 printer-name
+41 00 16 70 72 69 6e 74 65 72 2d 6d 61 6b 65 2d 61 6e 64 2d 6d 6f 64 65 6c 00 14 53 61 6d 73 75   # 0x41 printer-make-and-model
+6e 67 20 4d 32 30 32 30 20 53 65 72 69 65 73
+45 00 0c 70 72 69 6e 74 65 72 2d 75 75 69 64 00 2d 75 72 6e 3a 75 75 69 64 3a 31 36 41 36 35 37   # 0x45 printer-uuid
+30 30 2d 30 30 37 43 2d 31 30 30 30 2d 42 42 34 39 2d 33 30 43 44 41 37 31 43 45 32 46 32
+42 00 0c 6d 61 72 6b 65 72 2d 6e 61 6d 65 73 00 21 42 6c 61 63 6b 20 54 6f 6e 65 72 5f 53 2f 4e   # marker-names : Black Toner_S/N_:CRUM-18020727263
+5f 3a 43 52 55 4d 2d 31 38 30 32 30 37 32 37 32 36 33
+42 00 00 00 0f 54 72 61 6e 73 66 65 72 20 52 6f 6c 6c 65 72                                       # marker-names : Transfer Roller
+42 00 00 00 0a 46 75 73 65 72 20 4c 69 66 65                                                      # marker-names : Fuser Life
+42 00 00 00 0e 50 69 63 6b 2d 75 70 20 52 6f 6c 6c 65 72                                          # marker-names : Pick-up Roller
+21 00 0d 6d 61 72 6b 65 72 2d 6c 65 76 65 6c 73 00 04 00 00 00 60                                 # marker-levels : 96
+21 00 00 00 04 00 00 00 56                                                                        # marker-levels : 86
+21 00 00 00 04 00 00 00 56                                                                        # marker-levels : 86
+21 00 00 00 04 00 00 00 56                                                                        # marker-levels : 86
+21 00 11 6d 61 72 6b 65 72 2d 6c 6f 77 2d 6c 65 76 65 6c 73 00 04 00 00 00 0a                     # marker-low-levels : 10
+21 00 00 00 04 00 00 00 00                                                                        # marker-low-levels : 0
+21 00 00 00 04 00 00 00 00                                                                        # marker-low-levels : 0
+21 00 00 00 04 00 00 00 00                                                                        # marker-low-levels : 0
+44 00 0c 6d 61 72 6b 65 72 2d 74 79 70 65 73 00 05 74 6f 6e 65 72                                 # marker-types : toner
+44 00 00 00 0f 74 72 61 6e 73 66 65 72 2d 72 6f 6c 6c 65 72                                       # marker-types : transfer-roller
+44 00 00 00 05 66 75 73 65 72                                                                     # marker-types : fuser
+44 00 00 00 05 6f 74 68 65 72                                                                     # marker-types : other
+42 00 0d 6d 61 72 6b 65 72 2d 63 6f 6c 6f 72 73 00 07 23 30 30 30 30 30 30                        # marker-colors : #000000
+42 00 00 00 04 6e 6f 6e 65                                                                        # marker-colors : none
+42 00 00 00 04 6e 6f 6e 65                                                                        # marker-colors : none
+42 00 00 00 04 6e 6f 6e 65                                                                        # marker-colors : none
+34 00 11 6d 65 64 69 61 2d 63 6f 6c 2d 64 65 66 61 75 6c 74 00 00                                 # begCollection media-col-default
+4a 00 00 00 0a 6d 65 64 69 61 2d 73 69 7a 65                                                      # memberAttrName media-size
+34 00 00 00 00                                                                                    # begCollection (media-size)
+4a 00 00 00 0b 78 2d 64 69 6d 65 6e 73 69 6f 6e                                                   # memberAttrName x-dimension
+21 00 00 00 04 00 00 52 08                                                                        # 21000
+4a 00 00 00 0b 79 2d 64 69 6d 65 6e 73 69 6f 6e                                                   # memberAttrName y-dimension
+21 00 00 00 04 00 00 74 04                                                                        # 29700
+37 00 00 00 00                                                                                    # endCollection (media-size)
+4a 00 00 00 0a 6d 65 64 69 61 2d 74 79 70 65                                                      # memberAttrName media-type
+44 00 00 00 0a 73 74 61 74 69 6f 6e 65 72 79                                                      # stationery
+37 00 00 00 00                                                                                    # endCollection media-col-default
+32 00 1a 70 72 69 6e 74 65 72 2d 72 65 73 6f 6c 75 74 69 6f 6e 2d 64 65 66 61 75 6c 74 00 09 00   # 600 x 600 dpi
+00 02 58 00 00 02 58 03
+33 00 10 63 6f 70 69 65 73 2d 73 75 70 70 6f 72 74 65 64 00 08 00 00 00 01 00 00 00 63            # 1-99
+22 00 19 70 72 69 6e 74 65 72 2d 69 73 2d 61 63 63 65 70 74 69 6e 67 2d 6a 6f 62 73 00 01 01      # true
+31 00 14 70 72 69 6e 74 65 72 2d 63 75 72 72 65 6e 74 2d 74 69 6d 65 00 0b 07 ea 0a 18 14 26 0c   # 2026-10-24 20:38:12 +02:00
+00 2b 02 00
+30 00 18 70 72 69 6e 74 65 72 2d 66 69 72 6d 77 61 72 65 2d 76 65 72 73 69 6f 6e 00 03 01 02 03   # octetString
+05                                                                                                # unsupported-attributes-tag
+10 00 10 70 72 69 6e 74 65 72 2d 6c 6f 63 61 74 69 6f 6e 00 00                                    # unsupported (sans valeur)
+03                                                                                                # end-of-attributes-tag

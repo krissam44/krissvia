@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "imprimante",
+  "name": "Imprimante",
+  "description": "Une imprimante IPP : une jauge en arc par consommable, l'état, l'heure du dernier relevé, le niveau le plus bas, les alertes, et « Vérifier » pour relever tout de suite. Livré par le plugin Imprimantes IPP.",
+  "version": "1.0.0",
+  "element": "kv-imprimante",
+  "script": "imprimante.js",
+  "slots": [ { "name": "imprimante", "kinds": ["sensor"], "device_classes": ["printer"], "required": true } ],
+  "size": { "cols": 3, "rows": 3 }
+}
