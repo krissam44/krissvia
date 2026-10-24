@@ -82,6 +82,7 @@ public sealed class IppHttpClient : IIppClient, IDisposable
     [
         "printer-state", "printer-state-reasons", "printer-state-message",
         "marker-names", "marker-levels", "marker-low-levels", "marker-high-levels", "marker-types", "marker-colors",
+        "printer-supply", "printer-supply-description",
         "printer-name", "printer-info", "printer-make-and-model", "printer-uuid", "printer-location",
     ];
 

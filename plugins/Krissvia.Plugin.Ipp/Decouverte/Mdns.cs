@@ -60,7 +60,8 @@ public static class DnsMessage
         var enregistrements = new List<DnsRecord>();
         try
         {
-            if (m.Length < 12) return [];
+            // Seules les réponses comptent : sur le groupe passent aussi les questions des autres machines.
+            if (m.Length < 12 || (m[2] & 0x80) == 0) return [];
             var questions = BinaryPrimitives.ReadUInt16BigEndian(m[4..]);
             var total = BinaryPrimitives.ReadUInt16BigEndian(m[6..]) + BinaryPrimitives.ReadUInt16BigEndian(m[8..]) + BinaryPrimitives.ReadUInt16BigEndian(m[10..]);
             var p = 12;
@@ -192,14 +193,20 @@ public interface IDecouverteIpp
 }
 
 /// <summary>
-/// mDNS en « monodiffusion à l'ancienne » (RFC 6762 §6.7) : la question part vers 224.0.0.251:5353 depuis un port
-/// quelconque, et les répondeurs (Bonjour des imprimantes, Avahi) répondent directement à ce port. Pas besoin
-/// d'écouter le 5353, souvent déjà pris par le système. Une question par interface IPv4 active, pour ne pas dépendre
-/// de l'interface que le système choisirait.
+/// La question mDNS part de deux façons, en même temps, et les réponses des deux sont réunies :
+/// <list type="bullet">
+/// <item><b>mDNS ordinaire</b> : depuis le port 5353, partagé avec le répondeur du système (Avahi, Windows) ; les
+/// imprimantes répondent au groupe 224.0.0.251, qu'on écoute sur chaque interface IPv4. C'est la seule qui ait obtenu
+/// une réponse de la Samsung M2020 de l'utilisateur, le 24/10/2026.</item>
+/// <item><b>Monodiffusion à l'ancienne</b> (RFC 6762 §6.7), depuis un port quelconque : les répondeurs devraient
+/// répondre directement à ce port. Sur le poste Windows de l'essai, personne n'a répondu ainsi (pare-feu ou
+/// répondeurs) ; gardée en secours, pour une machine où le 5353 ne se partage pas.</item>
+/// </list>
 /// </summary>
 public sealed class DecouverteMdns : IDecouverteIpp
 {
-    private static readonly IPEndPoint Groupe = new(IPAddress.Parse("224.0.0.251"), 5353);
+    private static readonly IPAddress Groupe = IPAddress.Parse("224.0.0.251");
+    private static readonly IPEndPoint Destination = new(Groupe, 5353);
 
     public async Task<IReadOnlyList<ServiceIpp>> ChercherAsync(TimeSpan duree, CancellationToken ct)
     {
@@ -211,11 +218,56 @@ public sealed class DecouverteMdns : IDecouverteIpp
             .ToList();
         if (adresses.Count == 0) adresses.Add(IPAddress.Any);
 
-        var lus = await Task.WhenAll(adresses.Select(a => InterrogerAsync(a, duree, ct)));
+        var lus = await Task.WhenAll([MulticastAsync(adresses, duree, ct), .. adresses.Select(a => MonodiffusionAsync(a, duree, ct))]);
         return DnsMessage.Assembler(lus.SelectMany(l => l));
     }
 
-    private static async Task<List<DnsRecord>> InterrogerAsync(IPAddress locale, TimeSpan duree, CancellationToken ct)
+    private static async Task<List<DnsRecord>> MulticastAsync(IReadOnlyList<IPAddress> adresses, TimeSpan duree, CancellationToken ct)
+    {
+        var recus = new List<DnsRecord>();
+        try
+        {
+            using var udp = new UdpClient(AddressFamily.InterNetwork);
+            udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            udp.Client.Bind(new IPEndPoint(IPAddress.Any, 5353));
+            foreach (var a in adresses)
+            {
+                try
+                {
+                    udp.JoinMulticastGroup(Groupe, a);
+                }
+                catch (SocketException)
+                {
+                    // Interface sans multidiffusion (VPN, Hyper-V…) : les autres suffisent.
+                }
+            }
+
+            // Identifiant 0 : celui d'une question mDNS ordinaire (RFC 6762 §18.1).
+            var question = DnsMessage.Question(0, DnsMessage.ServiceIpp, DnsMessage.ServiceIpps);
+            foreach (var a in adresses.Where(a => !a.Equals(IPAddress.Any)))
+            {
+                try
+                {
+                    udp.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, a.GetAddressBytes());
+                    await udp.SendAsync(question, Destination, ct);
+                }
+                catch (SocketException)
+                {
+                }
+            }
+
+            if (adresses is [var seule] && seule.Equals(IPAddress.Any)) await udp.SendAsync(question, Destination, ct);
+            await EcouterAsync(udp, recus, duree, ct);
+        }
+        catch (SocketException)
+        {
+            // 5353 réservé en exclusivité par un autre programme : la monodiffusion reste.
+        }
+
+        return recus;
+    }
+
+    private static async Task<List<DnsRecord>> MonodiffusionAsync(IPAddress locale, TimeSpan duree, CancellationToken ct)
     {
         var recus = new List<DnsRecord>();
         try
@@ -224,10 +276,23 @@ public sealed class DecouverteMdns : IDecouverteIpp
             if (!locale.Equals(IPAddress.Any))
                 udp.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, locale.GetAddressBytes());
             var question = DnsMessage.Question((ushort)Random.Shared.Next(1, ushort.MaxValue), DnsMessage.ServiceIpp, DnsMessage.ServiceIpps);
-            await udp.SendAsync(question, Groupe, ct);
+            await udp.SendAsync(question, Destination, ct);
+            await EcouterAsync(udp, recus, duree, ct);
+        }
+        catch (SocketException)
+        {
+            // Interface sans multidiffusion (VPN, Hyper-V…) : les autres répondent.
+        }
 
-            using var limite = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            limite.CancelAfter(duree);
+        return recus;
+    }
+
+    private static async Task EcouterAsync(UdpClient udp, List<DnsRecord> recus, TimeSpan duree, CancellationToken ct)
+    {
+        using var limite = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        limite.CancelAfter(duree);
+        try
+        {
             while (true)
             {
                 var r = await udp.ReceiveAsync(limite.Token);
@@ -238,11 +303,5 @@ public sealed class DecouverteMdns : IDecouverteIpp
         {
             // Fin de la fenêtre d'écoute.
         }
-        catch (SocketException)
-        {
-            // Interface sans multidiffusion (VPN, Hyper-V…) : les autres répondent.
-        }
-
-        return recus;
     }
 }

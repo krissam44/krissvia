@@ -6,7 +6,8 @@ namespace Krissvia.Plugin.Ipp.Tests;
 /// <summary>
 /// Les trames de <c>Trames/</c> : écrites octet par octet d'après la RFC 8010 par un script indépendant du codec (pas
 /// par lui : un test qui relit ce que le codec a écrit ne prouverait que sa cohérence avec lui-même), aux valeurs de
-/// la Samsung M2020 de l'utilisateur telles que Gladys les affiche.
+/// la Samsung M2020 de l'utilisateur telles que Gladys les affiche. Les trames <c>capture-*</c>, elles, sont de vraies
+/// réponses de cette imprimante (voir <see cref="CaptureTests"/>).
 /// </summary>
 internal static class Trames
 {

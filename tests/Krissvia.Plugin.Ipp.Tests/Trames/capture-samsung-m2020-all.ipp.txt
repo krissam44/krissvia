@@ -1,0 +1,241 @@
+# Capture réelle, Samsung M2020 (192.168.1.63), 24/10/2026 : requested-attributes = all.
+01 01 00 00 00 00 00 07                                                                           # IPP/1.1, statut 0x0000, request-id 7
+01                                                                                                # operation-attributes-tag
+47 00 12 61 74 74 72 69 62 75 74 65 73 2d 63 68 61 72 73 65 74 00 05 75 74 66 2d 38               # attributes-charset 0x47 = utf-8
+48 00 1b 61 74 74 72 69 62 75 74 65 73 2d 6e 61 74 75 72 61 6c 2d 6c 61 6e 67 75 61 67 65 00 05   # attributes-natural-language 0x48 = en-us
+65 6e 2d 75 73
+45 00 0b 70 72 69 6e 74 65 72 2d 75 72 69 00 20 69 70 70 3a 2f 2f 31 39 32 2e 31 36 38 2e 31 2e   # printer-uri 0x45 = ipp://192.168.1.63:631/ipp/print
+36 33 3a 36 33 31 2f 69 70 70 2f 70 72 69 6e 74
+04                                                                                                # printer-attributes-tag
+21 00 14 6a 6f 62 2d 70 72 69 6f 72 69 74 79 2d 64 65 66 61 75 6c 74 00 04 00 00 00 32            # job-priority-default 0x21 = 50
+44 00 16 6a 6f 62 2d 68 6f 6c 64 2d 75 6e 74 69 6c 2d 64 65 66 61 75 6c 74 00 07 6e 6f 2d 68 6f   # job-hold-until-default 0x44 = no-hold
+6c 64
+44 00 12 6a 6f 62 2d 73 68 65 65 74 73 2d 64 65 66 61 75 6c 74 00 04 6e 6f 6e 65                  # job-sheets-default 0x44 = none
+44 00 22 6d 75 6c 74 69 70 6c 65 2d 64 6f 63 75 6d 65 6e 74 2d 68 61 6e 64 6c 69 6e 67 2d 64 65   # multiple-document-handling-default 0x44 = separate-documents-uncollated-copies
+66 61 75 6c 74 00 24 73 65 70 61 72 61 74 65 2d 64 6f 63 75 6d 65 6e 74 73 2d 75 6e 63 6f 6c 6c
+61 74 65 64 2d 63 6f 70 69 65 73
+21 00 0e 63 6f 70 69 65 73 2d 64 65 66 61 75 6c 74 00 04 00 00 00 01                              # copies-default 0x21 = 1
+23 00 12 66 69 6e 69 73 68 69 6e 67 73 2d 64 65 66 61 75 6c 74 00 04 00 00 00 03                  # finishings-default 0x23 = 3
+44 00 0d 73 69 64 65 73 2d 64 65 66 61 75 6c 74 00 09 6f 6e 65 2d 73 69 64 65 64                  # sides-default 0x44 = one-sided
+21 00 11 6e 75 6d 62 65 72 2d 75 70 2d 64 65 66 61 75 6c 74 00 04 00 00 00 01                     # number-up-default 0x21 = 1
+23 00 1d 6f 72 69 65 6e 74 61 74 69 6f 6e 2d 72 65 71 75 65 73 74 65 64 2d 64 65 66 61 75 6c 74   # orientation-requested-default 0x23 = 3
+00 04 00 00 00 03
+44 00 0d 6d 65 64 69 61 2d 64 65 66 61 75 6c 74 00 10 69 73 6f 5f 61 34 5f 32 31 30 78 32 39 37   # media-default 0x44 = iso_a4_210x297mm
+6d 6d
+32 00 1a 70 72 69 6e 74 65 72 2d 72 65 73 6f 6c 75 74 69 6f 6e 2d 64 65 66 61 75 6c 74 00 09 00   # printer-resolution-default 0x32 = 9 octet(s)
+00 02 58 00 00 02 58 03
+23 00 15 70 72 69 6e 74 2d 71 75 61 6c 69 74 79 2d 64 65 66 61 75 6c 74 00 04 00 00 00 04         # print-quality-default 0x23 = 4
+44 00 12 6d 65 64 69 61 2d 74 79 70 65 2d 64 65 66 61 75 6c 74 00 0a 73 74 61 74 69 6f 6e 65 72   # media-type-default 0x44 = stationery
+79
+44 00 14 6d 65 64 69 61 2d 73 6f 75 72 63 65 2d 64 65 66 61 75 6c 74 00 06 74 72 61 79 2d 31      # media-source-default 0x44 = tray-1
+44 00 18 70 72 69 6e 74 2d 63 6f 6c 6f 72 2d 6d 6f 64 65 2d 64 65 66 61 75 6c 74 00 0a 6d 6f 6e   # print-color-mode-default 0x44 = monochrome
+6f 63 68 72 6f 6d 65
+44 00 12 6f 75 74 70 75 74 2d 62 69 6e 2d 64 65 66 61 75 6c 74 00 03 74 6f 70                     # output-bin-default 0x44 = top
+22 00 1b 6d 61 72 67 69 6e 73 2d 70 72 65 2d 61 70 70 6c 69 65 64 2d 64 65 66 61 75 6c 74 00 01   # margins-pre-applied-default 0x22 = true
+01
+44 00 13 6f 75 74 70 75 74 2d 6d 6f 64 65 2d 64 65 66 61 75 6c 74 00 0a 6d 6f 6e 6f 63 68 72 6f   # output-mode-default 0x44 = monochrome
+6d 65
+21 00 16 6a 6f 62 2d 70 72 69 6f 72 69 74 79 2d 73 75 70 70 6f 72 74 65 64 00 04 00 00 00 64      # job-priority-supported 0x21 = 100
+42 00 18 6a 6f 62 2d 68 6f 6c 64 2d 75 6e 74 69 6c 2d 73 75 70 70 6f 72 74 65 64 00 07 6e 6f 2d   # job-hold-until-supported 0x42 = no-hold
+68 6f 6c 64
+44 00 14 6a 6f 62 2d 73 68 65 65 74 73 2d 73 75 70 70 6f 72 74 65 64 00 04 6e 6f 6e 65            # job-sheets-supported 0x44 = none
+44 00 24 6d 75 6c 74 69 70 6c 65 2d 64 6f 63 75 6d 65 6e 74 2d 68 61 6e 64 6c 69 6e 67 2d 73 75   # multiple-document-handling-supported 0x44 = separate-documents-uncollated-copies
+70 70 6f 72 74 65 64 00 24 73 65 70 61 72 61 74 65 2d 64 6f 63 75 6d 65 6e 74 73 2d 75 6e 63 6f
+6c 6c 61 74 65 64 2d 63 6f 70 69 65 73
+33 00 10 63 6f 70 69 65 73 2d 73 75 70 70 6f 72 74 65 64 00 08 00 00 00 01 00 00 00 ff            # copies-supported 0x33 = 8 octet(s)
+23 00 14 66 69 6e 69 73 68 69 6e 67 73 2d 73 75 70 70 6f 72 74 65 64 00 04 00 00 00 03            # finishings-supported 0x23 = 3
+22 00 15 70 61 67 65 2d 72 61 6e 67 65 73 2d 73 75 70 70 6f 72 74 65 64 00 01 00                  # page-ranges-supported 0x22 = false
+44 00 0f 73 69 64 65 73 2d 73 75 70 70 6f 72 74 65 64 00 09 6f 6e 65 2d 73 69 64 65 64            # sides-supported 0x44 = one-sided
+21 00 13 6e 75 6d 62 65 72 2d 75 70 2d 73 75 70 70 6f 72 74 65 64 00 04 00 00 00 01               # number-up-supported 0x21 = 1
+23 00 1f 6f 72 69 65 6e 74 61 74 69 6f 6e 2d 72 65 71 75 65 73 74 65 64 2d 73 75 70 70 6f 72 74   # orientation-requested-supported 0x23 = 3
+65 64 00 04 00 00 00 03
+44 00 0f 6d 65 64 69 61 2d 73 75 70 70 6f 72 74 65 64 00 12 6e 61 5f 6c 65 74 74 65 72 5f 38 2e   # media-supported 0x44 = na_letter_8.5x11in
+35 78 31 31 69 6e
+44 00 00 00 11 6e 61 5f 6c 65 67 61 6c 5f 38 2e 35 78 31 34 69 6e                                 # (suite media-supported) 0x44 = na_legal_8.5x14in
+44 00 00 00 10 69 73 6f 5f 61 34 5f 32 31 30 78 32 39 37 6d 6d                                    # (suite media-supported) 0x44 = iso_a4_210x297mm
+44 00 00 00 18 6e 61 5f 65 78 65 63 75 74 69 76 65 5f 37 2e 32 35 78 31 30 2e 35 69 6e            # (suite media-supported) 0x44 = na_executive_7.25x10.5in
+44 00 00 00 10 6a 69 73 5f 62 35 5f 31 38 32 78 32 35 37 6d 6d                                    # (suite media-supported) 0x44 = jis_b5_182x257mm
+44 00 00 00 10 69 73 6f 5f 62 35 5f 31 37 36 78 32 35 30 6d 6d                                    # (suite media-supported) 0x44 = iso_b5_176x250mm
+44 00 00 00 18 6e 61 5f 6e 75 6d 62 65 72 2d 31 30 5f 34 2e 31 32 35 78 39 2e 35 69 6e            # (suite media-supported) 0x44 = na_number-10_4.125x9.5in
+44 00 00 00 16 6e 61 5f 6d 6f 6e 61 72 63 68 5f 33 2e 38 37 35 78 37 2e 35 69 6e                  # (suite media-supported) 0x44 = na_monarch_3.875x7.5in
+44 00 00 00 10 69 73 6f 5f 64 6c 5f 31 31 30 78 32 32 30 6d 6d                                    # (suite media-supported) 0x44 = iso_dl_110x220mm
+44 00 00 00 10 69 73 6f 5f 63 35 5f 31 36 32 78 32 32 39 6d 6d                                    # (suite media-supported) 0x44 = iso_c5_162x229mm
+44 00 00 00 14 6e 61 5f 66 6f 6f 6c 73 63 61 70 5f 38 2e 35 78 31 33 69 6e                        # (suite media-supported) 0x44 = na_foolscap_8.5x13in
+44 00 00 00 10 69 73 6f 5f 61 35 5f 31 34 38 78 32 31 30 6d 6d                                    # (suite media-supported) 0x44 = iso_a5_148x210mm
+44 00 00 00 14 6f 65 5f 6f 66 69 63 69 6f 5f 38 2e 35 78 31 33 2e 35 69 6e                        # (suite media-supported) 0x44 = oe_oficio_8.5x13.5in
+44 00 00 00 12 6e 61 5f 69 6e 64 65 78 2d 34 78 36 5f 34 78 36 69 6e                              # (suite media-supported) 0x44 = na_index-4x6_4x6in
+44 00 00 00 13 63 75 73 74 6f 6d 5f 6d 69 6e 5f 37 36 78 31 32 37 6d 6d                           # (suite media-supported) 0x44 = custom_min_76x127mm
+44 00 00 00 14 63 75 73 74 6f 6d 5f 6d 61 78 5f 32 31 36 78 33 35 36 6d 6d                        # (suite media-supported) 0x44 = custom_max_216x356mm
+32 00 1c 70 72 69 6e 74 65 72 2d 72 65 73 6f 6c 75 74 69 6f 6e 2d 73 75 70 70 6f 72 74 65 64 00   # printer-resolution-supported 0x32 = 9 octet(s)
+09 00 00 02 58 00 00 02 58 03
+23 00 17 70 72 69 6e 74 2d 71 75 61 6c 69 74 79 2d 73 75 70 70 6f 72 74 65 64 00 04 00 00 00 04   # print-quality-supported 0x23 = 4
+44 00 21 6a 6f 62 2d 63 72 65 61 74 69 6f 6e 2d 61 74 74 72 69 62 75 74 65 73 2d 73 75 70 70 6f   # job-creation-attributes-supported 0x44 = copies
+72 74 65 64 00 06 63 6f 70 69 65 73
+44 00 00 00 0a 66 69 6e 69 73 68 69 6e 67 73                                                      # (suite job-creation-attributes-supported) 0x44 = finishings
+44 00 00 00 16 69 70 70 2d 61 74 74 72 69 62 75 74 65 2d 66 69 64 65 6c 69 74 79                  # (suite job-creation-attributes-supported) 0x44 = ipp-attribute-fidelity
+44 00 00 00 08 6a 6f 62 2d 6e 61 6d 65                                                            # (suite job-creation-attributes-supported) 0x44 = job-name
+44 00 00 00 0f 64 6f 63 75 6d 65 6e 74 2d 66 6f 72 6d 61 74                                       # (suite job-creation-attributes-supported) 0x44 = document-format
+44 00 00 00 0d 64 6f 63 75 6d 65 6e 74 2d 6e 61 6d 65                                             # (suite job-creation-attributes-supported) 0x44 = document-name
+44 00 00 00 05 6d 65 64 69 61                                                                     # (suite job-creation-attributes-supported) 0x44 = media
+44 00 00 00 09 6d 65 64 69 61 2d 63 6f 6c                                                         # (suite job-creation-attributes-supported) 0x44 = media-col
+44 00 00 00 0a 6d 65 64 69 61 2d 73 69 7a 65                                                      # (suite job-creation-attributes-supported) 0x44 = media-size
+44 00 00 00 0a 6d 65 64 69 61 2d 74 79 70 65                                                      # (suite job-creation-attributes-supported) 0x44 = media-type
+44 00 00 00 0c 6d 65 64 69 61 2d 73 6f 75 72 63 65                                                # (suite job-creation-attributes-supported) 0x44 = media-source
+44 00 00 00 1a 6d 75 6c 74 69 70 6c 65 2d 64 6f 63 75 6d 65 6e 74 2d 68 61 6e 64 6c 69 6e 67      # (suite job-creation-attributes-supported) 0x44 = multiple-document-handling
+44 00 00 00 09 6e 75 6d 62 65 72 2d 75 70                                                         # (suite job-creation-attributes-supported) 0x44 = number-up
+44 00 00 00 0a 6f 75 74 70 75 74 2d 62 69 6e                                                      # (suite job-creation-attributes-supported) 0x44 = output-bin
+44 00 00 00 0b 6f 75 74 70 75 74 2d 6d 6f 64 65                                                   # (suite job-creation-attributes-supported) 0x44 = output-mode
+44 00 00 00 15 6f 72 69 65 6e 74 61 74 69 6f 6e 2d 72 65 71 75 65 73 74 65 64                     # (suite job-creation-attributes-supported) 0x44 = orientation-requested
+44 00 00 00 0d 70 72 69 6e 74 2d 71 75 61 6c 69 74 79                                             # (suite job-creation-attributes-supported) 0x44 = print-quality
+44 00 00 00 12 70 72 69 6e 74 65 72 2d 72 65 73 6f 6c 75 74 69 6f 6e                              # (suite job-creation-attributes-supported) 0x44 = printer-resolution
+44 00 00 00 05 73 69 64 65 73                                                                     # (suite job-creation-attributes-supported) 0x44 = sides
+44 00 00 00 10 70 72 69 6e 74 2d 63 6f 6c 6f 72 2d 6d 6f 64 65                                    # (suite job-creation-attributes-supported) 0x44 = print-color-mode
+44 00 13 6d 65 64 69 61 2d 63 6f 6c 2d 73 75 70 70 6f 72 74 65 64 00 0a 6d 65 64 69 61 2d 73 69   # media-col-supported 0x44 = media-size
+7a 65
+44 00 00 00 0a 6d 65 64 69 61 2d 74 79 70 65                                                      # (suite media-col-supported) 0x44 = media-type
+44 00 00 00 0c 6d 65 64 69 61 2d 73 6f 75 72 63 65                                                # (suite media-col-supported) 0x44 = media-source
+44 00 00 00 13 6d 65 64 69 61 2d 62 6f 74 74 6f 6d 2d 6d 61 72 67 69 6e                           # (suite media-col-supported) 0x44 = media-bottom-margin
+44 00 00 00 10 6d 65 64 69 61 2d 74 6f 70 2d 6d 61 72 67 69 6e                                    # (suite media-col-supported) 0x44 = media-top-margin
+44 00 00 00 12 6d 65 64 69 61 2d 72 69 67 68 74 2d 6d 61 72 67 69 6e                              # (suite media-col-supported) 0x44 = media-right-margin
+44 00 00 00 11 6d 65 64 69 61 2d 6c 65 66 74 2d 6d 61 72 67 69 6e                                 # (suite media-col-supported) 0x44 = media-left-margin
+21 00 1d 6d 65 64 69 61 2d 62 6f 74 74 6f 6d 2d 6d 61 72 67 69 6e 2d 73 75 70 70 6f 72 74 65 64   # media-bottom-margin-supported 0x21 = 440
+00 04 00 00 01 b8
+21 00 1b 6d 65 64 69 61 2d 6c 65 66 74 2d 6d 61 72 67 69 6e 2d 73 75 70 70 6f 72 74 65 64 00 04   # media-left-margin-supported 0x21 = 440
+00 00 01 b8
+21 00 1c 6d 65 64 69 61 2d 72 69 67 68 74 2d 6d 61 72 67 69 6e 2d 73 75 70 70 6f 72 74 65 64 00   # media-right-margin-supported 0x21 = 440
+04 00 00 01 b8
+21 00 1a 6d 65 64 69 61 2d 74 6f 70 2d 6d 61 72 67 69 6e 2d 73 75 70 70 6f 72 74 65 64 00 04 00   # media-top-margin-supported 0x21 = 440
+00 01 b8
+44 00 16 6d 65 64 69 61 2d 73 6f 75 72 63 65 2d 73 75 70 70 6f 72 74 65 64 00 06 74 72 61 79 2d   # media-source-supported 0x44 = tray-1
+31
+44 00 14 6d 65 64 69 61 2d 74 79 70 65 2d 73 75 70 70 6f 72 74 65 64 00 0a 73 74 61 74 69 6f 6e   # media-type-supported 0x44 = stationery
+65 72 79
+44 00 00 00 16 73 74 61 74 69 6f 6e 65 72 79 2d 68 65 61 76 79 77 65 69 67 68 74                  # (suite media-type-supported) 0x44 = stationery-heavyweight
+44 00 00 00 16 73 74 61 74 69 6f 6e 65 72 79 2d 6c 69 67 68 74 77 65 69 67 68 74                  # (suite media-type-supported) 0x44 = stationery-lightweight
+44 00 00 00 0f 73 74 61 74 69 6f 6e 65 72 79 2d 62 6f 6e 64                                       # (suite media-type-supported) 0x44 = stationery-bond
+44 00 00 00 12 73 74 61 74 69 6f 6e 65 72 79 2d 63 6f 6c 6f 72 65 64                              # (suite media-type-supported) 0x44 = stationery-colored
+44 00 00 00 09 63 61 72 64 73 74 6f 63 6b                                                         # (suite media-type-supported) 0x44 = cardstock
+44 00 00 00 06 6c 61 62 65 6c 73                                                                  # (suite media-type-supported) 0x44 = labels
+44 00 00 00 08 65 6e 76 65 6c 6f 70 65                                                            # (suite media-type-supported) 0x44 = envelope
+44 00 00 00 08 72 65 63 79 63 6c 65 64                                                            # (suite media-type-supported) 0x44 = recycled
+44 00 00 00 0a 70 72 65 70 72 69 6e 74 65 64                                                      # (suite media-type-supported) 0x44 = preprinted
+44 00 00 00 06 63 6f 74 74 6f 6e                                                                  # (suite media-type-supported) 0x44 = cotton
+44 00 00 00 07 61 72 63 68 69 76 65                                                               # (suite media-type-supported) 0x44 = archive
+44 00 16 70 64 66 2d 76 65 72 73 69 6f 6e 73 2d 73 75 70 70 6f 72 74 65 64 00 04 6e 6f 6e 65      # pdf-versions-supported 0x44 = none
+44 00 0d 75 72 66 2d 73 75 70 70 6f 72 74 65 64 00 02 57 38                                       # urf-supported 0x44 = W8
+44 00 00 00 05 52 53 36 30 30                                                                     # (suite urf-supported) 0x44 = RS600
+44 00 00 00 03 49 53 31                                                                           # (suite urf-supported) 0x44 = IS1
+44 00 00 00 03 43 50 31                                                                           # (suite urf-supported) 0x44 = CP1
+44 00 00 00 04 49 46 55 30                                                                        # (suite urf-supported) 0x44 = IFU0
+44 00 00 00 03 50 51 34                                                                           # (suite urf-supported) 0x44 = PQ4
+44 00 00 00 04 4f 42 31 30                                                                        # (suite urf-supported) 0x44 = OB10
+44 00 00 00 04 56 31 2e 32                                                                        # (suite urf-supported) 0x44 = V1.2
+44 00 21 6a 6f 62 2d 70 61 73 73 77 6f 72 64 2d 65 6e 63 72 79 70 74 69 6f 6e 2d 73 75 70 70 6f   # job-password-encryption-supported 0x44 = none
+72 74 65 64 00 04 6e 6f 6e 65
+21 00 16 6a 6f 62 2d 70 61 73 73 77 6f 72 64 2d 73 75 70 70 6f 72 74 65 64 00 04 00 00 00 00      # job-password-supported 0x21 = 0
+44 00 1a 70 72 69 6e 74 2d 63 6f 6c 6f 72 2d 6d 6f 64 65 2d 73 75 70 70 6f 72 74 65 64 00 0a 6d   # print-color-mode-supported 0x44 = monochrome
+6f 6e 6f 63 68 72 6f 6d 65
+44 00 00 00 04 61 75 74 6f                                                                        # (suite print-color-mode-supported) 0x44 = auto
+44 00 14 6f 75 74 70 75 74 2d 62 69 6e 2d 73 75 70 70 6f 72 74 65 64 00 03 74 6f 70               # output-bin-supported 0x44 = top
+22 00 1d 6d 61 72 67 69 6e 73 2d 70 72 65 2d 61 70 70 6c 69 65 64 2d 73 75 70 70 6f 72 74 65 64   # margins-pre-applied-supported 0x22 = true
+00 01 01
+44 00 15 6f 75 74 70 75 74 2d 6d 6f 64 65 2d 73 75 70 70 6f 72 74 65 64 00 0a 6d 6f 6e 6f 63 68   # output-mode-supported 0x44 = monochrome
+72 6f 6d 65
+44 00 00 00 04 61 75 74 6f                                                                        # (suite output-mode-supported) 0x44 = auto
+45 00 15 70 72 69 6e 74 65 72 2d 75 72 69 2d 73 75 70 70 6f 72 74 65 64 00 1c 69 70 70 3a 2f 2f   # printer-uri-supported 0x45 = ipp://192.168.1.63/ipp/print
+31 39 32 2e 31 36 38 2e 31 2e 36 33 2f 69 70 70 2f 70 72 69 6e 74
+45 00 00 00 26 69 70 70 3a 2f 2f 53 45 43 33 30 43 44 41 37 32 30 31 32 38 37 2e 6c 6f 63 61 6c   # (suite printer-uri-supported) 0x45 = ipp://SEC30CDA7201287.local./ipp/print
+2e 2f 69 70 70 2f 70 72 69 6e 74
+44 00 16 75 72 69 2d 73 65 63 75 72 69 74 79 2d 73 75 70 70 6f 72 74 65 64 00 04 6e 6f 6e 65      # uri-security-supported 0x44 = none
+44 00 00 00 04 6e 6f 6e 65                                                                        # (suite uri-security-supported) 0x44 = none
+44 00 1c 75 72 69 2d 61 75 74 68 65 6e 74 69 63 61 74 69 6f 6e 2d 73 75 70 70 6f 72 74 65 64 00   # uri-authentication-supported 0x44 = none
+04 6e 6f 6e 65
+44 00 00 00 04 6e 6f 6e 65                                                                        # (suite uri-authentication-supported) 0x44 = none
+42 00 0c 70 72 69 6e 74 65 72 2d 6e 61 6d 65 00 0f 53 45 43 33 30 43 44 41 37 32 30 31 32 38 37   # printer-name 0x42 = SEC30CDA7201287
+41 00 10 70 72 69 6e 74 65 72 2d 6c 6f 63 61 74 69 6f 6e 00 00                                    # printer-location 0x41 = 
+41 00 0c 70 72 69 6e 74 65 72 2d 69 6e 66 6f 00 26 53 61 6d 73 75 6e 67 20 4d 32 30 32 30 20 53   # printer-info 0x41 = Samsung M2020 Series (SEC30CDA7201287)
+65 72 69 65 73 20 28 53 45 43 33 30 43 44 41 37 32 30 31 32 38 37 29
+45 00 11 70 72 69 6e 74 65 72 2d 6d 6f 72 65 2d 69 6e 66 6f 00 58 68 74 74 70 3a 2f 2f 31 39 32   # printer-more-info 0x45 = http://192.168.1.63/sws/index.html?link=/sws/ap...
+2e 31 36 38 2e 31 2e 36 33 2f 73 77 73 2f 69 6e 64 65 78 2e 68 74 6d 6c 3f 6c 69 6e 6b 3d 2f 73
+77 73 2f 61 70 70 2f 73 65 74 74 69 6e 67 73 2f 6e 65 74 77 6f 72 6b 2f 41 69 72 50 72 69 6e 74
+2f 41 69 72 50 72 69 6e 74 2e 68 74 6d 6c
+45 00 18 70 72 69 6e 74 65 72 2d 64 72 69 76 65 72 2d 69 6e 73 74 61 6c 6c 65 72 00 41 68 74 74   # printer-driver-installer 0x45 = http://www.samsung.com/Support/ProductSupport/d...
+70 3a 2f 2f 77 77 77 2e 73 61 6d 73 75 6e 67 2e 63 6f 6d 2f 53 75 70 70 6f 72 74 2f 50 72 6f 64
+75 63 74 53 75 70 70 6f 72 74 2f 64 6f 77 6e 6c 6f 61 64 2f 69 6e 64 65 78 2e 61 73 70 78
+41 00 16 70 72 69 6e 74 65 72 2d 6d 61 6b 65 2d 61 6e 64 2d 6d 6f 64 65 6c 00 14 53 61 6d 73 75   # printer-make-and-model 0x41 = Samsung M2020 Series
+6e 67 20 4d 32 30 32 30 20 53 65 72 69 65 73
+23 00 0d 70 72 69 6e 74 65 72 2d 73 74 61 74 65 00 04 00 00 00 03                                 # printer-state 0x23 = 3
+44 00 15 70 72 69 6e 74 65 72 2d 73 74 61 74 65 2d 72 65 61 73 6f 6e 73 00 04 6e 6f 6e 65         # printer-state-reasons 0x44 = none
+41 00 15 70 72 69 6e 74 65 72 2d 73 74 61 74 65 2d 6d 65 73 73 61 67 65 00 19 50 72 69 6e 74 65   # printer-state-message 0x41 = Printer is ready to print
+72 20 69 73 20 72 65 61 64 79 20 74 6f 20 70 72 69 6e 74
+44 00 16 69 70 70 2d 76 65 72 73 69 6f 6e 73 2d 73 75 70 70 6f 72 74 65 64 00 03 31 2e 30         # ipp-versions-supported 0x44 = 1.0
+44 00 00 00 03 31 2e 31                                                                           # (suite ipp-versions-supported) 0x44 = 1.1
+44 00 00 00 03 32 2e 30                                                                           # (suite ipp-versions-supported) 0x44 = 2.0
+23 00 14 6f 70 65 72 61 74 69 6f 6e 73 2d 73 75 70 70 6f 72 74 65 64 00 04 00 00 00 02            # operations-supported 0x23 = 2
+23 00 00 00 04 00 00 00 04                                                                        # (suite operations-supported) 0x23 = 4
+23 00 00 00 04 00 00 00 05                                                                        # (suite operations-supported) 0x23 = 5
+23 00 00 00 04 00 00 00 06                                                                        # (suite operations-supported) 0x23 = 6
+23 00 00 00 04 00 00 00 08                                                                        # (suite operations-supported) 0x23 = 8
+23 00 00 00 04 00 00 00 09                                                                        # (suite operations-supported) 0x23 = 9
+23 00 00 00 04 00 00 00 0a                                                                        # (suite operations-supported) 0x23 = 10
+23 00 00 00 04 00 00 00 0b                                                                        # (suite operations-supported) 0x23 = 11
+22 00 20 6d 75 6c 74 69 70 6c 65 2d 64 6f 63 75 6d 65 6e 74 2d 6a 6f 62 73 2d 73 75 70 70 6f 72   # multiple-document-jobs-supported 0x22 = false
+74 65 64 00 01 00
+47 00 12 63 68 61 72 73 65 74 2d 63 6f 6e 66 69 67 75 72 65 64 00 05 75 74 66 2d 38               # charset-configured 0x47 = utf-8
+47 00 11 63 68 61 72 73 65 74 2d 73 75 70 70 6f 72 74 65 64 00 05 75 74 66 2d 38                  # charset-supported 0x47 = utf-8
+48 00 1b 6e 61 74 75 72 61 6c 2d 6c 61 6e 67 75 61 67 65 2d 63 6f 6e 66 69 67 75 72 65 64 00 05   # natural-language-configured 0x48 = en-us
+65 6e 2d 75 73
+48 00 24 67 65 6e 65 72 61 74 65 64 2d 6e 61 74 75 72 61 6c 2d 6c 61 6e 67 75 61 67 65 2d 73 75   # generated-natural-language-supported 0x48 = en-us
+70 70 6f 72 74 65 64 00 05 65 6e 2d 75 73
+49 00 17 64 6f 63 75 6d 65 6e 74 2d 66 6f 72 6d 61 74 2d 64 65 66 61 75 6c 74 00 18 61 70 70 6c   # document-format-default 0x49 = application/octet-stream
+69 63 61 74 69 6f 6e 2f 6f 63 74 65 74 2d 73 74 72 65 61 6d
+49 00 19 64 6f 63 75 6d 65 6e 74 2d 66 6f 72 6d 61 74 2d 73 75 70 70 6f 72 74 65 64 00 18 61 70   # document-format-supported 0x49 = application/octet-stream
+70 6c 69 63 61 74 69 6f 6e 2f 6f 63 74 65 74 2d 73 74 72 65 61 6d
+49 00 00 00 12 61 70 70 6c 69 63 61 74 69 6f 6e 2f 78 2d 51 50 44 4c                              # (suite document-format-supported) 0x49 = application/x-QPDL
+49 00 00 00 09 69 6d 61 67 65 2f 75 72 66                                                         # (suite document-format-supported) 0x49 = image/urf
+22 00 19 70 72 69 6e 74 65 72 2d 69 73 2d 61 63 63 65 70 74 69 6e 67 2d 6a 6f 62 73 00 01 01      # printer-is-accepting-jobs 0x22 = true
+21 00 10 71 75 65 75 65 64 2d 6a 6f 62 2d 63 6f 75 6e 74 00 04 00 00 00 00                        # queued-job-count 0x21 = 0
+41 00 1d 70 72 69 6e 74 65 72 2d 6d 65 73 73 61 67 65 2d 66 72 6f 6d 2d 6f 70 65 72 61 74 6f 72   # printer-message-from-operator 0x41 = Operator Message
+00 10 4f 70 65 72 61 74 6f 72 20 4d 65 73 73 61 67 65
+22 00 0f 63 6f 6c 6f 72 2d 73 75 70 70 6f 72 74 65 64 00 01 00                                    # color-supported 0x22 = false
+44 00 16 70 64 6c 2d 6f 76 65 72 72 69 64 65 2d 73 75 70 70 6f 72 74 65 64 00 09 61 74 74 65 6d   # pdl-override-supported 0x44 = attempted
+70 74 65 64
+21 00 0f 70 72 69 6e 74 65 72 2d 75 70 2d 74 69 6d 65 00 04 00 00 1d 9c                           # printer-up-time 0x21 = 7580
+21 00 1b 6d 75 6c 74 69 70 6c 65 2d 6f 70 65 72 61 74 69 6f 6e 2d 74 69 6d 65 2d 6f 75 74 00 04   # multiple-operation-time-out 0x21 = 300
+00 00 01 2c
+44 00 15 63 6f 6d 70 72 65 73 73 69 6f 6e 2d 73 75 70 70 6f 72 74 65 64 00 04 6e 6f 6e 65         # compression-supported 0x44 = none
+33 00 16 6a 6f 62 2d 6b 2d 6f 63 74 65 74 73 2d 73 75 70 70 6f 72 74 65 64 00 08 00 00 00 01 0f   # job-k-octets-supported 0x33 = 8 octet(s)
+ff ff ff
+33 00 19 6a 6f 62 2d 69 6d 70 72 65 73 73 69 6f 6e 73 2d 73 75 70 70 6f 72 74 65 64 00 08 00 00   # job-impressions-supported 0x33 = 8 octet(s)
+00 01 00 00 fd e8
+33 00 1a 6a 6f 62 2d 6d 65 64 69 61 2d 73 68 65 65 74 73 2d 73 75 70 70 6f 72 74 65 64 00 08 00   # job-media-sheets-supported 0x33 = 8 octet(s)
+00 00 01 00 00 fd e8
+21 00 10 70 61 67 65 73 2d 70 65 72 2d 6d 69 6e 75 74 65 00 04 00 00 00 14                        # pages-per-minute 0x21 = 20
+23 00 29 6c 61 6e 64 73 63 61 70 65 2d 6f 72 69 65 6e 74 61 74 69 6f 6e 2d 72 65 71 75 65 73 74   # landscape-orientation-requested-preferred 0x23 = 4
+65 64 2d 70 72 65 66 65 72 72 65 64 00 04 00 00 00 04
+49 00 19 64 6f 63 75 6d 65 6e 74 2d 66 6f 72 6d 61 74 2d 70 72 65 66 65 72 72 65 64 00 09 69 6d   # document-format-preferred 0x49 = image/urf
+61 67 65 2f 75 72 66
+42 00 0d 6d 61 72 6b 65 72 2d 63 6f 6c 6f 72 73 00 07 23 46 46 46 46 46 46                        # marker-colors 0x42 = #FFFFFF
+21 00 12 6d 61 72 6b 65 72 2d 68 69 67 68 2d 6c 65 76 65 6c 73 00 04 00 00 00 64                  # marker-high-levels 0x21 = 100
+21 00 0d 6d 61 72 6b 65 72 2d 6c 65 76 65 6c 73 00 04 00 00 00 60                                 # marker-levels 0x21 = 96
+21 00 11 6d 61 72 6b 65 72 2d 6c 6f 77 2d 6c 65 76 65 6c 73 00 04 00 00 00 05                     # marker-low-levels 0x21 = 5
+42 00 0c 6d 61 72 6b 65 72 2d 6e 61 6d 65 73 00 21 42 6c 61 63 6b 20 54 6f 6e 65 72 5f 53 2f 4e   # marker-names 0x42 = Black Toner_S/N_:CRUM-18020727263
+5f 3a 43 52 55 4d 2d 31 38 30 32 30 37 32 37 32 36 33
+44 00 0c 6d 61 72 6b 65 72 2d 74 79 70 65 73 00 05 74 6f 6e 65 72                                 # marker-types 0x44 = toner
+41 00 11 70 72 69 6e 74 65 72 2d 64 65 76 69 63 65 2d 69 64 00 6b 4d 46 47 3a 53 61 6d 73 75 6e   # printer-device-id 0x41 = MFG:Samsung;CMD:SPL,URF,FWV,PIC,EXT,DCU;MDL:M20...
+67 3b 43 4d 44 3a 53 50 4c 2c 55 52 46 2c 46 57 56 2c 50 49 43 2c 45 58 54 2c 44 43 55 3b 4d 44
+4c 3a 4d 32 30 32 30 20 53 65 72 69 65 73 3b 43 4c 53 3a 50 52 49 4e 54 45 52 3b 43 49 44 3a 53
+41 5f 53 50 4c 56 33 5f 42 57 3b 4d 4f 44 45 3a 53 50 4c 33 2c 52 30 30 30 31 30 35 2c 53 43 50
+3b
+45 00 0d 70 72 69 6e 74 65 72 2d 69 63 6f 6e 73 00 2e 68 74 74 70 3a 2f 2f 31 39 32 2e 31 36 38   # printer-icons 0x45 = http://192.168.1.63/images/printer-icon128.png
+2e 31 2e 36 33 2f 69 6d 61 67 65 73 2f 70 72 69 6e 74 65 72 2d 69 63 6f 6e 31 32 38 2e 70 6e 67
+42 00 13 70 72 69 6e 74 65 72 2d 64 6e 73 2d 73 64 2d 6e 61 6d 65 00 26 53 61 6d 73 75 6e 67 20   # printer-dns-sd-name 0x42 = Samsung M2020 Series (SEC30CDA7201287)
+4d 32 30 32 30 20 53 65 72 69 65 73 20 28 53 45 43 33 30 43 44 41 37 32 30 31 32 38 37 29
+12 00 14 70 72 69 6e 74 65 72 2d 67 65 6f 2d 6c 6f 63 61 74 69 6f 6e 00 00                        # printer-geo-location 0x12 = 0 octet(s)
+45 00 17 70 72 69 6e 74 65 72 2d 73 75 70 70 6c 79 2d 69 6e 66 6f 2d 75 72 69 00 53 68 74 74 70   # printer-supply-info-uri 0x45 = http://192.168.1.63/sws/index.html?link=/sws/ap...
+3a 2f 2f 31 39 32 2e 31 36 38 2e 31 2e 36 33 2f 73 77 73 2f 69 6e 64 65 78 2e 68 74 6d 6c 3f 6c
+69 6e 6b 3d 2f 73 77 73 2f 61 70 70 2f 49 6e 66 6f 72 6d 61 74 69 6f 6e 2f 73 75 70 70 6c 69 65
+73 2f 73 75 70 70 6c 69 65 73 2e 68 74 6d 6c
+45 00 0c 70 72 69 6e 74 65 72 2d 75 75 69 64 00 2d 75 72 6e 3a 75 75 69 64 3a 31 36 61 36 35 37   # printer-uuid 0x45 = urn:uuid:16a65700-007c-1000-bb49-30cda7201287
+30 30 2d 30 30 37 63 2d 31 30 30 30 2d 62 62 34 39 2d 33 30 63 64 61 37 32 30 31 32 38 37
+03                                                                                                # end-of-attributes-tag

@@ -75,6 +75,41 @@ public class ReleveTests
         Assert.Equal([false, true], r.Consommables.Select(c => c.Bas));
     }
 
+    [Fact]
+    public void Un_niveau_se_lit_a_l_echelle_de_son_maximum()
+    {
+        // marker-high-levels n'est pas toujours 100 : 30 sur 60 font 50 %, et le seuil suit la même échelle.
+        var r = ReleveImprimante.Lire(Reponse(("marker-names", ["Toner"]), ("marker-levels", [30]), ("marker-high-levels", [60]), ("marker-low-levels", [6])), 20);
+
+        var c = Assert.Single(r.Consommables);
+        Assert.Equal((50, 10), (c.Niveau, c.SeuilBas));
+    }
+
+    [Fact]
+    public void Sans_marker_les_consommables_viennent_de_printer_supply()
+    {
+        var r = ReleveImprimante.Lire(Reponse(
+            ("printer-supply", ["index=1;class=supplyThatIsConsumed;type=ink;unit=percent;maxcapacity=100;level=57;colorantname=cyan;"u8.ToArray(),
+                                "index=2;type=ink;maxcapacity=200;level=50;colorantname=black;"]),
+            ("printer-supply-description", ["Cyan Ink", ""])), 10);
+
+        Assert.Equal(
+            [
+                new Consommable("cyan_ink", "Cyan Ink", 57, false, 10, "ink", null),
+                new Consommable("black", "black", 25, false, 10, "ink", null),   // pas de description : la couleur ; 50 sur 200
+            ],
+            r.Consommables);
+    }
+
+    [Fact]
+    public void Les_marker_priment_sur_printer_supply()
+    {
+        var r = ReleveImprimante.Lire(Reponse(("marker-names", ["Toner"]), ("marker-levels", [80]),
+            ("printer-supply", ["type=toner;maxcapacity=100;level=10;colorantname=black;"])), 10);
+
+        Assert.Equal(["Toner"], r.Consommables.Select(c => c.Nom));
+    }
+
     internal static IppResponse Reponse(params (string Nom, object?[] Valeurs)[] attributs) =>
         new(1, 1, 0, 1, [new IppGroup(IppTag.PrinterAttributes, [.. attributs.Select(a => new IppAttribute(a.Nom, 0, a.Valeurs))])]);
 }

@@ -1,0 +1,29 @@
+# Capture réelle, Samsung M2020 (192.168.1.63), 24/10/2026 : réponse à la requête du plugin.
+01 01 00 00 00 00 00 07                                                                           # IPP/1.1, statut 0x0000, request-id 7
+01                                                                                                # operation-attributes-tag
+47 00 12 61 74 74 72 69 62 75 74 65 73 2d 63 68 61 72 73 65 74 00 05 75 74 66 2d 38               # attributes-charset 0x47 = utf-8
+48 00 1b 61 74 74 72 69 62 75 74 65 73 2d 6e 61 74 75 72 61 6c 2d 6c 61 6e 67 75 61 67 65 00 05   # attributes-natural-language 0x48 = en-us
+65 6e 2d 75 73
+45 00 0b 70 72 69 6e 74 65 72 2d 75 72 69 00 20 69 70 70 3a 2f 2f 31 39 32 2e 31 36 38 2e 31 2e   # printer-uri 0x45 = ipp://192.168.1.63:631/ipp/print
+36 33 3a 36 33 31 2f 69 70 70 2f 70 72 69 6e 74
+04                                                                                                # printer-attributes-tag
+23 00 0d 70 72 69 6e 74 65 72 2d 73 74 61 74 65 00 04 00 00 00 03                                 # printer-state 0x23 = 3
+44 00 15 70 72 69 6e 74 65 72 2d 73 74 61 74 65 2d 72 65 61 73 6f 6e 73 00 04 6e 6f 6e 65         # printer-state-reasons 0x44 = none
+41 00 15 70 72 69 6e 74 65 72 2d 73 74 61 74 65 2d 6d 65 73 73 61 67 65 00 19 50 72 69 6e 74 65   # printer-state-message 0x41 = Printer is ready to print
+72 20 69 73 20 72 65 61 64 79 20 74 6f 20 70 72 69 6e 74
+42 00 0c 6d 61 72 6b 65 72 2d 6e 61 6d 65 73 00 21 42 6c 61 63 6b 20 54 6f 6e 65 72 5f 53 2f 4e   # marker-names 0x42 = Black Toner_S/N_:CRUM-18020727263
+5f 3a 43 52 55 4d 2d 31 38 30 32 30 37 32 37 32 36 33
+21 00 0d 6d 61 72 6b 65 72 2d 6c 65 76 65 6c 73 00 04 00 00 00 60                                 # marker-levels 0x21 = 96
+21 00 11 6d 61 72 6b 65 72 2d 6c 6f 77 2d 6c 65 76 65 6c 73 00 04 00 00 00 05                     # marker-low-levels 0x21 = 5
+21 00 12 6d 61 72 6b 65 72 2d 68 69 67 68 2d 6c 65 76 65 6c 73 00 04 00 00 00 64                  # marker-high-levels 0x21 = 100
+44 00 0c 6d 61 72 6b 65 72 2d 74 79 70 65 73 00 05 74 6f 6e 65 72                                 # marker-types 0x44 = toner
+42 00 0d 6d 61 72 6b 65 72 2d 63 6f 6c 6f 72 73 00 07 23 46 46 46 46 46 46                        # marker-colors 0x42 = #FFFFFF
+42 00 0c 70 72 69 6e 74 65 72 2d 6e 61 6d 65 00 0f 53 45 43 33 30 43 44 41 37 32 30 31 32 38 37   # printer-name 0x42 = SEC30CDA7201287
+41 00 0c 70 72 69 6e 74 65 72 2d 69 6e 66 6f 00 26 53 61 6d 73 75 6e 67 20 4d 32 30 32 30 20 53   # printer-info 0x41 = Samsung M2020 Series (SEC30CDA7201287)
+65 72 69 65 73 20 28 53 45 43 33 30 43 44 41 37 32 30 31 32 38 37 29
+41 00 16 70 72 69 6e 74 65 72 2d 6d 61 6b 65 2d 61 6e 64 2d 6d 6f 64 65 6c 00 14 53 61 6d 73 75   # printer-make-and-model 0x41 = Samsung M2020 Series
+6e 67 20 4d 32 30 32 30 20 53 65 72 69 65 73
+45 00 0c 70 72 69 6e 74 65 72 2d 75 75 69 64 00 2d 75 72 6e 3a 75 75 69 64 3a 31 36 61 36 35 37   # printer-uuid 0x45 = urn:uuid:16a65700-007c-1000-bb49-30cda7201287
+30 30 2d 30 30 37 63 2d 31 30 30 30 2d 62 62 34 39 2d 33 30 63 64 61 37 32 30 31 32 38 37
+41 00 10 70 72 69 6e 74 65 72 2d 6c 6f 63 61 74 69 6f 6e 00 00                                    # printer-location 0x41 = 
+03                                                                                                # end-of-attributes-tag
