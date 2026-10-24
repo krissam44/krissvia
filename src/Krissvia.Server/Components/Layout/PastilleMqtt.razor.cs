@@ -25,7 +25,14 @@ public partial class PastilleMqtt
         _ => Color.Default,
     };
 
-    private string Icone => _etat.Health switch
+    private string Icone => _etat switch
+    {
+        { Health: MqttHealth.Problem } => Icons.Material.Filled.Error,
+        { SharedSaved: false, Health: not MqttHealth.NoPlugin } => Icons.Material.Filled.Settings,
+        _ => IconeEtat,
+    };
+
+    private string IconeEtat => _etat.Health switch
     {
         MqttHealth.Ok => Icons.Material.Filled.CheckCircle,
         MqttHealth.Problem => Icons.Material.Filled.Error,
@@ -43,7 +50,7 @@ public partial class PastilleMqtt
     private void Relire()
     {
         var nouveau = Superviseur.MqttStatus();
-        if (nouveau.Health == _etat.Health && nouveau.Lines.SequenceEqual(_etat.Lines)) return;
+        if (nouveau.Health == _etat.Health && nouveau.SharedSaved == _etat.SharedSaved && nouveau.Lines.SequenceEqual(_etat.Lines)) return;
         _etat = nouveau;
         _ = InvokeAsync(StateHasChanged);
     }

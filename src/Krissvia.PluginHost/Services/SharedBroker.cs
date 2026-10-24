@@ -112,13 +112,20 @@ public enum MqttHealth
 /// <param name="Connected">Connecté au cœur : sans session, son lien n'est pas connu.</param>
 public sealed record MqttPluginLink(string Id, string Name, bool Connected, LinkState? Link);
 
-public sealed record MqttOverview(MqttHealth Health, IReadOnlyList<string> Lines)
+/// <param name="SharedSaved">
+/// Faux : aucun broker commun enregistré. Les plugins qui ont gardé leur propre broker marchent, mais un plugin à la
+/// fiche vide (un nouveau, typiquement) n'a rien à joindre — et la saisie de la pastille, pré-remplie depuis un plugin,
+/// a l'air enregistrée alors qu'elle ne l'est pas. Vécu le 24/10/2026 avec MQTT Discovery.
+/// </param>
+public sealed record MqttOverview(MqttHealth Health, IReadOnlyList<string> Lines, bool SharedSaved = true)
 {
+    public const string NotSavedLine = "Broker commun pas encore enregistré : un plugin sans broker propre ne se connectera pas.";
+
     /// <summary>
     /// L'état de la pastille, d'après ce que disent les plugins de leur propre lien — pas une connexion du cœur, qui serait
     /// verte alors qu'un plugin n'y arrive pas (mauvais mot de passe de son côté). Rouge l'emporte sur orange, orange sur vert.
     /// </summary>
-    public static MqttOverview Evaluate(IEnumerable<MqttPluginLink> plugins)
+    public static MqttOverview Evaluate(IEnumerable<MqttPluginLink> plugins, bool sharedSaved = true)
     {
         var liste = plugins.OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         if (liste.Count == 0) return new MqttOverview(MqttHealth.NoPlugin, ["Aucun plugin MQTT activé."]);
@@ -133,6 +140,13 @@ public sealed record MqttOverview(MqttHealth Health, IReadOnlyList<string> Lines
         var etat = liste.Any(p => p is { Connected: true, Link.Connected: false }) ? MqttHealth.Problem
             : liste.Any(p => !p.Connected || p.Link is null) ? MqttHealth.Waiting
             : MqttHealth.Ok;
-        return new MqttOverview(etat, lignes);
+        // Pas enregistré : orange au moins (rien n'est en panne, mais il y a quelque chose à faire), la ligne en tête.
+        if (!sharedSaved)
+        {
+            lignes.Insert(0, NotSavedLine);
+            if (etat == MqttHealth.Ok) etat = MqttHealth.Waiting;
+        }
+
+        return new MqttOverview(etat, lignes, sharedSaved);
     }
 }
