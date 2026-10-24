@@ -19,7 +19,9 @@ class KvEnergie extends KvWidget {
         .entete .ms { font-size: 1.3rem; color: #ffb300; }
         .entete .nom { font-weight: 600; font-size: .9rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .entete .quand { font-size: .66rem; color: var(--kv-text-secondary, #999); white-space: nowrap; }
-        .tuiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; }
+        /* Autant de tuiles par ligne que la carte en loge (140 px chacune) : toutes sur une ligne jusqu'au tiers d'un grand
+           écran, deux par ligne en dessous. */
+        .tuiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px 8px; }
         .tuile { padding: 6px 8px; border-radius: 8px; background: color-mix(in srgb, var(--kv-text-secondary, #888) 8%, transparent); }
         .tuile .v { font-size: 1.35rem; font-weight: 700; line-height: 1.1; }
         .tuile .v .u { font-size: .8rem; font-weight: 400; margin-left: 2px; }
