@@ -1,4 +1,5 @@
 using Krissvia.Contracts;
+using Krissvia.Plugin.MqttDiscovery.Discovery;
 
 namespace Krissvia.Plugin.MqttDiscovery.Tests;
 
@@ -85,5 +86,20 @@ public class BoutEnBoutTests
 
         Assert.Equal(CommandOutcome.Accepted, issue);
         Assert.Contains(("krissvia/esp32-sht30-etage/switch/relais/command", "ON"), banc.Broker.Publications);
+    }
+
+    [Fact]
+    public async Task Une_sonde_Rfx2Mqtt_saisie_a_la_main_arrive_dans_le_coeur_sans_aucune_annonce()
+    {
+        await using var banc = await BancBoutEnBout.DemarrerAsync(
+            b => b.Retenir("domomud/sensor/th/salon/temperature", "19.8"),
+            [new EntiteManuelle { Appareil = "Sonde salon", Topic = "domomud/sensor/th/salon/temperature", Classe = "temperature", Unite = "°C" }]);
+
+        var salon = await banc.EntityIdAsync("manuel:domomud/sensor/th/salon/temperature");
+        await BancBoutEnBout.AttendreAsync(() => banc.Etats.Get(salon) is { Available: true }, "mesure retenue de la sonde");
+        Assert.Equal(19.8, banc.Etats.Get(salon)!.Value.GetDouble());
+
+        await banc.Broker.PublierAsync("domomud/sensor/th/salon/temperature", "20.1");
+        await BancBoutEnBout.AttendreAsync(() => banc.Etats.Get(salon)!.Value.GetDouble() == 20.1, "nouvelle mesure");
     }
 }

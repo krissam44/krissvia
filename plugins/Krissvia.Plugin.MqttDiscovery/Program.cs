@@ -37,7 +37,9 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(mqtt);
 builder.Services.AddSingleton(coeur);
 builder.Services.AddSingleton<IMqttLink, MqttNetLink>();
-builder.Services.AddSingleton(sp => new DiscoveryTranslator(prefixe, sp.GetRequiredService<ILogger<DiscoveryTranslator>>()));
+// Entités manuelles (section Entites des réglages) : Entites__0__Topic… transmis par le cœur au lancement.
+var manuelles = builder.Configuration.GetSection("Entites").Get<List<EntiteManuelle>>() ?? [];
+builder.Services.AddSingleton(sp => new DiscoveryTranslator(prefixe, manuelles, sp.GetRequiredService<ILogger<DiscoveryTranslator>>()));
 builder.Services.AddSingleton<MqttDiscoveryPlugin>();
 builder.Services.AddSingleton(sp =>
 {

@@ -45,6 +45,17 @@
                         </MudSelect>
                         break;
 
+                    case SettingType.String when champ.Choices.Count > 0:
+                        <MudSelect T="string" Label="@champ.Label" HelperText="@champ.Description" Required="@(champ.Required && !Partage)"
+                                   Clearable="@(!champ.Required)" Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   Value="Texte(champ)" ValueChanged="v => Ecrire(champ, v)" ToStringFunc="@(v => v is null ? "" : champ.ChoiceLabel(v))">
+                            @foreach (var choix in champ.Choices)
+                            {
+                                <MudSelectItem Value="choix">@champ.ChoiceLabel(choix)</MudSelectItem>
+                            }
+                        </MudSelect>
+                        break;
+
                     default:
                         <MudTextField T="string" Label="@champ.Label" HelperText="@champ.Description" Required="@(champ.Required && !Partage)"
                                       InputType="@(champ.Secret ? InputType.Password : InputType.Text)"

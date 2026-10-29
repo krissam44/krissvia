@@ -37,7 +37,8 @@ public partial class ListeReglages
         return valeur.GetValueKind() switch
         {
             JsonValueKind.String when valeur.GetValue<string>() is { Length: > 0 } texte =>
-                champ.Entity is null ? texte : Registre.Loaded.FirstOrDefault(e => e.EntityId == texte)?.DisplayName ?? texte,
+                champ.Choices.Count > 0 ? champ.ChoiceLabel(texte)
+                : champ.Entity is null ? texte : Registre.Loaded.FirstOrDefault(e => e.EntityId == texte)?.DisplayName ?? texte,
             JsonValueKind.Number when SettingsSchema.TryGetNumber(valeur, out var n) => n.ToString(System.Globalization.CultureInfo.CurrentCulture),
             _ => "—",
         };

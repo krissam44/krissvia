@@ -80,6 +80,45 @@ public class ReglagesPluginsTests
         Assert.Equal([true, false, false], champ.Properties.Select(p => p.Multiline));
     }
 
+    [Fact]
+    public void Une_liste_de_choix_propose_ses_libelles_et_refuse_ce_qu_elle_ne_propose_pas()
+    {
+        var champ = SettingsSchema.Parse(JsonDocument.Parse("""
+            { "type": "object", "properties": {
+                "Type": { "type": "string", "enum": [ "sensor", "switch" ], "x-enum-titles": [ "Capteur" ] },
+                "Nombre": { "type": "integer", "enum": [ "1" ] } } }
+            """).RootElement)!;
+        var type = champ.Properties[0];
+
+        Assert.Equal(["sensor", "switch"], type.Choices);
+        Assert.Equal(("Capteur", "switch", "autre"), (type.ChoiceLabel("sensor"), type.ChoiceLabel("switch"), type.ChoiceLabel("autre")));
+        Assert.Empty(champ.Properties[1].Choices);   // une liste de choix ne vaut que pour un texte
+        Assert.Empty(SettingsSchema.Validate(champ, new JsonObject { ["Type"] = "switch" }));
+        Assert.Equal(["Type : « cover » n'est pas dans la liste."], SettingsSchema.Validate(champ, new JsonObject { ["Type"] = "cover" }));
+    }
+
+    [Fact]
+    public void Les_entites_manuelles_de_MQTT_Discovery_se_saisissent_en_liste_et_partent_au_plugin()
+    {
+        var schema = Schema("Krissvia.Plugin.MqttDiscovery");
+        var entites = schema.Properties.Single(p => p.Key == "Entites");
+        Assert.Equal(SettingType.Array, entites.Type);
+        Assert.Equal(["sensor", "binary_sensor", "switch", "light"], entites.Properties.Single(p => p.Key == "Type").Choices);
+        Assert.Contains("temperature", entites.Properties.Single(p => p.Key == "Classe").Choices);
+        // Chaque choix a son libellé : un menu de codes anglais ne parlerait à personne.
+        Assert.All(entites.Properties.Where(p => p.Choices.Count > 0), p => Assert.Equal(p.Choices.Count, p.ChoiceTitles.Count));
+
+        var ligne = SettingsSchema.Complete(entites, null);
+        Assert.Equal("sensor", ligne["Type"]!.GetValue<string>());
+        ligne["Appareil"] = "Sonde salon";
+        ligne["Topic"] = "domomud/sensor/th/salon/temperature";
+        Assert.Empty(SettingsSchema.Validate(entites, ligne));
+
+        var env = SettingsSchema.ToEnvironment(new JsonObject { ["Entites"] = new JsonArray(ligne) });
+        Assert.Equal("domomud/sensor/th/salon/temperature", env["Entites__0__Topic"]);
+        Assert.Equal("sensor", env["Entites__0__Type"]);
+    }
+
     private sealed class Magasin : IConfigurationStore
     {
         public ConcurrentDictionary<(string, string), string> Documents { get; } = new();

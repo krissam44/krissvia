@@ -37,6 +37,12 @@ internal sealed record ConfigHa
     public string EtatOn { get; init; } = "ON";
     public string EtatOff { get; init; } = "OFF";
 
+    /// <summary>
+    /// Entité manuelle sans valeurs ON / OFF saisies : <c>ON</c>, <c>true</c> et <c>1</c> (et leurs contraires) sont
+    /// reconnus, sans tenir compte de la casse. Un appareil qui s'annonce dit exactement ce qu'il publie ; pas une saisie.
+    /// </summary>
+    public bool BooleensSouples { get; init; }
+
     /// <summary>Lumière : schéma <c>json</c> (ESPHome, Zigbee2MQTT) ou <c>default</c> (une charge ON/OFF par topic).</summary>
     public bool SchemaJson { get; init; }
     public bool Luminosite { get; init; }

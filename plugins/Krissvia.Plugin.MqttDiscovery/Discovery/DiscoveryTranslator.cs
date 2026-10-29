@@ -30,6 +30,9 @@ internal sealed partial class DiscoveryTranslator(string prefixe, ILogger? logge
     private readonly ILogger _logger = logger ?? NullLogger.Instance;
     private readonly Lock _verrou = new();
 
+    /// <summary>Les entités manuelles des réglages, fixées au démarrage (le cœur relance le plugin quand elles changent).</summary>
+    private readonly Dictionary<string, EntiteHa> _manuelles = new(StringComparer.Ordinal);
+
     /// <summary>Par topic de configuration : la charge reçue (pour ignorer une republication identique) et l'entité.</summary>
     private readonly Dictionary<string, (string Charge, EntiteHa? Entite)> _configs = new(StringComparer.Ordinal);
     private Dictionary<string, EntiteHa> _entites = new(StringComparer.Ordinal);
@@ -48,6 +51,25 @@ internal sealed partial class DiscoveryTranslator(string prefixe, ILogger? logge
 
     private readonly HashSet<string> _abonnes = new(StringComparer.Ordinal);
     private bool _mqttConnecte;
+
+    /// <summary>
+    /// Avec des entités manuelles : elles sont déclarées dès la connexion, même si aucun appareil ne s'annonce. Une ligne
+    /// refusée ou en double (même topic et même champ qu'une autre) est écartée, avec une ligne au journal.
+    /// </summary>
+    public DiscoveryTranslator(string prefixe, IEnumerable<EntiteManuelle> manuelles, ILogger? logger = null) : this(prefixe, logger)
+    {
+        foreach (var ligne in manuelles)
+        {
+            if (EntitesManuelles.VersConfig(ligne, out var refus) is not { } config || EntiteHa.Creer(config, out refus) is not { } entite)
+                ManuelleIgnoree(_logger, ligne.Topic, refus);
+            else if (!_manuelles.TryAdd(entite.UniqueId, entite))
+                ManuelleEnDouble(_logger, entite.UniqueId);
+        }
+
+        if (_manuelles.Count == 0) return;
+        Reindexer();
+        _enAttente = true;
+    }
 
     /// <summary>L'abonnement de départ : toutes les configurations. Les topics d'état s'y ajoutent à mesure.</summary>
     public string Abonnement => $"{prefixe}/#";
@@ -142,7 +164,7 @@ internal sealed partial class DiscoveryTranslator(string prefixe, ILogger? logge
     private void Reindexer()
     {
         // Deux configurations pour le même identifiant : la dernière lue gagne (un appareil renommé, l'ancienne retenue).
-        _entites = new Dictionary<string, EntiteHa>(StringComparer.Ordinal);
+        _entites = new Dictionary<string, EntiteHa>(_manuelles, StringComparer.Ordinal);
         foreach (var (_, (_, entite)) in _configs)
             if (entite is not null) _entites[entite.UniqueId] = entite;
 
@@ -333,6 +355,12 @@ internal sealed partial class DiscoveryTranslator(string prefixe, ILogger? logge
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Configuration {Topic} ignorée : {Motif}.")]
     private static partial void ConfigIgnoree(ILogger logger, string topic, string? motif);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Entité manuelle sur {Topic} ignorée : {Motif}.")]
+    private static partial void ManuelleIgnoree(ILogger logger, string? topic, string? motif);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Entité manuelle « {UniqueId} » en double (même topic, même champ) : seule la première est gardée.")]
+    private static partial void ManuelleEnDouble(ILogger logger, string uniqueId);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Entité retirée par l'appareil : {Topic}.")]
     private static partial void Retiree(ILogger logger, string topic);
