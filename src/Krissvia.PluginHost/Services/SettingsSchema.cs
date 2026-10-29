@@ -227,7 +227,7 @@ public static class SettingsSchema
                     if (v.GetValueKind() is not (JsonValueKind.True or JsonValueKind.False)) erreurs.Add($"{nom} : oui ou non attendu.");
                     break;
                 case SettingType.Integer or SettingType.Number:
-                    if (v.GetValueKind() != JsonValueKind.Number || !v.AsValue().TryGetValue<double>(out var n))
+                    if (!TryGetNumber(v, out var n))
                     {
                         erreurs.Add($"{nom} : nombre attendu.");
                         break;
@@ -279,6 +279,20 @@ public static class SettingsSchema
                 if (!string.IsNullOrEmpty(texte)) resultat[prefixe] = texte;
                 break;
         }
+    }
+
+    /// <summary>
+    /// Le nombre d'une valeur de réglage, qu'elle vienne d'un JSON lu (un <c>JsonElement</c> derrière) ou du formulaire,
+    /// qui écrit un entier en <c>long</c>. <c>JsonValue.GetValue&lt;double&gt;()</c> sur ce <c>long</c> LÈVE au lieu de
+    /// convertir, et <c>TryGetValue&lt;double&gt;</c> répond faux : taper « 2 » dans un champ entier tuait la page
+    /// (exception au rendu, circuit Blazor perdu), et la validation aurait de toute façon refusé « pas un nombre ».
+    /// Vécu le 29/10/2026 sur le n° d'objet de la page perso openHASP.
+    /// </summary>
+    public static bool TryGetNumber(JsonNode? noeud, out double valeur)
+    {
+        valeur = 0;
+        return noeud is JsonValue v && v.GetValueKind() == JsonValueKind.Number
+            && double.TryParse(v.ToJsonString(), NumberStyles.Float, CultureInfo.InvariantCulture, out valeur);
     }
 
     private static string? Chaine(JsonElement e, string nom) =>

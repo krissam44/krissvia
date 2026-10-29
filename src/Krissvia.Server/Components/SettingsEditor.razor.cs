@@ -39,8 +39,7 @@ public partial class SettingsEditor
     private string? Texte(SettingField champ) =>
         Valeur[champ.Key] is JsonValue v && v.GetValueKind() == JsonValueKind.String ? v.GetValue<string>() : null;
 
-    private double? Nombre(SettingField champ) =>
-        Valeur[champ.Key] is JsonValue v && v.GetValueKind() == JsonValueKind.Number ? v.GetValue<double>() : null;
+    private double? Nombre(SettingField champ) => SettingsSchema.TryGetNumber(Valeur[champ.Key], out var n) ? n : null;
 
     private bool Booleen(SettingField champ) => Valeur[champ.Key]?.GetValueKind() == JsonValueKind.True;
 
