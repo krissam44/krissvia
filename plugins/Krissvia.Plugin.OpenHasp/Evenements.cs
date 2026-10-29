@@ -83,6 +83,17 @@ public static class Evenements
             if (objet == Nom(Objets.PageAlarme, Objets.Desarmer)) return new CommandeAlarme(StandardCommands.Disarm);
         }
 
+        // Page perso : un bouton relié allume ou éteint son entité, selon l'état connu, comme ceux de la page horloge.
+        if (platine.APagePerso)
+        {
+            foreach (var b in platine.BoutonsPerso.Where(x => x.Entite.Length > 0))
+            {
+                if (objet != Nom(Objets.PagePerso, b.Objet)) continue;
+                var allume = Ecran.EstAllume(etats.GetValueOrDefault(b.Entite)) == true;
+                return new Ordre(b.Entite, allume ? StandardCommands.TurnOff : StandardCommands.TurnOn);
+            }
+        }
+
         var interrupteurs = platine.InterrupteursAffiches();
         for (var i = 0; i < interrupteurs.Count; i++)
         {

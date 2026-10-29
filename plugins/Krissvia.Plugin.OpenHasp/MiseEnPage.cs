@@ -12,6 +12,9 @@ public static class Objets
     public const int PageHorloge = 3;
     public const int PageAlarme = 4;
 
+    /// <summary>La page écrite par l'utilisateur (README, « La page perso »).</summary>
+    public const int PagePerso = 5;
+
     /// <summary>Fond plein écran, déclaré en premier sur chaque page (l'ordre des lignes est l'ordre d'empilement).</summary>
     public const int Fond = 50;
 
@@ -90,6 +93,7 @@ public static class MiseEnPage
         if (reglages.SondesAffichees().Any()) pages.Add(Objets.PageTemperatures);
         pages.Add(Objets.PageHorloge);
         if (platine.ADigicode(reglages)) pages.Add(Objets.PageAlarme);
+        if (platine.APagePerso) pages.Add(Objets.PagePerso);
         return pages;
     }
 
@@ -98,30 +102,41 @@ public static class MiseEnPage
     {
         var lignes = new List<JsonObject>();
         var pages = PagesPresentes(platine, reglages);
-        Navigation(lignes, pages);
+        Navigation(lignes, pages, platine.NomPagePerso is { Length: > 0 } nomPerso ? nomPerso : "Perso");
         if (platine.AThermostat) Thermostat(lignes, reglages.Affichage);
         if (pages.Contains(Objets.PageTemperatures)) Temperatures(lignes, reglages);
         Horloge(lignes, platine, reglages.Affichage);
         if (pages.Contains(Objets.PageAlarme)) Digicode(lignes, reglages.Affichage);
+        if (pages.Contains(Objets.PagePerso))
+        {
+            // Le fond d'abord, comme sur les autres pages : l'ordre des lignes est l'ordre d'empilement.
+            lignes.Add(Fond(Objets.PagePerso, reglages.Affichage.CouleurFond));
+            lignes.AddRange(OpenHasp.PagePerso.Lire(platine.PagePerso).Lignes);
+        }
+
         return [.. lignes.Select(l => l.ToJsonString(Json))];
     }
 
-    private static void Navigation(List<JsonObject> lignes, IReadOnlyList<int> pages)
+    private static void Navigation(List<JsonObject> lignes, IReadOnlyList<int> pages, string nomPerso)
     {
         const int marge = 5, ecart = 5;
         var largeur = (Cote - 2 * marge - ecart * (pages.Count - 1)) / pages.Count;
         for (var i = 0; i < pages.Count; i++)
         {
-            var (nom, icone) = pages[i] switch
+            // À cinq boutons de 90 px, « Thermostat » ne tient plus en 20 : les noms courts, en 16.
+            var cinq = pages.Count >= 5;
+            (string Nom, string? Icone) libelle = pages[i] switch
             {
-                Objets.PageThermostat => ("Thermostat", Icones.Thermometre),
+                Objets.PageThermostat => (cinq ? "Thermo" : "Thermostat", Icones.Thermometre),
                 Objets.PageTemperatures => ("Sondes", Icones.Goutte),
                 Objets.PageAlarme => ("Alarme", Icones.Bouclier),
-                _ => ("Horloge", Icones.Horloge),
+                Objets.PagePerso => (nomPerso, null),   // pas d'icône : rien ne garantit qu'une étoile soit dans la police
+                _ => (cinq ? "Heure" : "Horloge", Icones.Horloge),
             };
             // L'icône devant le nom, comme DomoMud, tant qu'il y a la place : à quatre boutons de 113 px, le nom seul.
-            var texte = pages.Count <= 3 ? $"{icone} {nom}" : nom;
-            var o = Btn(0, i + 1, marge + i * (largeur + ecart), 435, largeur, 42, texte, 20, Panneau, "#FFFFFF", 10);
+            var (nom, icone) = libelle;
+            var texte = pages.Count <= 3 && icone is not null ? $"{icone} {nom}" : nom;
+            var o = Btn(0, i + 1, marge + i * (largeur + ecart), 435, largeur, 42, texte, cinq ? 16 : 20, Panneau, "#FFFFFF", 10);
             o["action"] = $"p{pages[i]}";
             lignes.Add(o);
         }

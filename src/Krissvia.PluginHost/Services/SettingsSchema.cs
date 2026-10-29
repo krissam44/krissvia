@@ -19,7 +19,7 @@ public sealed record EntitySetting(IReadOnlyList<string> Kinds, IReadOnlyList<st
 /// <summary>
 /// Un réglage décrit dans <c>plugin.json</c> (<c>"settings"</c>) — un sous-ensemble de JSON Schema : <c>type</c>,
 /// <c>title</c>, <c>description</c>, <c>default</c>, <c>minimum</c>/<c>maximum</c>, <c>required</c>,
-/// <c>format: "password"</c>, <c>properties</c> (objet), <c>items</c> et <c>maxItems</c> (liste d'objets). Les clés sont celles de la
+/// <c>format: "password"</c>, <c>format: "textarea"</c> (texte sur plusieurs lignes), <c>properties</c> (objet), <c>items</c> et <c>maxItems</c> (liste d'objets). Les clés sont celles de la
 /// configuration du plugin (<c>Mqtt</c> → <c>Host</c>…) : c'est ce qui permet de les lui transmettre telles quelles.
 /// </summary>
 public sealed record SettingField
@@ -33,6 +33,12 @@ public sealed record SettingField
 
     /// <summary>Mot de passe, jeton : saisi masqué.</summary>
     public bool Secret { get; init; }
+
+    /// <summary>
+    /// Texte de plusieurs lignes (<c>"format": "textarea"</c>) : la page perso d'une platine, en JSONL. Saisi sur toute la
+    /// largeur, en police à chasse fixe ; dans un tableau, le nombre de lignes au lieu du contenu.
+    /// </summary>
+    public bool Multiline { get; init; }
 
     public double? Minimum { get; init; }
     public double? Maximum { get; init; }
@@ -93,6 +99,7 @@ public static class SettingsSchema
             Default = s.TryGetProperty("default", out var d) ? JsonNode.Parse(d.GetRawText()) : null,
             Required = requis,
             Secret = Chaine(s, "format") == "password",
+            Multiline = type == SettingType.String && Chaine(s, "format") == "textarea",
             Minimum = s.TryGetProperty("minimum", out var min) && min.TryGetDouble(out var vmin) ? vmin : null,
             Maximum = s.TryGetProperty("maximum", out var max) && max.TryGetDouble(out var vmax) ? vmax : null,
             Properties = proprietes,

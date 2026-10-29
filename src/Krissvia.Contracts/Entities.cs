@@ -157,6 +157,13 @@ public static class DeviceClasses
     /// </summary>
     public const string Printer = "printer";
 
+    /// <summary>
+    /// sensor dont la valeur est un OBJET : un écran mural (platine openHASP) — en ligne, pages, dernière peinture.
+    /// Commandes du plugin : <c>repaint</c> (effacer et renvoyer toutes ses pages) et <c>reboot</c> (redémarrer l'écran).
+    /// Distinct de <see cref="Connectivity"/>, qui est la connexion Internet pour la supervision et les cartes.
+    /// </summary>
+    public const string DisplayPanel = "display_panel";
+
     /// <summary>binary_sensor : true = OUVERT (le plugin inverse les conventions contraires).</summary>
     public const string Opening = "opening";
 

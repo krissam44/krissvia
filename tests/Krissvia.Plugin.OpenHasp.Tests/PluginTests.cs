@@ -82,7 +82,7 @@ public class PluginTests
         Assert.Contains((Topic("p1b9.text"), "Statut: indisponible"), publiees);   // rien reçu du cœur : on le dit
         Assert.DoesNotContain(publiees, p => p.Topic == Topic("backlight"));        // personne n'a touché au curseur
 
-        var connexion = Assert.Single(Assert.IsType<StateBatch>(b.Plugin.Snapshot()[1]).States);
+        var connexion = Assert.IsType<StateBatch>(b.Plugin.Snapshot()[1]).States.Single(s => s.EntityUniqueId == "appart1");
         Assert.True(connexion.Value.GetBoolean());
     }
 

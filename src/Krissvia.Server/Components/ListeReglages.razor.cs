@@ -29,6 +29,11 @@ public partial class ListeReglages
         if (champ.Type == SettingType.Array) return v is JsonArray a ? a.Count.ToString(System.Globalization.CultureInfo.CurrentCulture) : "0";
         if (v is not JsonValue valeur) return "—";
         if (champ.Secret) return "••••";
+        // Un JSONL de quarante lignes ne tient pas dans une cellule : son volume suffit à le reconnaître.
+        if (champ.Multiline)
+            return valeur.GetValueKind() == JsonValueKind.String && valeur.GetValue<string>() is { Length: > 0 } t
+                ? $"{t.Split('\n').Count(l => l.Trim().Length > 0)} ligne(s)"
+                : "—";
         return valeur.GetValueKind() switch
         {
             JsonValueKind.String when valeur.GetValue<string>() is { Length: > 0 } texte =>

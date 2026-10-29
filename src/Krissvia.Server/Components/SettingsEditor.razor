@@ -7,9 +7,16 @@
     <MudGrid Spacing="2" Class="mb-1">
         @foreach (var champ in ChampsSimples)
         {
-            <MudItem xs="12" md="6">
+            <MudItem xs="12" md="@(champ.Multiline ? 12 : 6)">
                 @switch (champ.Type)
                 {
+                    case SettingType.String when champ.Multiline:
+                        <MudTextField T="string" Label="@champ.Label" HelperText="@champ.Description" Required="@(champ.Required && !Partage)"
+                                      Lines="12" AutoGrow="true" MaxLines="30" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Style="font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: .82rem"
+                                      Value="Texte(champ)" ValueChanged="v => Ecrire(champ, v)" />
+                        break;
+
                     case SettingType.Boolean:
                         <MudSwitch T="bool" Label="@champ.Label" Color="Color.Primary"
                                    Value="Booleen(champ)" ValueChanged="v => Ecrire(champ, v)" />

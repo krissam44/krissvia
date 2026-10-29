@@ -164,6 +164,7 @@ Familles (`kinds`) : `sensor`, `binary_sensor`, `switch`, `light`, `cover`, `eve
 | `hypervisor_node` | un nœud d'hyperviseur | Proxmox |
 | `internet_connection` | l'état complet de la connexion | Livebox |
 | `network_hosts` | les appareils du réseau local ; commande `set_tracked` | Livebox |
+| `display_panel` | un écran mural (platine) : en ligne, pages, dernière peinture ; commandes `repaint`, `reboot` | openHASP |
 
 Les **usages** (`usages`) ne sont pas des classes : l'utilisateur les choisit dans l'écran Entités pour un interrupteur
 (`radiateur`, `eclairage`, `prise`, `compteur`, ou ceux d'un widget local comme `ampoule`).

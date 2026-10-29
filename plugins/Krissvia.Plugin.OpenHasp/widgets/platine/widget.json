@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "platine",
+  "name": "Platine openHASP",
+  "description": "Une platine murale : en ligne, en veille, nombre de pages, dernière peinture ; Repeindre (effacer et renvoyer ses pages) et Redémarrer. Livré par le plugin openHASP.",
+  "version": "1.0.0",
+  "element": "kv-platine",
+  "script": "platine.js",
+  "slots": [ { "name": "ecran", "kinds": ["sensor"], "device_classes": ["display_panel"], "required": true } ],
+  "size": { "cols": 3, "rows": 1.5 }
+}

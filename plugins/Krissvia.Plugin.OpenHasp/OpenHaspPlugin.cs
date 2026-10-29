@@ -19,6 +19,14 @@ namespace Krissvia.Plugin.OpenHasp;
 internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
 {
     public const string Abonnement = "hasp/#";
+
+    /// <summary>Effacer la platine et lui renvoyer toutes ses pages et valeurs, comme à son démarrage.</summary>
+    public const string Repaint = "repaint";
+
+    /// <summary>Redémarrer l'écran ; il se repeint de lui-même à son retour en ligne.</summary>
+    public const string Reboot = "reboot";
+
+    public static string EcranId(string noeud) => $"{noeud}:ecran";
     public static readonly TimeSpan Periode = TimeSpan.FromSeconds(30);
 
     private readonly Reglages _reglages;
@@ -32,6 +40,7 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
     private readonly ConcurrentDictionary<string, int> _luminosites = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, byte> _enVeille = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, Clavier> _claviers = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _peintes = new(StringComparer.Ordinal);
     private string? _etatAlarme;
     private readonly SemaphoreSlim _envoi = new(1, 1);
     private volatile bool _brokerConnecte;
@@ -55,6 +64,9 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
             .GroupBy(p => p.Noeud, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
         foreach (var doublon in reglages.Platines.GroupBy(p => p.Noeud).Where(g => g.Count() > 1)) NoeudEnDouble(_logger, doublon.Key);
+        // Dit une fois au démarrage, pas à chaque peinture : une ligne écartée l'est jusqu'à ce qu'on corrige les réglages.
+        foreach (var platine in _platines.Values.Where(p => p.APagePerso))
+            foreach (var raison in PagePerso.Lire(platine.PagePerso).Ecartees) LignePersoEcartee(_logger, platine.Noeud, raison);
     }
 
     /// <summary>
@@ -152,18 +164,70 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
                     Name = $"Platine {n}",
                     Manufacturer = "openHASP",
                     Model = "Guition 480×480",
-                    Entities = [new EntityDescriptor { UniqueId = n, Kind = EntityKind.BinarySensor, Name = "Connexion", DeviceClass = DeviceClasses.Connectivity }],
+                    Entities =
+                    [
+                        new EntityDescriptor { UniqueId = n, Kind = EntityKind.BinarySensor, Name = "Connexion", DeviceClass = DeviceClasses.Connectivity },
+                        new EntityDescriptor { UniqueId = EcranId(n), Kind = EntityKind.Sensor, Name = "Écran", DeviceClass = DeviceClasses.DisplayPanel, Commands = [Repaint, Reboot] },
+                    ],
                 })],
             },
         };
         if (!_enLigne.IsEmpty)
-            messages.Add(new StateBatch { States = [.. _enLigne.Select(kv => new EntityState { EntityUniqueId = kv.Key, Value = JsonSerializer.SerializeToElement(kv.Value) })] });
+            messages.Add(new StateBatch
+            {
+                States = [.. _enLigne.Select(kv => new EntityState { EntityUniqueId = kv.Key, Value = JsonSerializer.SerializeToElement(kv.Value) })
+                    .Concat(_enLigne.Keys.Where(_platines.ContainsKey).Select(EtatEcran))],
+            });
         messages.Add(new Availability { Online = _brokerConnecte });
         return messages;
     }
 
-    public Task<CommandResult> ExecuteAsync(CommandRequest request, CancellationToken ct) =>
-        Task.FromResult(new CommandResult { Id = request.Id, Outcome = CommandOutcome.Failed, Detail = "une platine ne se commande pas : elle commande" });
+    /// <summary>
+    /// <c>repaint</c> et <c>reboot</c>, sur l'entité « Écran » d'une platine. Les autres entités ne se commandent pas :
+    /// une platine commande, elle n'est pas commandée.
+    /// </summary>
+    public async Task<CommandResult> ExecuteAsync(CommandRequest request, CancellationToken ct)
+    {
+        CommandResult Resultat(CommandOutcome o, string? detail = null) => new() { Id = request.Id, Outcome = o, Detail = detail };
+        var platine = _platines.Values.FirstOrDefault(p => EcranId(p.Noeud) == request.EntityUniqueId);
+        if (platine is null) return Resultat(CommandOutcome.Failed, "une platine ne se commande pas : elle commande ; seul son écran sait se repeindre ou redémarrer");
+        if (!_brokerConnecte) return Resultat(CommandOutcome.Unreachable, "broker injoignable");
+        if (!(_enLigne.TryGetValue(platine.Noeud, out var enLigne) && enLigne))
+            return Resultat(CommandOutcome.Unreachable, "platine hors ligne : elle se repeindra d'elle-même à son retour");
+
+        switch (request.Command)
+        {
+            case Repaint:
+                return await GenererAsync(platine) ? Resultat(CommandOutcome.Accepted) : Resultat(CommandOutcome.Unreachable, "pages non envoyées (broker)");
+
+            case Reboot:
+                // « reboot » en charge du topic de commande : la forme documentée par openHASP, et jamais une charge vide
+                // (qui, sur un topic d'attribut, serait une lecture). La platine repart, publie « online », et se repeint.
+                var ok = await _mqtt.PublishAsync($"hasp/{platine.Noeud}/command", "reboot", ct);
+                if (ok) Redemarrage(_logger, platine.Noeud);
+                return ok ? Resultat(CommandOutcome.Accepted) : Resultat(CommandOutcome.Unreachable, "broker injoignable");
+
+            default:
+                return Resultat(CommandOutcome.Failed, $"commande « {request.Command} » inconnue");
+        }
+    }
+
+    /// <summary>La valeur de l'entité « Écran » : ce que dessine sa carte.</summary>
+    private EntityState EtatEcran(string noeud) => new()
+    {
+        EntityUniqueId = EcranId(noeud),
+        Value = JsonSerializer.SerializeToElement(new
+        {
+            node = noeud,
+            online = _enLigne.TryGetValue(noeud, out var l) && l,
+            pages = _platines.TryGetValue(noeud, out var p) ? MiseEnPage.PagesPresentes(p, _reglages).Count : 0,
+            last_paint = _peintes.TryGetValue(noeud, out var quand) ? quand : (DateTimeOffset?)null,
+            asleep = _enVeille.ContainsKey(noeud),
+        }),
+    };
+
+    private Task PublierEcranAsync(string noeud) =>
+        Coeur?.SendAsync(new StateBatch { States = [EtatEcran(noeud)] }) ?? Task.CompletedTask;
 
     // ── Broker ───────────────────────────────────────────────────────────────
 
@@ -209,7 +273,7 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
             var avant = _enLigne.TryGetValue(noeud, out var e) ? e : (bool?)null;
             _enLigne[noeud] = enLigne;
             if (avant != enLigne && Coeur is { } coeur)
-                await coeur.SendAsync(new StateBatch { States = [new EntityState { EntityUniqueId = noeud, Value = JsonSerializer.SerializeToElement(enLigne) }] });
+                await coeur.SendAsync(new StateBatch { States = [new EntityState { EntityUniqueId = noeud, Value = JsonSerializer.SerializeToElement(enLigne) }, EtatEcran(noeud)] });
 
             if (ARepeindre(avant, enLigne, _horloge.GetUtcNow() - _connecteLe)) _ = Task.Run(() => GenererAsync(platine));
             else if (!enLigne && avant == true) PlatineHorsLigne(_logger, noeud);
@@ -241,8 +305,8 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
 
     // ── Platines ─────────────────────────────────────────────────────────────
 
-    /// <summary>Efface la platine, pose les pages générées, puis la peint.</summary>
-    internal async Task GenererAsync(Platine platine)
+    /// <summary>Efface la platine, pose les pages générées, puis la peint. Faux si le broker a lâché en route.</summary>
+    internal async Task<bool> GenererAsync(Platine platine)
     {
         var noeud = platine.Noeud;
         var lignes = MiseEnPage.Generer(platine, _reglages);
@@ -263,16 +327,20 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
                 // Retentée au prochain « online » : la platine n'a peut-être reçu qu'une partie de ses pages.
                 _enLigne.TryRemove(noeud, out _);
                 GenerationRatee(_logger, noeud);
-                return;
+                return false;
             }
 
             PagesGenerees(_logger, noeud, lignes.Count);
             await PeindreAsync(platine);
+            _peintes[noeud] = _horloge.GetUtcNow();
         }
         finally
         {
             _envoi.Release();
         }
+
+        await PublierEcranAsync(noeud);
+        return true;
     }
 
     internal async Task RafraichirAsync(CancellationToken ct)
@@ -438,6 +506,12 @@ internal sealed partial class OpenHaspPlugin : ICorePlugin, IMqttHandler
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Platine {Noeud} : {Commande} sur {Entite} — {Resultat} : {Detail}")]
     private static partial void OrdreRefuse(ILogger logger, string noeud, string entite, string commande, CommandOutcome resultat, string detail);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Platine {Noeud}, page perso : {Raison} — ligne écartée.")]
+    private static partial void LignePersoEcartee(ILogger logger, string noeud, string raison);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Platine {Noeud} : redémarrage demandé.")]
+    private static partial void Redemarrage(ILogger logger, string noeud);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Platine {Noeud} : écran éteint (veille).")]
     private static partial void EcranEteint(ILogger logger, string noeud);

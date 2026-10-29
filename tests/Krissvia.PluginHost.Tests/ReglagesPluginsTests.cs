@@ -25,6 +25,32 @@ public class ReglagesPluginsTests
 
     private static SettingField Schema(string projet) => SettingsSchema.Parse(Fiche(projet).Settings)!;
 
+    [Fact]
+    public void La_page_perso_d_une_platine_se_saisit_sur_plusieurs_lignes_et_ses_liaisons_ont_les_bons_droits()
+    {
+        var platine = Schema("Krissvia.Plugin.OpenHasp").Properties.Single(p => p.Key == "Platines").Properties;
+
+        Assert.True(platine.Single(p => p.Key == "PagePerso").Multiline);
+        Assert.False(platine.Single(p => p.Key == "NomPagePerso").Multiline);
+        Assert.False(platine.Single(p => p.Key == "Noeud").Multiline);
+        // Un objet qui montre une valeur ne fait que lire ; un bouton commande (contrat 0.3 : choisir, c'est autoriser).
+        Assert.Equal(EntityAccess.Read, platine.Single(p => p.Key == "AffichagesPerso").Properties.Single(p => p.Key == "Entite").Entity!.Access);
+        Assert.Equal(EntityAccess.Command, platine.Single(p => p.Key == "BoutonsPerso").Properties.Single(p => p.Key == "Entite").Entity!.Access);
+    }
+
+    [Fact]
+    public void Textarea_ne_vaut_que_pour_un_texte()
+    {
+        var champ = SettingsSchema.Parse(JsonDocument.Parse("""
+            { "type": "object", "properties": {
+                "a": { "type": "string", "format": "textarea" },
+                "b": { "type": "integer", "format": "textarea" },
+                "c": { "type": "string", "format": "password" } } }
+            """).RootElement)!;
+
+        Assert.Equal([true, false, false], champ.Properties.Select(p => p.Multiline));
+    }
+
     private sealed class Magasin : IConfigurationStore
     {
         public ConcurrentDictionary<(string, string), string> Documents { get; } = new();
