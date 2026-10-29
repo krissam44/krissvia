@@ -117,8 +117,63 @@ public sealed partial record ReleveImprimante(
     /// Un niveau brut en %, à l'échelle de son maximum (<c>marker-high-levels</c>, souvent 100, pas toujours). Négatif
     /// (-1 non fourni, -2 inconnu, -3 « il en reste ») : null, jamais un faux 0 %.
     /// </summary>
-    public static int? Pourcentage(int? niveau, int? haut) =>
+    public static int? Pourcentage(long? niveau, long? haut) =>
         niveau is not >= 0 ? null : (int)Math.Clamp(Math.Round(niveau.Value * 100.0 / (haut is > 0 ? haut.Value : 100)), 0, 100);
+
+    /// <summary>prtMarkerSuppliesType (RFC 3805) → le mot-clé IPP de <c>marker-types</c>, pour un vocabulaire unique.</summary>
+    private static readonly Dictionary<int, string> TypesSnmp = new()
+    {
+        [1] = "other", [3] = "toner", [4] = "waste-toner", [5] = "ink", [6] = "ink-cartridge", [7] = "ink-ribbon", [8] = "waste-ink",
+        [9] = "opc", [10] = "developer", [11] = "fuser-oil", [15] = "fuser", [18] = "cleaner-unit", [20] = "transfer-unit",
+        [21] = "toner-cartridge", [24] = "waste-water",
+    };
+
+    private static readonly HashSet<string> Cartouches = new(StringComparer.Ordinal) { "toner", "ink", "ink-cartridge", "ink-ribbon", "toner-cartridge" };
+
+    private static readonly HashSet<string> TypesPieces = new(StringComparer.Ordinal)
+    {
+        "opc", "developer", "fuser", "transfer-unit", "cleaner-unit", "waste-toner", "waste-ink", "fuser-oil", "waste-water",
+    };
+
+    /// <summary>
+    /// Complète le relevé IPP par la table SNMP <c>prtMarkerSupplies</c>, avec la prudence de l'intégration Gladys :
+    /// <list type="bullet">
+    /// <item>IPP n'annonce AUCUN consommable : la table le remplace entièrement ;</item>
+    /// <item>sinon, seules les <b>pièces</b> s'ajoutent (tambour, four, rouleaux, courroie, récupérateur) — jamais une
+    /// cartouche, que l'IPP couvre déjà. Une pièce se reconnaît à son type, ou, pour le type « autre », à son nom :
+    /// la Samsung M2020 range ses rouleaux de transfert et d'entraînement en « autre » ;</item>
+    /// <item>une pièce de même type ou de même identifiant qu'un consommable IPP est écartée : un doublon ferait deux
+    /// entités pour une même jauge.</item>
+    /// </list>
+    /// Les niveaux sont dans l'unité de la ligne (pages pour la Samsung : 25743 sur 30000) : ramenés à leur capacité.
+    /// </summary>
+    public ReleveImprimante Completer(IReadOnlyList<Snmp.LigneSnmp> lignes, int seuilBas)
+    {
+        var ids = Consommables.Select(c => c.Id).ToHashSet(StringComparer.Ordinal);
+        var typesIpp = Consommables.Select(c => c.Type).Where(t => t is not null and not "other").ToHashSet(StringComparer.Ordinal);
+        var remplace = Consommables.Count == 0;
+        var ajouts = new List<Consommable>();
+        foreach (var l in lignes)
+        {
+            var type = l.Type is { } t ? TypesSnmp.GetValueOrDefault(t) : null;
+            var nom = NomPropre(l.Description) ?? $"Consommable {l.Index}";
+            if (!remplace)
+            {
+                if (type is not null && Cartouches.Contains(type)) continue;
+                if (!(type is not null && TypesPieces.Contains(type)) && !PieceRegex().IsMatch(nom)) continue;   // inconnu : on s'abstient
+                if (type is not null && typesIpp.Contains(type)) continue;
+            }
+
+            var id = Identifiant(nom);
+            if (!remplace && ids.Contains(id)) continue;
+            ajouts.Add(new Consommable(Unique(ids, id), nom, Pourcentage(l.Niveau, l.Capacite), l.Niveau == -3, seuilBas, type, null));
+        }
+
+        return ajouts.Count == 0 ? this : this with { Consommables = [.. Consommables, .. ajouts] };
+    }
+
+    [GeneratedRegex(@"roller|rouleau|drum|tambour|fuser|four|belt|courroie|transfer|waste|imaging|imagerie|developer|maintenance|opc", RegexOptions.IgnoreCase)]
+    private static partial Regex PieceRegex();
 
     /// <summary>
     /// Le nom d'un consommable sans son numéro de série. Samsung écrit « Black Toner_S/N_:CRUM-18020727263 » : le

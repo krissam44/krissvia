@@ -77,7 +77,9 @@ class KvImprimante extends KvWidget {
         const entite = this._entities.imprimante;
         const etat = this._states.imprimante;
         const v = etat?.value && typeof etat.value === "object" ? etat.value : {};
-        const nom = entite?.name && entite.name !== "Imprimante" ? entite.name : v.name ?? v.model ?? "Imprimante";
+        // Le cœur nomme l'entité « appareil + Imprimante » : le nom de l'imprimante suffit, sauf si l'utilisateur en a
+        // choisi un autre (renommage, « Nom sur la carte »).
+        const nom = entite?.name && v.name && !entite.name.startsWith(v.name) ? entite.name : v.name ?? v.model ?? entite?.name ?? "Imprimante";
         const entete = `<div class="entete">${icone("print")}Imprimante</div><div class="nom">${esc(nom)}</div>`;
         const manque = absence(etat, entite);
         if (manque && !(etat && !etat.available && Array.isArray(v.markers))) return `<div class="carte">${entete}${manque}</div>`;

@@ -1,6 +1,7 @@
 using Krissvia.Plugin.Ipp;
 using Krissvia.Plugin.Ipp.Decouverte;
 using Krissvia.Plugin.Ipp.Protocole;
+using Krissvia.Plugin.Ipp.Snmp;
 using Krissvia.Sdk;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,8 +49,11 @@ var fichier = Path.Combine(coeur.DataDirectory is { Length: > 0 } donnees ? donn
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IIppClient, IppHttpClient>();
 builder.Services.AddSingleton<IDecouverteIpp, DecouverteMdns>();
+// Les pièces que l'IPP ne publie pas (rouleaux, four) : en SNMP, sauf si on l'a coupé.
+var snmp = builder.Configuration.GetSection("Snmp");
+ISnmpConsommables? consommablesSnmp = snmp.GetValue("Enabled", true) ? new SnmpConsommables(snmp["Community"] is { Length: > 0 } c ? c : "public") : null;
 builder.Services.AddSingleton(sp => new IppPlugin(sp.GetRequiredService<IIppClient>(), sp.GetRequiredService<IDecouverteIpp>(),
-    sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<ILogger<IppPlugin>>(), options, new MemoireImprimantes(fichier)));
+    sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<ILogger<IppPlugin>>(), options, new MemoireImprimantes(fichier), consommablesSnmp));
 builder.Services.AddSingleton(sp =>
 {
     var plugin = sp.GetRequiredService<IppPlugin>();

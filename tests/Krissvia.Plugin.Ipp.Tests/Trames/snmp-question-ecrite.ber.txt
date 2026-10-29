@@ -1,0 +1,12 @@
+# GetNextRequest v2c écrit par un script indépendant du codec (celui de la capture du 24/10/2026).
+30 27                                                                                             # SEQUENCE (39 octets)
+02 01 01                                                                                          #   INTEGER 1
+04 06 70 75 62 6c 69 63                                                                           #   OCTET STRING public
+a1 1a                                                                                             #   GetNextRequest (26 octets)
+02 01 01                                                                                          #     INTEGER 1
+02 01 00                                                                                          #     INTEGER 0
+02 01 00                                                                                          #     INTEGER 0
+30 0f                                                                                             #     SEQUENCE (15 octets)
+30 0d                                                                                             #       SEQUENCE (13 octets)
+06 09 2b 06 01 02 01 2b 0b 01 01                                                                  #         OID 1.3.6.1.2.1.43.11.1.1
+05 00                                                                                             #         NULL

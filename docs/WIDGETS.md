@@ -162,6 +162,7 @@ Familles (`kinds`) : `sensor`, `binary_sensor`, `switch`, `light`, `cover`, `eve
 | `system_health` | santé d'une machine | Raspberry |
 | `virtual_machine` | une VM ou un conteneur ; commandes du plugin | Proxmox |
 | `hypervisor_node` | un nœud d'hyperviseur | Proxmox |
+| `printer` | une imprimante : état, consommables, alertes ; commande `refresh` | Imprimantes IPP |
 | `internet_connection` | l'état complet de la connexion | Livebox |
 | `network_hosts` | les appareils du réseau local ; commande `set_tracked` | Livebox |
 

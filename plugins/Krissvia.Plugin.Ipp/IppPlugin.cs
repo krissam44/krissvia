@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Krissvia.Contracts;
 using Krissvia.Plugin.Ipp.Decouverte;
 using Krissvia.Plugin.Ipp.Protocole;
+using Krissvia.Plugin.Ipp.Snmp;
 using Krissvia.Sdk;
 using Microsoft.Extensions.Logging;
 
@@ -78,10 +79,23 @@ internal sealed partial class IppPlugin(
     TimeProvider clock,
     ILogger<IppPlugin> logger,
     OptionsIpp options,
-    MemoireImprimantes? memoire = null) : ICorePlugin
+    MemoireImprimantes? memoire = null,
+    ISnmpConsommables? snmp = null) : ICorePlugin
 {
     public const string Refresh = "refresh";
     public const int EchecsAvantIndisponible = 2;
+
+    /// <summary>Une imprimante muette en SNMP (coupé, pare-feu, autre communauté) : on la laisse tranquille ce temps-là.</summary>
+    public static readonly TimeSpan SnmpApresSilence = TimeSpan.FromMinutes(30);
+
+    /// <summary>
+    /// Une imprimante qui répond sans pièce à ajouter (une jet d'encre dont l'IPP dit déjà tout) : sa table ne change
+    /// qu'avec le matériel, quelques lectures par jour suffisent. Celle qui apporte des pièces est relue à chaque relevé.
+    /// </summary>
+    public static readonly TimeSpan SnmpApresRien = TimeSpan.FromHours(6);
+
+    /// <summary>Où en est le SNMP d'une imprimante : prochaine lecture due, dernière table lue.</summary>
+    private sealed record EtatSnmp(DateTimeOffset Prochain, IReadOnlyList<LigneSnmp>? Lignes, string Bilan);
 
     private sealed class Suivi(string cle)
     {
@@ -110,6 +124,7 @@ internal sealed partial class IppPlugin(
     private readonly Dictionary<string, JsonElement> _valeurs = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _envoyes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, bool> _disponibilitesEnvoyees = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, EtatSnmp> _snmp = new(StringComparer.Ordinal);
     private DateTimeOffset? _derniereDecouverte;
     private string? _declaration;
     private bool _chargee;
@@ -256,12 +271,12 @@ internal sealed partial class IppPlugin(
             if (ex is TaskCanceledException && ct.IsCancellationRequested) throw;
             bool premiere;
             lock (_verrou) premiere = _injoignablesSignalees.Add(url.ToString());
-            if (premiere) Injoignable(logger, url, ex.Message);
+            // « The operation was canceled » ne dit rien : c'est le délai de 15 s, souvent une imprimante en veille.
+            if (premiere) Injoignable(logger, url, ex is TaskCanceledException ? "pas de réponse en 15 s (en veille ?)" : ex.Message);
             return null;
         }
 
         var releve = ReleveImprimante.Lire(reponse, options.SeuilBas);
-        var diagnostic = Diagnostic.Evaluer(releve);
         var cle = releve.Uuid ?? CleAdresse(url);
         if (dejaLues.Contains(cle))
         {
@@ -269,6 +284,9 @@ internal sealed partial class IppPlugin(
             lock (_verrou) _cleParUrl[url.ToString()] = cle;
             return cle;
         }
+
+        releve = await CompleterSnmpAsync(cle, url, releve, ct);
+        var diagnostic = Diagnostic.Evaluer(releve);
 
         var memoriser = false;
         lock (_verrou)
@@ -306,6 +324,62 @@ internal sealed partial class IppPlugin(
         }
 
         return cle;
+    }
+
+    /// <summary>
+    /// Les pièces que l'IPP ne publie pas (rouleaux, four, tambour), lues en SNMP — seulement vers une imprimante qui
+    /// vient de répondre en IPP, à son adresse, jamais en balayage. Une imprimante muette ou sans pièce n'est pas
+    /// relancée à chaque relevé (<see cref="SnmpApresSilence"/>, <see cref="SnmpApresRien"/>) ; entre deux lectures,
+    /// la dernière table sert.
+    /// </summary>
+    private async Task<ReleveImprimante> CompleterSnmpAsync(string cle, Uri url, ReleveImprimante releve, CancellationToken ct)
+    {
+        if (snmp is null) return releve;
+        var maintenant = clock.GetUtcNow();
+        EtatSnmp? etat;
+        lock (_verrou) etat = _snmp.GetValueOrDefault(cle);
+        if (etat is not null && maintenant < etat.Prochain) return etat.Lignes is { } l ? releve.Completer(l, options.SeuilBas) : releve;
+
+        IReadOnlyList<LigneSnmp>? lues;
+        try
+        {
+            lues = await snmp.LireAsync(url.Host, ct);
+        }
+        catch (Exception ex) when (ex is System.Net.Sockets.SocketException or SnmpFormatException or InvalidOperationException)
+        {
+            lues = null;
+        }
+
+        string bilan;
+        if (lues is null)
+        {
+            etat = new EtatSnmp(maintenant + SnmpApresSilence, etat?.Lignes, "muette");
+            bilan = etat.Bilan;
+        }
+        else
+        {
+            var complete = releve.Completer(lues, options.SeuilBas);
+            var pieces = complete.Consommables.Skip(releve.Consommables.Count).Select(c => c.Nom).ToList();
+            bilan = pieces.Count == 0 ? "rien" : string.Join(", ", pieces);
+            etat = new EtatSnmp(pieces.Count == 0 ? maintenant + SnmpApresRien : maintenant, lues, bilan);
+        }
+
+        string? avant;
+        lock (_verrou)
+        {
+            avant = _snmp.GetValueOrDefault(cle)?.Bilan;
+            _snmp[cle] = etat;
+        }
+
+        // Dit au journal quand le bilan change seulement : il revient à chaque relevé.
+        if (avant != bilan)
+        {
+            if (lues is null) SnmpMuet(logger, releve.Nom ?? cle, (int)SnmpApresSilence.TotalMinutes);
+            else if (bilan == "rien") SnmpSansPiece(logger, releve.Nom ?? cle);
+            else SnmpPieces(logger, releve.Nom ?? cle, bilan);
+        }
+
+        return etat.Lignes is { } lignes ? releve.Completer(lignes, options.SeuilBas) : releve;
     }
 
     /// <summary>Sans UUID (imprimante ancienne) : l'adresse, réduite à des caractères sûrs.</summary>
@@ -477,6 +551,15 @@ internal sealed partial class IppPlugin(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "« {Nom} » ne répond plus depuis {Echecs} relevés (éteinte ?) : indisponible.")]
     private static partial void Eteinte(ILogger logger, string nom, int echecs);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "« {Nom} » ne répond pas en SNMP (coupé, ou autre communauté) : pas de pièces ; nouvel essai dans {Minutes} min.")]
+    private static partial void SnmpMuet(ILogger logger, string nom, int minutes);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "« {Nom} » : rien à ajouter en SNMP, l'IPP dit déjà tout.")]
+    private static partial void SnmpSansPiece(ILogger logger, string nom);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "« {Nom} » : pièces lues en SNMP : {Pieces}.")]
+    private static partial void SnmpPieces(ILogger logger, string nom, string pieces);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "« {Nom} » signale un problème : {Alertes}.")]
     private static partial void Probleme(ILogger logger, string nom, string alertes);
