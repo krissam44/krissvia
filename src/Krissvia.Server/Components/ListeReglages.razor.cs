@@ -10,6 +10,9 @@ public partial class ListeReglages
     [Parameter, EditorRequired] public SettingField Champ { get; set; } = default!;
     [Parameter, EditorRequired] public JsonArray Liste { get; set; } = default!;
 
+    /// <summary>Levé après chaque ajout, modification, retrait ou déplacement (voir <see cref="SettingsEditor.Modifie"/>).</summary>
+    [Parameter] public EventCallback Modifie { get; set; }
+
     [Inject] private IEntityRegistry Registre { get; set; } = default!;
     [Inject] private IDialogService Dialogues { get; set; } = default!;
 
@@ -51,7 +54,7 @@ public partial class ListeReglages
         };
     }
 
-    private void Deplacer(int indice, int sens)
+    private async Task Deplacer(int indice, int sens)
     {
         var cible = indice + sens;
         if (cible < 0 || cible >= Liste.Count) return;
@@ -59,6 +62,7 @@ public partial class ListeReglages
         Liste.RemoveAt(indice);
         Liste.Insert(cible, element);
         _version++;
+        await Modifie.InvokeAsync();
     }
 
     private async Task AjouterAsync()
@@ -68,6 +72,7 @@ public partial class ListeReglages
         {
             Liste.Add(nouveau);
             _version++;
+            await Modifie.InvokeAsync();
         }
     }
 
@@ -80,6 +85,7 @@ public partial class ListeReglages
         {
             Liste[indice] = modifie;
             _version++;
+            await Modifie.InvokeAsync();
         }
     }
 
@@ -92,6 +98,7 @@ public partial class ListeReglages
         {
             Liste.RemoveAt(indice);
             _version++;
+            await Modifie.InvokeAsync();
         }
     }
 

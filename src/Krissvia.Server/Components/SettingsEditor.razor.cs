@@ -13,6 +13,9 @@ public partial class SettingsEditor
     /// <summary>Dans une section que le cœur sait remplir (broker commun) : rien n'y est obligatoire, comme à la validation.</summary>
     [Parameter] public bool Partage { get; set; }
 
+    /// <summary>Levé à chaque saisie : la page en déduit qu'il reste des modifications à enregistrer.</summary>
+    [Parameter] public EventCallback Modifie { get; set; }
+
     [Inject] private IEntityRegistry Registre { get; set; } = default!;
 
     /// <summary>
@@ -43,14 +46,24 @@ public partial class SettingsEditor
 
     private bool Booleen(SettingField champ) => Valeur[champ.Key]?.GetValueKind() == JsonValueKind.True;
 
-    private void Ecrire(SettingField champ, string? texte) =>
+    private Task Ecrire(SettingField champ, string? texte)
+    {
         Valeur[champ.Key] = string.IsNullOrEmpty(texte) ? null : JsonValue.Create(texte);
+        return Modifie.InvokeAsync();
+    }
 
-    private void Ecrire(SettingField champ, double? nombre) =>
+    private Task Ecrire(SettingField champ, double? nombre)
+    {
         Valeur[champ.Key] = nombre is not { } n ? null
             : champ.Type == SettingType.Integer ? JsonValue.Create((long)Math.Round(n)) : JsonValue.Create(n);
+        return Modifie.InvokeAsync();
+    }
 
-    private void Ecrire(SettingField champ, bool oui) => Valeur[champ.Key] = JsonValue.Create(oui);
+    private Task Ecrire(SettingField champ, bool oui)
+    {
+        Valeur[champ.Key] = JsonValue.Create(oui);
+        return Modifie.InvokeAsync();
+    }
 
     private JsonObject SousObjet(SettingField champ)
     {
