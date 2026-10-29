@@ -15,7 +15,8 @@ public sealed class Reglages
     /// <summary>Toutes les entités à suivre, sans doublon : ce qu'on demande au cœur (contrat 0.3).</summary>
     public IReadOnlyList<string> Entites() =>
     [
-        .. Platines.SelectMany(p => p.InterrupteursAffiches().Select(i => i.Entite).Prepend(p.Thermostat))
+        .. Platines.SelectMany(p => p.InterrupteursAffiches().Select(i => i.Entite).Prepend(p.Thermostat)
+                .Concat(p.APagePerso ? p.AffichagesPerso.Select(a => a.Entite).Concat(p.BoutonsPerso.Select(b => b.Entite)) : []))
             .Concat(SondesAffichees().Select(s => s.Entite))
             .Append(Affichage.Exterieure)
             .Append(Alarme.Entite)
@@ -38,7 +39,18 @@ public sealed class Platine
     /// <summary>Page 4, le digicode : sur toutes les platines par défaut, dès qu'une alarme est choisie.</summary>
     public bool Digicode { get; set; } = true;
 
+    /// <summary>Page 5, écrite par l'utilisateur en JSONL (<see cref="OpenHasp.PagePerso"/>). Vide : pas de page perso.</summary>
+    public string? PagePerso { get; set; }
+
+    /// <summary>Le libellé de la page perso dans la barre du bas ; vide : « Perso ».</summary>
+    public string? NomPagePerso { get; set; }
+
+    public List<AffichagePerso> AffichagesPerso { get; set; } = [];
+    public List<BoutonPerso> BoutonsPerso { get; set; } = [];
+
     public bool AThermostat => !string.IsNullOrEmpty(Thermostat);
+
+    public bool APagePerso => !string.IsNullOrWhiteSpace(PagePerso);
 
     public bool ADigicode(Reglages reglages) => Digicode && !string.IsNullOrEmpty(reglages.Alarme.Entite);
 

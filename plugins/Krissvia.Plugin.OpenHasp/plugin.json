@@ -1,7 +1,7 @@
 {
   "id": "openhasp",
   "name": "openHASP",
-  "description": "Platines murales openHASP (Guition 480×480) : Krissvia génère leurs pages à chaque démarrage de la platine — thermostat de la pièce, températures, horloge et interrupteurs — et relaie les appuis.",
+  "description": "Platines murales openHASP (Guition 480×480) : Krissvia génère leurs pages à chaque démarrage de la platine — thermostat de la pièce, températures, horloge et interrupteurs, et une page à soi en JSONL — et relaie les appuis. Repeindre ou redémarrer une platine depuis sa carte.",
   "executable": "Krissvia.Plugin.OpenHasp",
   "settings": {
     "type": "object",
@@ -30,6 +30,36 @@
             "Piece": { "type": "string", "title": "Titre", "description": "Affiché en tête de la page thermostat. Vide : le nom du thermostat." },
             "Digicode": { "type": "boolean", "title": "Digicode de l'alarme (page 4)", "default": true, "description": "Seulement si une alarme est choisie plus bas." },
             "Thermostat": { "type": "string", "title": "Thermostat de la pièce", "format": "entity", "x-kinds": [ "climate" ], "x-access": "command", "description": "Page 1. Vide : pas de page thermostat." },
+            "NomPagePerso": { "type": "string", "title": "Nom de la page perso", "description": "Son bouton dans la barre du bas. Vide : « Perso »." },
+            "PagePerso": { "type": "string", "format": "textarea", "title": "Page perso (page 5), en JSONL", "description": "Une ligne par objet, au format des pages.jsonl d'openHASP : {\"id\":10,\"obj\":\"label\",\"x\":20,\"y\":40,\"w\":440,\"h\":40,\"text\":\"Salon\"}. Le numéro de page est mis à 5 d'office, le fond et la barre du bas sont ajoutés. Pas d'id 50 (le fond). Une ligne illisible est écartée et dite dans le journal. Vide : pas de page perso." },
+            "AffichagesPerso": {
+              "type": "array",
+              "title": "Page perso : objets qui montrent une valeur",
+              "items": {
+                "type": "object",
+                "required": [ "Objet", "Entite" ],
+                "properties": {
+                  "Objet": { "type": "integer", "title": "N° d'objet (id)", "minimum": 1, "maximum": 254 },
+                  "Entite": { "type": "string", "title": "Entité", "format": "entity", "x-kinds": [ "sensor", "binary_sensor", "switch", "light", "climate" ] },
+                  "Attribut": { "type": "string", "title": "Attribut", "default": "text", "description": "text pour un libellé ou un bouton ; val pour un arc, une barre, un curseur (valeur entière)." },
+                  "Format": { "type": "string", "title": "Format", "description": "{} à la place de la valeur : « Salon {} °C ». Sans {}, il suit la valeur (« °C »). Vide : la valeur seule." },
+                  "Champ": { "type": "string", "title": "Champ", "description": "Pour une entité dont la valeur est un objet, le champ à montrer (thermostat : temperature, target)." }
+                }
+              }
+            },
+            "BoutonsPerso": {
+              "type": "array",
+              "title": "Page perso : boutons qui commandent",
+              "description": "L'objet doit être un bouton (obj btn) ; avec \"toggle\":true, il reste enfoncé tant que l'entité est allumée.",
+              "items": {
+                "type": "object",
+                "required": [ "Objet", "Entite" ],
+                "properties": {
+                  "Objet": { "type": "integer", "title": "N° d'objet (id)", "minimum": 1, "maximum": 254 },
+                  "Entite": { "type": "string", "title": "Interrupteur ou lumière", "format": "entity", "x-kinds": [ "switch", "light" ], "x-access": "command" }
+                }
+              }
+            },
             "Interrupteurs": {
               "type": "array",
               "title": "Interrupteurs (page horloge, 3 au plus)",

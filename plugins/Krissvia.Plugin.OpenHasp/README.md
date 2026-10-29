@@ -12,9 +12,10 @@ entités choisies dans ses réglages et transmet les appuis au cœur comme des o
 | 2 Températures | jusqu'à six sondes en arcs, en rangées de trois (la dernière rangée est centrée), **les mêmes sur toutes les platines** | au moins une sonde |
 | 3 Horloge | heure (tenue par la platine), date et température extérieure, prochaine bascule du planning (« Confort à 18:00 »), jusqu'à trois interrupteurs **propres à chaque platine**, curseur de luminosité | toujours |
 | 4 Alarme | digicode : état et décompte, capteur en cause ou défaut, code masqué, clavier 0-9 / C / ⌫, **Armer** et **Désarmer** | une alarme est choisie et la platine a « Digicode » coché (par défaut) |
+| 5 Perso | **la tienne**, écrite en JSONL (voir « La page perso ») | la platine a une page perso |
 
 La barre du bas ne propose que les pages présentes (à quatre, « Températures » devient « Sondes » : le mot ne tient
-plus dans le bouton). Une consigne réglée au −/+ n'allume plus aucun mode : aucun ne la
+plus dans le bouton ; à cinq, boutons de 90 px, les noms courts « Thermo », « Heure » en police 16). Une consigne réglée au −/+ n'allume plus aucun mode : aucun ne la
 décrit. La prochaine bascule vient du thermostat de la platine (`next_change` de l'entité `climate`) et reste vide quand
 le planning est arrêté ou que l'absence l'emporte.
 
@@ -30,11 +31,59 @@ broker, alors que les messages retenus arrivent dans l'instant : c'est ce qui la
 Ensuite, seul ce qui change est envoyé, et ce qui n'a pas changé est renvoyé toutes les deux minutes (une platine peut
 avoir perdu un attribut sans qu'on le sache). Changer les réglages relance le plugin, donc regénère les pages.
 
+## La page perso (page 5)
+
+L'échappatoire pour ce que les pages générées ne font pas : une page qu'on écrit soi-même, au format des
+`pages.jsonl` d'openHASP, une ligne par objet. Dans les réglages de la platine, **Page perso** :
+
+```
+// Les commentaires et les lignes vides sont ignorés
+{"id":10,"obj":"label","x":20,"y":40,"w":440,"h":40,"text":"Salon","text_font":32,"text_color":"#FFFFFF","bg_opa":0}
+{"id":11,"obj":"arc","x":140,"y":100,"w":200,"h":200,"min":0,"max":35}
+{"id":12,"obj":"btn","toggle":true,"x":20,"y":320,"w":200,"h":60,"text":"Lampe","text_font":24}
+```
+
+- **Le numéro de page est mis à 5 d'office**, quoi que dise la ligne : un objet posé sur la page 2 écraserait une sonde
+  générée. Le **fond** commun (id 50) et le **bouton de la barre du bas** (« Perso », ou le nom choisi) sont ajoutés ; l'id 50
+  est donc refusé.
+- Une ligne illisible, sans `id` ou hors de 1 à 254 est **écartée et dite dans le journal** au démarrage du plugin —
+  jamais toute la page.
+- **Objets qui montrent une valeur** (liste des réglages) : n° d'objet → entité. `text` (par défaut) : nombre à la
+  française, Oui / Non, Allumé / Éteint pour un interrupteur, texte tel quel, `--` si l'entité est indisponible ou jamais
+  reçue. **Format** : `{}` à la place de la valeur (« Salon {} °C ») ; sans `{}`, il suit la valeur (« °C »).
+  **Champ** : pour une entité dont la valeur est un objet (un thermostat : `temperature`, `target`). `val` : un entier,
+  pour un arc, une barre, un curseur.
+- **Boutons qui commandent** : n° d'objet → interrupteur ou lumière. Un appui (au relâché) allume ou éteint selon l'état
+  connu, comme les interrupteurs de la page horloge. Avec `"toggle":true`, le bouton reste enfoncé tant que l'entité est
+  allumée (le plugin écrit son `val`).
+- Les liaisons sont dans les réglages, pas dans le JSONL : c'est le choix d'une entité dans les réglages qui l'autorise
+  pour le plugin (contrat 0.3). Un affichage ne fait que lire ; un bouton commande.
+- Polices : les tailles de la liste fermée de `MiseEnPage.Polices` restent le meilleur choix (une taille de plus, un
+  cache de glyphes de plus sur l'ESP32). Séparateurs en ASCII, icônes du sous-ensemble MDI (voir plus bas).
+
+## Repeindre, redémarrer
+
+Chaque platine a une entité **Écran** (classe `display_panel`), avec sa carte livrée par le plugin (« Platine
+openHASP ») : en ligne, en veille ou hors ligne, nombre de pages, heure de la dernière peinture, et deux boutons.
+
+- **Repeindre** (`repaint`) : effacer la platine et lui renvoyer toutes ses pages et valeurs, comme à son démarrage, sans
+  la redémarrer. Pour une platine restée sur l'ancien écran de sa mémoire, ou après avoir modifié la page perso à la main
+  sur la platine. Quelques secondes.
+- **Redémarrer** (`reboot`, avec confirmation) : `reboot` sur `hasp/{nœud}/command` — la forme documentée, jamais une
+  charge vide, qui serait une lecture. L'ESP32 repart (une quinzaine de secondes), publie `online` et se repeint
+  d'elle-même. Utile après un changement de `config/gui`, que la platine n'applique qu'au redémarrage.
+- Une platine hors ligne, ou un broker perdu : refusé et dit (« injoignable »), rien n'est envoyé.
+
+Pourquoi une entité de plus plutôt que des commandes sur « Connexion » : sa classe `connectivity` est aussi celle de la
+connexion Internet (supervision, cartes). Une carte de plugin qui la visait aurait été choisie d'office pour l'entité de
+la Livebox.
+
 ## Réglages (page Services)
 
 - **Broker** : celui des platines.
 - **Platines**, une par pièce : son **nom de nœud** (celui réglé dans la platine), un titre, son **thermostat**, ses
-  **interrupteurs** (interrupteur ou lumière, avec un libellé). Choisir une entité, c'est autoriser le plugin à la
+  **interrupteurs** (interrupteur ou lumière, avec un libellé), sa **page perso** (JSONL, sur plusieurs lignes) et ses
+  liaisons. Choisir une entité, c'est autoriser le plugin à la
   commander.
 - **Températures** : les sondes de la page 2, avec les bornes de leur arc (une sonde extérieure : −10 à 40).
 - **Affichage** : sonde extérieure (sous l'horloge), couleur de fond, contraste minimum des textes (3 par défaut, 0 pour
@@ -78,7 +127,8 @@ les mêmes nœuds se repeindraient l'un l'autre en continu.
   (`off`, `{"idle":"off"}`) sont acceptées.
 - Interrupteurs : allumer ou éteindre selon l'état connu, jamais `toggle`, que tous les appareils ne portent pas.
 
-Chaque platine est aussi un appareil du cœur, avec une entité **Connexion** (son LWT).
+Chaque platine est aussi un appareil du cœur, avec une entité **Connexion** (son LWT) et une entité **Écran** (Repeindre,
+Redémarrer).
 
 ## Le digicode (page 4)
 

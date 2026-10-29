@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +19,8 @@
     <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- La fiche lue par la page Services du cœur. -->
     <Content Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- La carte « Platine » (Repeindre, Redémarrer), livrée par le plugin (WIDGETS.md §13). -->
+    <Content Include="widgets\**" CopyToOutputDirectory="PreserveNewest" />
     <None Include="appsettings.Local.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('appsettings.Local.json')" />
     <InternalsVisibleTo Include="Krissvia.Plugin.OpenHasp.Tests" />
   </ItemGroup>

@@ -128,6 +128,16 @@ public static class Ecran
             }
         }
 
+        // ── Page 5 : page perso, objets reliés aux entités ──
+        if (platine.APagePerso)
+        {
+            foreach (var aff in platine.AffichagesPerso.Where(x => x.Entite.Length > 0))
+                a.Add((Objets.Attribut(Objets.PagePerso, aff.Objet, PagePerso.Attribut(aff)), PagePerso.Valeur(aff, Etat(aff.Entite))));
+            // Un bouton « toggle » d'openHASP montre son état par val : 1 enfoncé, 0 relâché.
+            foreach (var b in platine.BoutonsPerso.Where(x => x.Entite.Length > 0))
+                a.Add((Objets.Attribut(Objets.PagePerso, b.Objet, "val"), EstAllume(Etat(b.Entite)) == true ? "1" : "0"));
+        }
+
         // ── Page 4 : digicode ──
         if (platine.ADigicode(reglages))
         {
