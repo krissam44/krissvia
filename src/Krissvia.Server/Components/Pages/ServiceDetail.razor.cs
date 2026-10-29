@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Components.Routing;
 
 namespace Krissvia.Server.Components.Pages;
 
@@ -10,11 +11,15 @@ public partial class ServiceDetail
     [Inject] private PluginSupervisor Supervisor { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private PluginSettingsService Settings { get; set; } = default!;
+    [Inject] private IDialogService Dialogues { get; set; } = default!;
 
     private ServiceSnapshot? _service;
     private PluginManifest? _fiche;
     private SettingField? _schema;
     private JsonObject? _reglages;
+
+    /// <summary>Les réglages tels qu'enregistrés (ou chargés) : ce qui diffère n'est pas encore pris en compte.</summary>
+    private string? _reference;
     private bool _dejaEnregistres;
     private IReadOnlyList<string> _erreurs = [];
     private Timer? _minuterie;
@@ -38,6 +43,7 @@ public partial class ServiceDetail
         _fiche = Supervisor.GetManifest(Id);
         _schema = SettingsSchema.Parse(_fiche?.Settings);
         _reglages = _fiche is null ? null : Settings.Get(_fiche);
+        _reference = _reglages?.ToJsonString();
         _dejaEnregistres = Settings.HasSaved(Id);
 
         _minuterie ??= new Timer(_ => InvokeAsync(() =>
@@ -61,6 +67,7 @@ public partial class ServiceDetail
         if (_erreurs.Count > 0) return;
 
         _dejaEnregistres = true;
+        _reference = _reglages.ToJsonString();
         if (_service?.Enabled == true)
         {
             if (await Supervisor.RestartAsync(Id) is { } refus) Snackbar.Add(refus, Severity.Warning);
@@ -72,6 +79,18 @@ public partial class ServiceDetail
         }
 
         _service = Supervisor.GetSnapshot(Id);
+    }
+
+    private bool NonEnregistre => _reglages is not null && _reglages.ToJsonString() != _reference;
+
+    /// <summary>Quitter la page perdrait la saisie : on demande, dans la page (pas de <c>confirm()</c> du navigateur).</summary>
+    private async Task AvantNavigationAsync(LocationChangingContext contexte)
+    {
+        if (!NonEnregistre) return;
+        var quitter = await Dialogues.ShowMessageBoxAsync("Modifications non enregistrées",
+            "Les réglages modifiés sur cette page n'ont pas été enregistrés. Quitter la page quand même ?",
+            yesText: "Quitter sans enregistrer", cancelText: "Rester");
+        if (quitter != true) contexte.PreventNavigation();
     }
 
     private async Task RelancerAsync()

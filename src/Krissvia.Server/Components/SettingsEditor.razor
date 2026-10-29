@@ -86,11 +86,11 @@
             </MudAlert>
         }
         <div class="pl-3">
-            <SettingsEditor Champ="champ" Valeur="SousObjet(champ)" Partage="@(Partage || champ.Shared is not null)" />
+            <SettingsEditor Champ="champ" Valeur="SousObjet(champ)" Partage="@(Partage || champ.Shared is not null)" Modifie="Modifie" />
         </div>
     }
     else
     {
-        <ListeReglages Champ="champ" Liste="Liste(champ)" />
+        <ListeReglages Champ="champ" Liste="Liste(champ)" Modifie="Modifie" />
     }
 }

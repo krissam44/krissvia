@@ -5,6 +5,8 @@
 
 <MudButton Href="/parametres/services" StartIcon="@Icons.Material.Filled.ArrowBack" Variant="Variant.Text" Class="mb-2">Services</MudButton>
 
+<NavigationLock OnBeforeInternalNavigation="AvantNavigationAsync" ConfirmExternalNavigation="NonEnregistre" />
+
 @if (_service is null)
 {
     <MudAlert Severity="Severity.Info">Aucun plugin « @Id » : ni installé, ni connecté.</MudAlert>
@@ -62,10 +64,18 @@ else
                     Une fois enregistrés, ceux de cette page l'emportent.
                 </MudAlert>
             }
-            <SettingsEditor Champ="_schema" Valeur="_reglages" />
+            <SettingsEditor Champ="_schema" Valeur="_reglages" Modifie="StateHasChanged" />
             @foreach (var erreur in _erreurs)
             {
                 <MudAlert Severity="Severity.Error" Dense="true" Class="mt-1">@erreur</MudAlert>
+            }
+            @if (NonEnregistre)
+            {
+                @* « Valider » dans la fenêtre d'une ligne ne fait que la modifier dans la page : vécu le 29/10/2026, un topic
+                   corrigé trois fois sans jamais être enregistré. *@
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-3">
+                    Modifications non enregistrées : elles ne comptent qu'après « @(_service.Enabled ? "Enregistrer et redémarrer" : "Enregistrer") ».
+                </MudAlert>
             }
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-3" OnClick="EnregistrerAsync"
                        StartIcon="@Icons.Material.Filled.Save">@(_service.Enabled ? "Enregistrer et redémarrer" : "Enregistrer")</MudButton>
