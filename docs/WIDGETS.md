@@ -72,7 +72,7 @@ MudBlazor, déjà dans Krissvia). Le manifeste s'écrit en attributs :
 
 ```json
 {
-  "contract": 2,
+  "contract": 3,
   "id": "jauge-cuve",
   "name": "Jauge de cuve",
   "description": "Niveau d'une cuve en pourcentage, avec seuil d'alerte.",
@@ -83,7 +83,7 @@ MudBlazor, déjà dans Krissvia). Le manifeste s'écrit en attributs :
     { "name": "niveau", "type": "entity", "kinds": ["sensor"], "device_classes": ["moisture", "enum"], "required": true },
     { "name": "pompe",  "type": "entity", "kinds": ["switch"], "required": false }
   ],
-  "size": { "cols": 3, "rows": 2 },
+  "size": { "cols": 6, "rows": 2 },
   "settings": {
     "type": "object",
     "properties": {
@@ -99,10 +99,12 @@ MudBlazor, déjà dans Krissvia). Le manifeste s'écrit en attributs :
   `kinds`, `device_classes`, `usages` — ou un objet de module (`"type": "thermostat"`, et plus tard d'autres).
   L'usage est choisi par l'utilisateur dans l'écran Entités (`radiateur`, `eclairage`, `prise`, `compteur` pour un interrupteur) ; une
   entité `light` a d'elle-même l'usage `eclairage`.
-- `size` : taille par défaut d'une carte. `cols` en douzièmes de la largeur d'un grand écran (1 à 12 : 3 = un quart,
-  quatre cartes par ligne, comme un `lg="3"` de MudGrid), `rows` en lignes, de 1 à 4 par demi-ligne (`2.5` convient, `2.25` non). Contrat 2 ; un manifeste du
-  contrat 1 comptait en sixièmes (1 à 6) : il est encore lu, sa largeur doublée. Même unité pour l'attribut
-  `Cols` d'un widget Blazor (2 par défaut).
+- `size` : taille par défaut d'une carte. `cols` en 24ᵉ de la largeur d'un grand écran (1 à 24 : 6 = un quart,
+  quatre cartes par ligne ; 3 = un huitième), `rows` en lignes, de 1 à 4 par demi-ligne (`2.5` convient, `2.25` non).
+  Contrat 3 (29/10/2026). Les contrats d'avant sont encore lus, leur largeur convertie au chargement : le contrat 2
+  comptait en douzièmes (1 à 12, doublés), le contrat 1 en sixièmes (1 à 6, quadruplés). Un widget n'a donc pas à
+  changer de contrat ; il n'y gagne que les largeurs que les douzièmes ne donnent pas (1/8, 3/8, 5/8). L'attribut
+  `Cols` d'un widget Blazor reste en **douzièmes** (2 par défaut), converti de la même façon.
 - `settings` : options propres à chaque carte, décrites avec le même sous-ensemble de JSON Schema que les réglages
   des plugins — le tableau de bord en tire le formulaire.
 
@@ -281,14 +283,19 @@ Organisation reprise de DomoMud : des **pages** (« Confort », « Technique »�
 chaque section une grille de cartes. Mode édition sur une copie : « Enregistrer » écrit tout, « Annuler » ne
 laisse rien ; replier une section hors édition s'enregistre aussitôt.
 
-- Grille : 12 colonnes sur grand écran, comme MudGrid et DomoMud ; largeur d'une carte de 1 à 12 (le menu propose
-  1/12, 1/6, 1/4, 1/3, 1/2, 2/3, 3/4 et pleine largeur ; 1/12 depuis le 23/10/2026, pour les petites cartes à icône ;
+- Grille : 24 colonnes sur grand écran depuis le 29/10/2026 (12 avant, comme MudGrid et DomoMud) ; largeur d'une
+  carte de 1 à 24 (le menu propose 1/12, 1/8, 1/6, 1/4, 1/3, 3/8, 1/2, 5/8, 2/3, 3/4 et pleine largeur ; 1/12 depuis
+  le 23/10/2026, pour les petites cartes à icône ; 1/8, 3/8 et 5/8 avec les 24 colonnes ; pas de 1/24, 54 px à 1600 px ;
   en édition, une carte de moins de 180 px remplace sa barre d'outils par un menu « ⋮ » : Avancer, Reculer, Régler, Retirer), hauteur de 1 à 4 lignes **par demi-ligne** (menu ↕ de la carte en mode
   édition, ou sa roue dentée ; 23/10/2026). La grille compte en demi-lignes de 53 px : une ligne fait toujours 118 px,
   1,5 ligne 183 px, 2 lignes 248 px. Pourquoi pas une hauteur libre, qui suivrait le contenu : une carte à liste (les
-  appareils de la box) grandirait jusqu'à tout montrer, et une carte qui change de taille en direct fait sauter la grille. Sur tablette, 4 colonnes (une carte y prend
-  la moitié de sa largeur, arrondie au-dessus) ; sur téléphone, 2 (une demi-ligne jusqu'à 2/12, puis la ligne).
-  Les pages écrites avant la grille de 12 (sans `grid`) sont relues en doublant leurs largeurs.
+  appareils de la box) grandirait jusqu'à tout montrer, et une carte qui change de taille en direct fait sauter la grille. Sur tablette, 4 colonnes (jusqu'à 1/6 : une
+  colonne ; jusqu'à 1/3 : deux ; jusqu'à 1/2 : trois ; au-delà, la ligne) ; sur téléphone, 2 (une demi-ligne jusqu'à
+  1/6, puis la ligne). Chaque carte porte ses trois largeurs en variables CSS (`--c`, `--ct`, `--cp`), calculées par
+  `ResponsiveGrid` : une règle par écran au lieu d'une par largeur.
+  Les pages écrites en douzièmes (`"grid": 12`) sont relues en doublant leurs largeurs, celles d'avant la grille de 12
+  (sans `grid`) en les quadruplant — cartes ET sections : rien ne bouge à l'écran, et la page est réécrite en 24ᵉ au
+  prochain enregistrement.
 - Cartes : glisser-déposer, y compris d'une section à l'autre ; flèches ◀ ▶ pour le téléphone ; menu de taille.
 - Nom sur la carte (`title` de la carte, 80 caractères au plus) : remplace, sur cette carte seulement, le nom de l'entité principale ; vide, la carte suit le nom de l'écran Entités.
 - **Proposer** (mode édition) : ajoute une section par famille (thermostats, températures, interrupteurs et

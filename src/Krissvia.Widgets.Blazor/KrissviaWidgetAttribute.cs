@@ -25,6 +25,7 @@ public sealed class KrissviaWidgetAttribute(string id, string name) : Attribute
 
     /// <summary>
     /// Largeur par défaut, en douzièmes de la largeur d'un grand écran (1 à 12 : 3 = un quart, comme <c>lg="3"</c>).
+    /// Le tableau de bord compte en 24ᵉ depuis le 29/10/2026 : la valeur est doublée au chargement (contrat 2).
     /// </summary>
     public int Cols { get; init; } = 2;
 

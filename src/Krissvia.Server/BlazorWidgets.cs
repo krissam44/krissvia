@@ -115,7 +115,8 @@ internal sealed class BlazorWidgets
 
         return new WidgetManifest
         {
-            Contract = WidgetCatalog.ContractVersion,
+            // L'attribut Cols compte en douzièmes (WIDGETS.md §2.2) : le catalogue le convertit, comme un manifeste du contrat 2.
+            Contract = WidgetCatalog.TwelfthsContractVersion,
             Id = d.Id,
             Name = d.Name,
             Description = d.Description,

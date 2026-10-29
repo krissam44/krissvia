@@ -43,7 +43,7 @@ public sealed record DashboardSection
     public bool Collapsed { get; init; }
 
     /// <summary>
-    /// Largeur de la section en douzièmes d'un grand écran ; null : toute la ligne. Deux sections de 6 se partagent une
+    /// Largeur de la section en 24ᵉ d'un grand écran ; null : toute la ligne. Deux sections de 12 se partagent une
     /// ligne (« Radiateurs » et « Éclairage » côte à côte). Les colonnes de ses cartes restent celles de la page : une
     /// carte de 1/12 garde sa taille, une carte plus large que la section est ramenée à sa largeur.
     /// </summary>
@@ -72,7 +72,8 @@ public sealed record Dashboard
 
     /// <summary>
     /// Nombre de colonnes dans lequel les largeurs sont comptées : toujours <see cref="DashboardService.GridColumns"/>
-    /// à l'enregistrement. Absent d'une page écrite avant le passage à 12 colonnes : ses largeurs sont en sixièmes.
+    /// à l'enregistrement. 12 : une page écrite avant le passage à 24 colonnes (29/10/2026), largeurs en douzièmes ;
+    /// absent d'une page lue en base : écrite avant le passage à 12, largeurs en sixièmes.
     /// </summary>
     public int? Grid { get; init; }
 
@@ -92,14 +93,20 @@ public sealed partial class DashboardService(IConfigurationStore store)
     public const string Collection = "tableaux";
     public const string MainId = "principal";
 
-    /// <summary>La grille de 12 colonnes de MudGrid et de DomoMud (une carte de 3 = quatre par ligne).</summary>
-    public const int GridColumns = 12;
+    /// <summary>
+    /// La grille de 24 colonnes (29/10/2026) : celle de 12 de MudGrid et de DomoMud, coupée en deux pour les cartes de
+    /// 1/8 (3) et de 3/8 (9), qu'aucun douzième ne donne. Une carte de 6 = quatre par ligne.
+    /// </summary>
+    public const int GridColumns = 24;
+
+    /// <summary>La grille de 12 colonnes (19/10 → 29/10/2026) : ses largeurs valent le double en 24ᵉ.</summary>
+    public const int TwelveColumnGrid = 12;
 
     /// <summary>Longueur maximale du nom propre à une carte.</summary>
     public const int MaxTitleLength = 80;
 
-    /// <summary>La grille d'avant (2, 4 ou 6 colonnes selon l'écran) : ses largeurs valent le double en douzièmes.</summary>
-    private const int AncienneGrille = 6;
+    /// <summary>La première grille (2, 4 ou 6 colonnes selon l'écran) : ses largeurs valent le quadruple en 24ᵉ.</summary>
+    private const int PremiereGrille = 6;
 
     public static JsonSerializerOptions Json { get; } = new()
     {
@@ -120,7 +127,8 @@ public sealed partial class DashboardService(IConfigurationStore store)
         {
             try
             {
-                if (JsonSerializer.Deserialize<Dashboard>(document.Json, Json) is { } page) pages.Add(EnDouziemes(page) with { Id = document.Id });
+                if (JsonSerializer.Deserialize<Dashboard>(document.Json, Json) is { } page)
+                    pages.Add(EnColonnes(page, page.Grid ?? PremiereGrille) with { Id = document.Id });
             }
             catch (JsonException)
             {
@@ -134,16 +142,29 @@ public sealed partial class DashboardService(IConfigurationStore store)
     }
 
     /// <summary>
-    /// Une page enregistrée en sixièmes, lue en douzièmes : chaque carte garde exactement sa largeur. Elle sera
-    /// réécrite en douzièmes au prochain enregistrement.
+    /// Une page comptée sur une grille plus grossière (<paramref name="grille"/> : 6 ou 12), en 24ᵉ : chaque carte et
+    /// chaque section garde exactement sa largeur. Elle sera réécrite en 24ᵉ au prochain enregistrement.
     /// </summary>
-    private static Dashboard EnDouziemes(Dashboard page) => page.Grid is null or AncienneGrille
-        ? page with
+    public static Dashboard EnColonnes(Dashboard page, int grille)
+    {
+        if (grille == GridColumns) return page with { Grid = GridColumns };
+        var facteur = GridColumns / grille;
+        return page with
         {
             Grid = GridColumns,
-            Sections = [.. page.Sections.Select(s => s with { Cards = [.. s.Cards.Select(c => c with { Cols = c.Cols * 2 })] })],
-        }
-        : page;
+            Sections = [.. page.Sections.Select(s => s with
+            {
+                Cols = s.Cols * facteur,
+                Cards = [.. s.Cards.Select(c => c with { Cols = c.Cols * facteur })],
+            })],
+        };
+    }
+
+    /// <summary>
+    /// Ce qu'on enregistre : une page envoyée en douzièmes (<c>"grid": 12</c>, un script écrit avant le passage à 24)
+    /// est convertie ; sans <c>grid</c>, ses largeurs sont déjà en 24ᵉ (le tableau de bord n'en écrit pas d'autres).
+    /// </summary>
+    private static Dashboard AEnregistrer(Dashboard page) => EnColonnes(page, page.Grid ?? GridColumns);
 
     /// <summary>Une page, ou null si elle n'existe pas.</summary>
     public async Task<Dashboard?> GetAsync(string id, CancellationToken ct = default) =>
@@ -153,6 +174,7 @@ public sealed partial class DashboardService(IConfigurationStore store)
     public async Task<Dashboard> SaveAsync(Dashboard page, CancellationToken ct = default)
     {
         Validate(page);
+        page = AEnregistrer(page);
         await _verrou.WaitAsync(ct);
         try
         {
@@ -164,7 +186,7 @@ public sealed partial class DashboardService(IConfigurationStore store)
         }
 
         Changed?.Invoke();
-        return page with { Grid = GridColumns };
+        return page;
     }
 
     /// <summary>
@@ -174,8 +196,8 @@ public sealed partial class DashboardService(IConfigurationStore store)
     public async Task<IReadOnlyList<Dashboard>> SaveAllAsync(IReadOnlyList<Dashboard> pages, CancellationToken ct = default)
     {
         if (pages.Count == 0) throw new DashboardValidationException("il faut au moins une page");
-        var numerotees = pages.Select((p, i) => p with { Order = i }).ToList();
-        foreach (var page in numerotees) Validate(page);
+        foreach (var page in pages) Validate(page);
+        var numerotees = pages.Select((p, i) => AEnregistrer(p) with { Order = i }).ToList();
         if (numerotees.Select(p => p.Id).Distinct(StringComparer.Ordinal).Count() != numerotees.Count)
             throw new DashboardValidationException("deux pages portent le même identifiant");
 
@@ -193,7 +215,7 @@ public sealed partial class DashboardService(IConfigurationStore store)
         }
 
         Changed?.Invoke();
-        return [.. numerotees.Select(p => p with { Grid = GridColumns })];
+        return numerotees;
     }
 
     /// <summary>Supprime une page ; jamais la dernière. Faux si elle n'existait pas.</summary>
@@ -232,8 +254,9 @@ public sealed partial class DashboardService(IConfigurationStore store)
     {
         if (!PageId().IsMatch(d.Id)) throw new DashboardValidationException("identifiant de page : minuscules, chiffres et « - »");
         if (string.IsNullOrWhiteSpace(d.Name)) throw new DashboardValidationException("une page doit avoir un nom");
-        if (d.Grid is not (null or GridColumns))
-            throw new DashboardValidationException($"grid : {GridColumns} (largeurs en douzièmes), ou absent");
+        if (d.Grid is not (null or GridColumns or TwelveColumnGrid))
+            throw new DashboardValidationException($"grid : {GridColumns} (largeurs en 24ᵉ), {TwelveColumnGrid} (en douzièmes), ou absent");
+        var max = d.Grid ?? GridColumns;
 
         var sections = new HashSet<string>(StringComparer.Ordinal);
         var cartes = new HashSet<string>(StringComparer.Ordinal);
@@ -241,8 +264,8 @@ public sealed partial class DashboardService(IConfigurationStore store)
         {
             if (string.IsNullOrWhiteSpace(section.Id)) throw new DashboardValidationException("une section n'a pas d'identifiant");
             if (!sections.Add(section.Id)) throw new DashboardValidationException($"deux sections portent l'identifiant « {section.Id} »");
-            if (section.Cols is < 1 or > GridColumns)
-                throw new DashboardValidationException($"section « {section.Id} » : de 1 à {GridColumns} colonnes");
+            if (section.Cols < 1 || section.Cols > max)
+                throw new DashboardValidationException($"section « {section.Id} » : de 1 à {max} colonnes");
             if (section.Color is { } couleur && !HexColor().IsMatch(couleur))
                 throw new DashboardValidationException($"section « {section.Id} » : couleur au format #RRGGBB");
 
@@ -252,8 +275,8 @@ public sealed partial class DashboardService(IConfigurationStore store)
                 if (!cartes.Add(carte.Id)) throw new DashboardValidationException($"deux cartes portent l'identifiant « {carte.Id} »");
                 if (carte.Widget is null ? string.IsNullOrWhiteSpace(carte.Entity) : string.IsNullOrWhiteSpace(carte.Widget))
                     throw new DashboardValidationException($"carte « {carte.Id} » : il faut un widget, ou une entité dont suivre le widget");
-                if (carte.Cols is < 1 or > WidgetCatalog.MaxCols || carte.Rows is { } lignes && !WidgetCatalog.IsValidRows(lignes))
-                    throw new DashboardValidationException($"carte « {carte.Id} » : de 1 à {WidgetCatalog.MaxCols} colonnes et de 1 à {WidgetCatalog.MaxRows} lignes, par demi-ligne");
+                if (carte.Cols < 1 || carte.Cols > max || carte.Rows is { } lignes && !WidgetCatalog.IsValidRows(lignes))
+                    throw new DashboardValidationException($"carte « {carte.Id} » : de 1 à {max} colonnes et de 1 à {WidgetCatalog.MaxRows} lignes, par demi-ligne");
                 if (carte.Title is { Length: > MaxTitleLength })
                     throw new DashboardValidationException($"carte « {carte.Id} » : nom de {MaxTitleLength} caractères au plus");
                 if (carte.Entities.Any(kv => string.IsNullOrWhiteSpace(kv.Key) || string.IsNullOrWhiteSpace(kv.Value)))
