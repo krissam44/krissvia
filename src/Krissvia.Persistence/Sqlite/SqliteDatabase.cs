@@ -9,7 +9,7 @@ namespace Krissvia.Persistence.Sqlite;
 /// </summary>
 public sealed class SqliteDatabase(string connectionString)
 {
-    private const int VersionSchema = 6;
+    private const int VersionSchema = 7;
 
     /// <remarks>
     /// <c>synchronous = FULL</c>, pas NORMAL, et sans réglage pour le changer : NORMAL n'est sûr en WAL que si chaque
@@ -44,6 +44,7 @@ public sealed class SqliteDatabase(string connectionString)
         if (version < 4) await connexion.ExecuteAsync(SchemaV4, transaction: transaction);
         if (version < 5) await connexion.ExecuteAsync(SchemaV5, transaction: transaction);
         if (version < 6) await connexion.ExecuteAsync(SchemaV6, transaction: transaction);
+        if (version < 7) await connexion.ExecuteAsync(SchemaV7, transaction: transaction);
         await connexion.ExecuteAsync($"PRAGMA user_version = {VersionSchema};", transaction: transaction);
         await transaction.CommitAsync(ct);
     }
@@ -140,6 +141,15 @@ public sealed class SqliteDatabase(string connectionString)
             coverage  REAL NOT NULL,
             PRIMARY KEY (series_id, hour)
         ) WITHOUT ROWID;
+        """;
+
+    /// <summary>
+    /// v7 : le dernier nom proposé par le plugin, que le nom affiché suit tant qu'il lui est égal. Laissé vide pour
+    /// l'existant : rien ne distingue un nom choisi par l'utilisateur d'un nom reçu du plugin.
+    /// </summary>
+    private const string SchemaV7 = """
+        ALTER TABLE devices ADD COLUMN proposed_name TEXT;
+        ALTER TABLE entities ADD COLUMN proposed_name TEXT;
         """;
 
     private const string SchemaV4 = """

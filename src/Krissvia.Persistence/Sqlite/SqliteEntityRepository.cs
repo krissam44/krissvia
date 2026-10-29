@@ -9,35 +9,36 @@ public sealed class SqliteEntityRepository(SqliteDatabase db) : IEntityRepositor
 {
     private const string DeviceColumns =
         "device_id AS DeviceId, integration_id AS IntegrationId, unique_id AS UniqueId, display_name AS DisplayName, " +
-        "manufacturer AS Manufacturer, model AS Model, room AS Room, extra_json AS ExtraJson";
+        "manufacturer AS Manufacturer, model AS Model, room AS Room, extra_json AS ExtraJson, proposed_name AS ProposedName";
 
     private const string EntityColumns =
         "entity_id AS EntityId, device_id AS DeviceId, integration_id AS IntegrationId, unique_id AS UniqueId, " +
         "kind AS Kind, display_name AS DisplayName, device_class AS DeviceClass, unit AS Unit, state_class AS StateClass, " +
         "commands_json AS CommandsJson, extra_json AS ExtraJson, usage AS Usage, enabled AS Enabled, missing AS Missing, " +
-        "nominal_power AS NominalPower, widget AS Widget";
+        "nominal_power AS NominalPower, widget AS Widget, proposed_name AS ProposedName";
 
     private const string UpsertDevice = """
-        INSERT INTO devices (device_id, integration_id, unique_id, display_name, manufacturer, model, room, extra_json)
-        VALUES (@DeviceId, @IntegrationId, @UniqueId, @DisplayName, @Manufacturer, @Model, @Room, @ExtraJson)
+        INSERT INTO devices (device_id, integration_id, unique_id, display_name, manufacturer, model, room, extra_json, proposed_name)
+        VALUES (@DeviceId, @IntegrationId, @UniqueId, @DisplayName, @Manufacturer, @Model, @Room, @ExtraJson, @ProposedName)
         ON CONFLICT(device_id) DO UPDATE SET
             integration_id = excluded.integration_id, unique_id = excluded.unique_id,
             display_name = excluded.display_name, manufacturer = excluded.manufacturer,
-            model = excluded.model, room = excluded.room, extra_json = excluded.extra_json;
+            model = excluded.model, room = excluded.room, extra_json = excluded.extra_json,
+            proposed_name = excluded.proposed_name;
         """;
 
     private const string UpsertEntity = """
         INSERT INTO entities (entity_id, device_id, integration_id, unique_id, kind, display_name, device_class, unit,
-                              state_class, commands_json, extra_json, usage, enabled, missing, nominal_power, widget)
+                              state_class, commands_json, extra_json, usage, enabled, missing, nominal_power, widget, proposed_name)
         VALUES (@EntityId, @DeviceId, @IntegrationId, @UniqueId, @Kind, @DisplayName, @DeviceClass, @Unit,
-                @StateClass, @CommandsJson, @ExtraJson, @Usage, @Enabled, @Missing, @NominalPower, @Widget)
+                @StateClass, @CommandsJson, @ExtraJson, @Usage, @Enabled, @Missing, @NominalPower, @Widget, @ProposedName)
         ON CONFLICT(entity_id) DO UPDATE SET
             device_id = excluded.device_id, integration_id = excluded.integration_id, unique_id = excluded.unique_id,
             kind = excluded.kind, display_name = excluded.display_name, device_class = excluded.device_class,
             unit = excluded.unit, state_class = excluded.state_class, commands_json = excluded.commands_json,
             extra_json = excluded.extra_json, usage = excluded.usage, enabled = excluded.enabled,
             nominal_power = excluded.nominal_power, widget = excluded.widget,
-            missing = excluded.missing;
+            missing = excluded.missing, proposed_name = excluded.proposed_name;
         """;
 
     public async Task<IReadOnlyList<RegisteredDevice>> ListDevicesAsync(CancellationToken ct = default)
@@ -67,7 +68,7 @@ public sealed class SqliteEntityRepository(SqliteDatabase db) : IEntityRepositor
         {
             await connexion.ExecuteAsync(new CommandDefinition(UpsertDevice, new
             {
-                d.DeviceId, d.IntegrationId, d.UniqueId, d.DisplayName, d.Manufacturer, d.Model, d.Room, d.ExtraJson,
+                d.DeviceId, d.IntegrationId, d.UniqueId, d.DisplayName, d.Manufacturer, d.Model, d.Room, d.ExtraJson, d.ProposedName,
             }, transaction, cancellationToken: ct));
         }
 
@@ -85,6 +86,7 @@ public sealed class SqliteEntityRepository(SqliteDatabase db) : IEntityRepositor
                 Missing = e.Missing ? 1 : 0,
                 e.NominalPower,
                 e.Widget,
+                e.ProposedName,
             }, transaction, cancellationToken: ct));
         }
 
@@ -140,6 +142,7 @@ public sealed class SqliteEntityRepository(SqliteDatabase db) : IEntityRepositor
         public string? Model { get; set; }
         public string? Room { get; set; }
         public string? ExtraJson { get; set; }
+        public string? ProposedName { get; set; }
     }
 
     private sealed class EntityRow
@@ -160,6 +163,7 @@ public sealed class SqliteEntityRepository(SqliteDatabase db) : IEntityRepositor
         public long Missing { get; set; }
         public double? NominalPower { get; set; }
         public string? Widget { get; set; }
+        public string? ProposedName { get; set; }
     }
 
     private static RegisteredDevice AppareilDepuis(DeviceRow r) => new()
@@ -172,6 +176,7 @@ public sealed class SqliteEntityRepository(SqliteDatabase db) : IEntityRepositor
         Model = r.Model,
         Room = r.Room,
         ExtraJson = r.ExtraJson,
+        ProposedName = r.ProposedName,
     };
 
     private static RegisteredEntity EntiteDepuis(EntityRow r) => new()
@@ -192,5 +197,6 @@ public sealed class SqliteEntityRepository(SqliteDatabase db) : IEntityRepositor
         Missing = r.Missing != 0,
         NominalPower = r.NominalPower,
         Widget = r.Widget,
+        ProposedName = r.ProposedName,
     };
 }

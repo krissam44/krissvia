@@ -87,12 +87,17 @@ public sealed class EntityRegistry(IEntityRepository repository, Krissvia.Core.E
             var appareils = new List<RegisteredDevice>();
             var entites = new List<RegisteredEntity>();
             var declarees = new HashSet<string>();
+            var identifiantsDeclares = devices.Select(d => d.UniqueId).ToHashSet(StringComparer.Ordinal);
+            var repris = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (var descripteur in devices)
             {
                 var extra = SerialiserExtra(descripteur.Extra);
+                var propose = descripteur.Name ?? descripteur.UniqueId;
                 var existant = courant.Devices.FirstOrDefault(d =>
-                    d.IntegrationId == integrationId && d.UniqueId == descripteur.UniqueId);
+                                   d.IntegrationId == integrationId && d.UniqueId == descripteur.UniqueId)
+                               ?? Renomme(courant, integrationId, descripteur, identifiantsDeclares, repris);
+                if (existant is not null) repris.Add(existant.DeviceId);
 
                 var appareil = existant is null
                     ? new RegisteredDevice
@@ -100,13 +105,17 @@ public sealed class EntityRegistry(IEntityRepository repository, Krissvia.Core.E
                         DeviceId = Guid.NewGuid().ToString("N"),
                         IntegrationId = integrationId,
                         UniqueId = descripteur.UniqueId,
-                        DisplayName = descripteur.Name ?? descripteur.UniqueId,
+                        DisplayName = propose,
+                        ProposedName = propose,
                         Manufacturer = descripteur.Manufacturer,
                         Model = descripteur.Model,
                         ExtraJson = extra,
                     }
                     : existant with
                     {
+                        UniqueId = descripteur.UniqueId,
+                        DisplayName = Suivre(existant.DisplayName, existant.ProposedName, propose),
+                        ProposedName = propose,
                         Manufacturer = descripteur.Manufacturer,
                         Model = descripteur.Model,
                         ExtraJson = extra,
@@ -140,13 +149,17 @@ public sealed class EntityRegistry(IEntityRepository repository, Krissvia.Core.E
                             Commands = d.Commands,
                             ExtraJson = SerialiserExtra(d.Extra),
                             DisplayName = NomAffiche(appareil.DisplayName, d),
+                            ProposedName = NomAffiche(appareil.DisplayName, d),
                         });
                     }
                     else
                     {
+                        var proposeEntite = NomAffiche(appareil.DisplayName, d);
                         var mise = entiteExistante with
                         {
                             DeviceId = appareil.DeviceId,
+                            DisplayName = Suivre(entiteExistante.DisplayName, entiteExistante.ProposedName, proposeEntite),
+                            ProposedName = proposeEntite,
                             Kind = d.Kind,
                             DeviceClass = d.DeviceClass,
                             Unit = d.Unit,
@@ -345,6 +358,33 @@ public sealed class EntityRegistry(IEntityRepository repository, Krissvia.Core.E
 
     private static bool Identiques(RegisteredEntity a, RegisteredEntity b) =>
         a.Commands.SequenceEqual(b.Commands) && (a with { Commands = b.Commands }) == b;
+
+    /// <summary>
+    /// Le nom affiché suit le nom proposé tant que l'utilisateur ne l'a pas changé (il lui est encore égal). Sans nom
+    /// proposé connu (enregistré avant le schéma v7), on ne sait pas : le nom reste.
+    /// </summary>
+    private static string Suivre(string affiche, string? anciennementPropose, string propose) =>
+        anciennementPropose is not null && affiche == anciennementPropose ? propose : affiche;
+
+    /// <summary>
+    /// Un appareil à l'identifiant nouveau dont toutes les entités déjà connues viennent d'UN appareil que la
+    /// déclaration ne mentionne plus : c'est le même, renommé. Une entité manuelle de MQTT Discovery tire l'identifiant
+    /// de son appareil de son nom ; sans cette règle, le renommer en créait un second, vide l'ancien, et perdait sa pièce.
+    /// Un identifiant matériel (adresse IEEE, MAC) ne change jamais : la règle ne joue pas pour lui.
+    /// </summary>
+    private static RegisteredDevice? Renomme(Snapshot courant, string integrationId, DeviceDescriptor descripteur,
+        HashSet<string> identifiantsDeclares, HashSet<string> repris)
+    {
+        var origines = descripteur.Entities
+            .Select(d => courant.ParIdentifiantPlugin.GetValueOrDefault((integrationId, d.UniqueId))?.DeviceId)
+            .OfType<string>()
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (origines.Count != 1 || repris.Contains(origines[0])) return null;
+
+        var ancien = courant.Devices.FirstOrDefault(d => d.DeviceId == origines[0]);
+        return ancien is not null && ancien.IntegrationId == integrationId && !identifiantsDeclares.Contains(ancien.UniqueId) ? ancien : null;
+    }
 
     private static string NomAffiche(string appareil, EntityDescriptor d) =>
         d.Name is not null ? $"{appareil} {d.Name}"

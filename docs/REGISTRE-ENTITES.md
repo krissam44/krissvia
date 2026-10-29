@@ -18,7 +18,14 @@ automatismes et dashboards le référencent par `entity_id`, jamais par topic ni
 |---|---|
 | famille, classe, unité, `state_class`, commandes, données `extra`, fabricant, modèle | nom affiché, usage, activée/désactivée, pièce |
 
-Le nom proposé par le plugin n'est utilisé qu'à la **création**.
+Le nom affiché **suit** le nom proposé par le plugin tant que l'utilisateur ne l'a pas changé (29/10/2026, schéma v7,
+colonne `proposed_name`) : renommer un appareil dans Zigbee2MQTT ou dans les entités manuelles de MQTT Discovery renomme
+la carte. Dès que l'utilisateur choisit un autre nom dans l'écran Entités, ce nom n'est plus jamais touché. Les entités
+enregistrées avant le schéma v7 gardent leur nom : rien ne dit s'il avait été choisi. L'`entity_id`, lui, ne change pas.
+
+**Appareil renommé.** Un appareil à l'identifiant nouveau dont toutes les entités déjà connues viennent d'un seul appareil
+que la déclaration ne mentionne plus est cet appareil, renommé : il garde son identifiant interne et sa pièce. C'est le
+cas des entités manuelles, dont l'appareil est identifié par son nom ; un identifiant matériel ne change jamais.
 
 ## Cycle de vie
 

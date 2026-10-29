@@ -162,6 +162,88 @@ public class EntityRegistryTests
     }
 
     [Fact]
+    public async Task Le_nom_affiche_suit_le_plugin_tant_que_l_utilisateur_ne_l_a_pas_change()
+    {
+        var registre = NouveauRegistre();
+        await registre.RegisterAsync(Plugin, [Prise("0x01", "Prise salon")]);
+
+        await registre.RegisterAsync(Plugin, [Prise("0x01", "Prise séjour")]);
+
+        Assert.Equal("Prise séjour", Assert.Single(await registre.ListDevicesAsync()).DisplayName);
+        Assert.Equal("Prise séjour power", (await registre.GetAsync("sensor.prise_salon_power"))!.DisplayName);
+        Assert.Equal("Prise séjour", (await registre.GetAsync("switch.prise_salon"))!.DisplayName);
+    }
+
+    [Fact]
+    public async Task Un_nom_choisi_par_l_utilisateur_ne_suit_plus_le_plugin()
+    {
+        var registre = NouveauRegistre();
+        await registre.RegisterAsync(Plugin, [Prise("0x01", "Prise salon")]);
+        await registre.RenameAsync("switch.prise_salon", "Lampe du coin");
+
+        await registre.RegisterAsync(Plugin, [Prise("0x01", "Prise séjour")]);
+        await registre.RegisterAsync(Plugin, [Prise("0x01", "Prise bureau")]);
+
+        Assert.Equal("Lampe du coin", (await registre.GetAsync("switch.prise_salon"))!.DisplayName);
+        Assert.Equal("Prise bureau power", (await registre.GetAsync("sensor.prise_salon_power"))!.DisplayName);
+    }
+
+    [Fact]
+    public async Task Un_appareil_dont_l_identifiant_change_avec_toutes_ses_entites_est_le_meme_renomme()
+    {
+        // Entités manuelles de MQTT Discovery : l'identifiant de l'appareil est tiré de son nom.
+        var registre = NouveauRegistre();
+        await registre.RegisterAsync(Plugin, [Prise("manuel:Sonde salon", "Sonde salon")]);
+        var avant = Assert.Single(await registre.ListDevicesAsync());
+        await registre.SetRoomAsync(avant.DeviceId, "Salon");
+
+        var renomme = Prise("manuel:Sonde salon", "Sonde du séjour") with { UniqueId = "manuel:Sonde du séjour" };
+        var resultat = await registre.RegisterAsync(Plugin, [renomme]);
+
+        var apres = Assert.Single(await registre.ListDevicesAsync());
+        Assert.Equal((avant.DeviceId, "manuel:Sonde du séjour", "Sonde du séjour", "Salon"), (apres.DeviceId, apres.UniqueId, apres.DisplayName, apres.Room));
+        Assert.Empty(resultat.Created);
+        Assert.Equal("Sonde du séjour power", (await registre.GetAsync("sensor.sonde_salon_power"))!.DisplayName);
+    }
+
+    [Fact]
+    public async Task Un_appareil_coupe_en_deux_garde_son_identite_pour_le_premier_seulement()
+    {
+        var registre = NouveauRegistre();
+        var origine = Prise("manuel:A", "A");
+        await registre.RegisterAsync(Plugin, [origine]);
+        var ancien = Assert.Single(await registre.ListDevicesAsync()).DeviceId;
+
+        await registre.RegisterAsync(Plugin,
+        [
+            new DeviceDescriptor { UniqueId = "manuel:B", Name = "B", Entities = [origine.Entities[0]] },
+            new DeviceDescriptor { UniqueId = "manuel:C", Name = "C", Entities = [origine.Entities[1]] },
+        ]);
+
+        var appareils = await registre.ListDevicesAsync();
+        Assert.Equal(2, appareils.Count);
+        Assert.Equal(ancien, appareils.Single(a => a.UniqueId == "manuel:B").DeviceId);
+        Assert.NotEqual(ancien, appareils.Single(a => a.UniqueId == "manuel:C").DeviceId);
+    }
+
+    [Fact]
+    public async Task Un_appareil_encore_declare_n_est_jamais_pris_pour_un_renomme()
+    {
+        var registre = NouveauRegistre();
+        var origine = Prise("0x01", "Prise");
+        await registre.RegisterAsync(Plugin, [origine]);
+
+        // Une entité passe d'un appareil à un autre, l'ancien restant déclaré : rien n'est renommé.
+        await registre.RegisterAsync(Plugin,
+        [
+            origine with { Entities = [origine.Entities[0]] },
+            new DeviceDescriptor { UniqueId = "0x02", Name = "Autre", Entities = [origine.Entities[1]] },
+        ]);
+
+        Assert.Equal(["0x01", "0x02"], (await registre.ListDevicesAsync()).Select(a => a.UniqueId).Order());
+    }
+
+    [Fact]
     public async Task Deux_appareils_de_meme_nom_obtiennent_des_identifiants_distincts()
     {
         var registre = NouveauRegistre();

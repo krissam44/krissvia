@@ -73,8 +73,9 @@ traduite en la configuration qu'aurait publiée l'appareil, puis suit exactement
 | Topic de commande | interrupteur ou lumière : on y publie les valeurs oui / non (`ON` / `OFF`) ; vide : lecture seule |
 | Topic de disponibilité | facultatif, `online` / `offline` |
 
-**Identité = topic + champ** (`manuel:{topic}#{champ}`). Renommer l'entité ou son appareil ne casse rien ; changer de
-topic ou de champ crée une autre entité, l'ancienne devient disparue (supprimable dans l'écran Entités). Une ligne
+**Identité = topic + champ** (`manuel:{topic}#{champ}`). Renommer l'entité ou son appareil ne casse rien, et le nom
+affiché suit, sauf si on l'a changé dans l'écran Entités ; l'appareil renommé garde sa pièce. Changer de topic ou de
+champ crée une autre entité, l'ancienne devient disparue (supprimable dans l'écran Entités). Une ligne
 inutilisable (joker, type inconnu) ou en double est écartée, avec un avertissement au journal. Enregistrer la fiche
 relance le plugin, comme tout réglage.
 
