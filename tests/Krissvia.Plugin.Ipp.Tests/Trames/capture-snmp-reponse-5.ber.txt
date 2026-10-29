@@ -1,0 +1,22 @@
+# Capture réelle, Samsung M2020, 24/10/2026 : réponse 5/5 au parcours du plugin (GetNext à quatre colonnes, v2c).
+30 81 84                                                                                          # SEQUENCE (132 octets)
+02 01 01                                                                                          #   INTEGER 1
+04 06 70 75 62 6c 69 63                                                                           #   OCTET STRING public
+a2 77                                                                                             #   GetResponse (119 octets)
+02 01 05                                                                                          #     INTEGER 5
+02 01 00                                                                                          #     INTEGER 0
+02 01 00                                                                                          #     INTEGER 0
+30 6c                                                                                             #     SEQUENCE (108 octets)
+30 30                                                                                             #       SEQUENCE (48 octets)
+06 0c 2b 06 01 02 01 2b 0b 01 01 06 01 01                                                         #         OID 1.3.6.1.2.1.43.11.1.1.6.1.1
+04 20 42 6c 61 63 6b 20 54 6f 6e 65 72 20 53 2f 4e 3a 43 52 55 4d 2d 31 38 30 32 30 37 32 37 32   #         OCTET STRING Black Toner S/N:CRUM-18020727263
+36 33
+30 11                                                                                             #       SEQUENCE (17 octets)
+06 0c 2b 06 01 02 01 2b 0b 01 01 07 01 01                                                         #         OID 1.3.6.1.2.1.43.11.1.1.7.1.1
+02 01 07                                                                                          #         INTEGER 7
+30 12                                                                                             #       SEQUENCE (18 octets)
+06 0c 2b 06 01 02 01 2b 0b 01 01 09 01 01                                                         #         OID 1.3.6.1.2.1.43.11.1.1.9.1.1
+02 02 06 c0                                                                                       #         INTEGER 1728
+30 11                                                                                             #       SEQUENCE (17 octets)
+06 0c 2b 06 01 02 01 2b 0c 01 01 02 01 01                                                         #         OID 1.3.6.1.2.1.43.12.1.1.2.1.1
+02 01 01                                                                                          #         INTEGER 1

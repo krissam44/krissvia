@@ -1,0 +1,21 @@
+# Capture réelle, Samsung M2020, 24/10/2026 : réponse 3/5 au parcours du plugin (GetNext à quatre colonnes, v2c).
+30 6f                                                                                             # SEQUENCE (111 octets)
+02 01 01                                                                                          #   INTEGER 1
+04 06 70 75 62 6c 69 63                                                                           #   OCTET STRING public
+a2 62                                                                                             #   GetResponse (98 octets)
+02 01 03                                                                                          #     INTEGER 3
+02 01 00                                                                                          #     INTEGER 0
+02 01 00                                                                                          #     INTEGER 0
+30 57                                                                                             #     SEQUENCE (87 octets)
+30 11                                                                                             #       SEQUENCE (17 octets)
+06 0c 2b 06 01 02 01 2b 0b 01 01 05 01 03                                                         #         OID 1.3.6.1.2.1.43.11.1.1.5.1.3
+02 01 0f                                                                                          #         INTEGER 15
+30 1a                                                                                             #       SEQUENCE (26 octets)
+06 0c 2b 06 01 02 01 2b 0b 01 01 06 01 03                                                         #         OID 1.3.6.1.2.1.43.11.1.1.6.1.3
+04 0a 46 75 73 65 72 20 4c 69 66 65                                                               #         OCTET STRING Fuser Life
+30 12                                                                                             #       SEQUENCE (18 octets)
+06 0c 2b 06 01 02 01 2b 0b 01 01 08 01 03                                                         #         OID 1.3.6.1.2.1.43.11.1.1.8.1.3
+02 02 75 30                                                                                       #         INTEGER 30000
+30 12                                                                                             #       SEQUENCE (18 octets)
+06 0c 2b 06 01 02 01 2b 0b 01 01 09 01 03                                                         #         OID 1.3.6.1.2.1.43.11.1.1.9.1.3
+02 02 64 90                                                                                       #         INTEGER 25744

@@ -210,7 +210,8 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
   appareil par imprimante (clé = son UUID), l'objet de classe `printer` pour la carte, l'état en `enum`, un capteur en
   % par consommable et un `problem` (arrêtée, panne, consommable bas) que la supervision signale ; éteinte, elle
   devient indisponible sans alerte, et reste déclarée au lancement suivant. Carte « Imprimante » livrée par le plugin,
-  d'après celle de Gladys. Voir son README.
+  d'après celle de Gladys. Voir son README. Pièces (tambour, four, rouleaux) lues en SNMP (`prtMarkerSupplies`,
+  RFC 3805, `GetNext` seulement, codec maison) en complément de l'IPP (29/10/2026).
 - **Alarme : `ALARME.md`** (22/10/2026) — machine à états de DomoMud, sonneries du §9, codes PBKDF2 et blocage,
   page `/alarme`, API `/api/alarm` par code.
 - **Présence et supervision : `PRESENCE.md`** (19/10/2026) — présence du foyer calculée par le cœur sur les capteurs

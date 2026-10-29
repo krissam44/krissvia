@@ -58,10 +58,35 @@ d'adresse IP ; à défaut d'UUID (imprimante ancienne), son adresse.
 - **`printer-supply`** (PWG 5100.13) : lu quand l'imprimante n'envoie aucun `marker-*` (certaines Epson). Repris de
   l'intégration Gladys ([guim31/gladys-ipp](https://github.com/guim31/gladys-ipp)).
 - **Ce que l'IPP ne dit pas** : la Samsung M2020 n'y publie que son **toner**, même en IPP/2.0. Les rouleaux et le
-  four qu'affiche la carte Gladys viennent du **SNMP** (table `prtMarkerSupplies` de la Printer MIB, RFC 3805), que
-  Gladys interroge en complément. Ce plugin ne le fait pas (encore).
+  four sont lus en **SNMP** (voir ci-dessous).
 - **Nom de l'appareil** : `printer-info`, sauf quand il ne fait que répéter le modèle suivi du nom réseau (Samsung :
   « Samsung M2020 Series (SEC30CDA7201287) ») — le modèle seul, alors.
+
+## Pièces en SNMP
+
+Beaucoup de lasers ne publient en IPP que leurs cartouches ; les **pièces** (tambour, four, rouleaux, courroie,
+récupérateur) sont dans la table `prtMarkerSupplies` de la Printer MIB (RFC 3805), en SNMP. Le plugin la lit en
+complément, comme l'intégration Gladys, avec la même prudence :
+
+- **Seulement les pièces** : une cartouche SNMP n'est jamais ajoutée, l'IPP les couvre. Une pièce se reconnaît à son
+  type (`opc`, `fuser`, `transfer-unit`…) ou, pour le type « autre », à son nom (« Roller », « Drum », « Fuser »,
+  « Waste »…) : la Samsung range ses rouleaux de transfert et d'entraînement en « autre ». Une ligne inconnue est
+  écartée, et une pièce de même type ou de même identifiant qu'un consommable IPP aussi (pas de doublon).
+- **Aucun consommable IPP** : la table remplace tout.
+- **Niveaux ramenés à leur capacité** : la Samsung compte en pages (25 743 sur 30 000 = 86 %).
+- **Écrit à la main** (`Snmp/SnmpCodec.cs`) : la seule requête est un `GetNextRequest`, une lecture ; quatre colonnes à
+  la fois, cinq échanges pour une laser à quatre consommables. Vers l'adresse de l'imprimante seulement, jamais en
+  balayage, et seulement après une réponse IPP.
+- **v2c d'abord, v1 en secours**, version retenue par imprimante : la Samsung ne répond qu'en v2c, quand Gladys ne
+  parle que v1.
+- **Chaque question est répétée** jusqu'à trois fois (2 s chacune) : la Samsung perd les premières questions qui la
+  tirent de sa veille, puis répond en 15 ms. Sans répétition, elle passait pour « sans SNMP » une fois sur deux.
+- **Une table lue à moitié n'est pas une mesure** : le parcours entier échoue, et la dernière table complète reste
+  publiée. Sinon, une jauge disparaîtrait au premier datagramme perdu, puis réapparaîtrait.
+- **Rythme** : relue à chaque relevé quand elle apporte des pièces ; toutes les 6 h quand elle n'apporte rien (une jet
+  d'encre dont l'IPP dit tout) ; 30 min de répit après un silence. Le journal ne parle que quand le bilan change.
+
+Une pièce sous le seuil (10 % par défaut) lève le **Problème**, comme une cartouche.
 
 ## Problème
 
@@ -89,7 +114,8 @@ parce qu'elle a cliqué : le relevé arrive par l'état de l'entité.
 
 ## Réglages (page Services)
 
-Découverte (oui), relevé toutes les 300 s (30 à 3600), seuil bas par défaut 10 %, adresses saisies. Pour un lancement
+Découverte (oui), relevé toutes les 300 s (30 à 3600), seuil bas par défaut 10 %, adresses saisies, pièces en SNMP
+(oui) et sa communauté (`public`). Pour un lancement
 à la main : `appsettings.Local.json` (voir `appsettings.Local.example.json`).
 
 ## Tests
@@ -103,7 +129,10 @@ Découverte (oui), relevé toutes les 300 s (30 à 3600), seuil bas par défaut 
 - **Captures réelles** (`Trames/capture-*`), sur la Samsung M2020 de l'utilisateur, avec son accord, en lecture seule
   (24/10/2026) : la réponse à la requête du plugin, la réponse complète (`all`, 94 attributs) et l'annonce mDNS.
   Elles ont appris ce que les trames écrites ne disaient pas : un seul consommable en IPP, un `printer-info` qui
-  répète le modèle, une imprimante muette à la monodiffusion mDNS.
+  répète le modèle, une imprimante muette à la monodiffusion mDNS. Puis le SNMP (`capture-snmp-reponse-*`) : les
+  cinq réponses au parcours du plugin, et une question écrite à part, par un script indépendant du codec.
+- SNMP : codec, parcours contre un faux agent UDP qui rejoue les vraies réponses (v2c, repli v1, imprimante qui sort
+  de veille, muette, coupée en plein parcours), règle de complément sur les vraies données, rythme des lectures.
 - Codec : requête octet par octet, lecture complète, trames incohérentes refusées sans lecture hors des bornes.
 - Relevé, diagnostic, découverte, puis le plugin contre de fausses imprimantes (éteinte, mémoire, doublons
   `_ipp`/`_ipps`, découverte coupée, Vérifier).

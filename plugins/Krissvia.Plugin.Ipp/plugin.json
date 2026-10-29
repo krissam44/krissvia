@@ -1,7 +1,7 @@
 {
   "id": "ipp",
   "name": "Imprimantes IPP",
-  "description": "État et consommables (toner, tambour, four…) des imprimantes réseau compatibles IPP, découvertes sur le réseau local ou saisies par leur adresse ; alerte sur une panne ou un consommable bas. Lecture seule : le plugin n'imprime jamais.",
+  "description": "État et consommables (toner, tambour, four…) des imprimantes réseau compatibles IPP, pièces complétées en SNMP, découvertes sur le réseau local ou saisies par leur adresse ; alerte sur une panne ou un consommable bas. Lecture seule : le plugin n'imprime jamais.",
   "executable": "Krissvia.Plugin.Ipp",
   "settings": {
     "type": "object",
@@ -13,6 +13,14 @@
           "Discovery": { "type": "boolean", "title": "Découvrir les imprimantes du réseau", "default": true, "description": "Annonces mDNS (_ipp._tcp, _ipps._tcp), toutes les 15 min. Le journal ci-dessous donne l'adresse de chaque imprimante trouvée." },
           "PollSeconds": { "type": "integer", "title": "Relevé toutes les (s)", "default": 300, "minimum": 30, "maximum": 3600 },
           "LowLevelPercent": { "type": "integer", "title": "Consommable bas sous (%)", "default": 10, "minimum": 1, "maximum": 50, "description": "Pour les consommables dont l'imprimante ne donne pas elle-même le seuil." }
+        }
+      },
+      "Snmp": {
+        "type": "object",
+        "title": "Pièces (SNMP)",
+        "properties": {
+          "Enabled": { "type": "boolean", "title": "Lire aussi les pièces en SNMP", "default": true, "description": "Tambour, four, rouleaux : beaucoup de lasers ne les publient qu'en SNMP (table prtMarkerSupplies). Lecture seule, vers l'imprimante seulement." },
+          "Community": { "type": "string", "title": "Communauté", "default": "public" }
         }
       },
       "Printers": {
