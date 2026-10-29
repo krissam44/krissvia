@@ -1,4 +1,4 @@
-import { KvWidget, esc, absence, icone, couleurCharge, nombre } from "/widgets/standard/commun.js";
+import { KvWidget, esc, absence, icone, couleurCharge, nombre, ConfirmationEnCarte } from "/widgets/standard/commun.js";
 
 const VERT = "#66bb6a", GRIS = "#78909c", ROUGE = "#ef5350";
 
@@ -17,7 +17,7 @@ function taille(octets) {
 
 /**
  * Carte « Machine virtuelle », livrée par le plugin Proxmox (WIDGETS.md §13) : l'état et les ressources, les ordres
- * (un arrêt ou un redémarrage se confirme : ce n'est pas une lampe), et les deux réglages de la machine — surveillée
+ * (un arrêt ou un redémarrage se confirme d'un second clic, dans la carte : ce n'est pas une lampe), et les deux réglages de la machine — surveillée
  * (alerte si elle s'arrête) et relancée automatiquement. La carte n'affiche pas « en marche » parce qu'elle a cliqué :
  * elle attend le relevé suivant.
  */
@@ -40,11 +40,13 @@ class KvProxmoxVm extends KvWidget {
                           border: 1px solid color-mix(in srgb, var(--kv-text-secondary, #888) 35%, transparent); }
         .actions button .ms { font-size: 1rem; }
         .actions button[disabled] { opacity: .45; cursor: default; }
+        .actions button.confirmer { background: ${ROUGE}; border-color: ${ROUGE}; color: #fff; }
         .reglages { display: flex; gap: 12px; font-size: .74rem; color: var(--kv-text-secondary, #777); }
         .reglages label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }`;
 
     #attente = false;
     #erreur = null;
+    #confirmation = new ConfirmationEnCarte(() => this.planifier());
 
     rendu() {
         const entite = this._entities.machine;
@@ -74,7 +76,9 @@ class KvProxmoxVm extends KvWidget {
         ].join("");
 
         const occupe = this.#attente ? " disabled" : "";
-        const bouton = (commande, ic, texte, actif) => `<button data-commande="${commande}"${actif ? occupe : " disabled"}>${icone(ic)}${texte}</button>`;
+        const armee = this.#confirmation.attendue;
+        const bouton = (commande, ic, texte, actif) =>
+            `<button data-commande="${commande}"${actif ? occupe : " disabled"} class="${armee === commande ? "confirmer" : ""}">${icone(ic)}${texte}</button>`;
         const case_ = (commande, coche, texte) => `<label><input type="checkbox" data-reglage="${commande}"${coche ? " checked" : ""}${occupe}>${texte}</label>`;
 
         return `<div class="carte">${entete}
@@ -87,15 +91,16 @@ class KvProxmoxVm extends KvWidget {
                 ${bouton("shutdown", "power_settings_new", "Arrêter", enMarche)}
                 ${bouton("reboot", "restart_alt", "Redémarrer", enMarche)}
             </div>
+            ${armee ? `<div class="erreur">Cliquer encore pour ${armee === "shutdown" ? "arrêter" : "redémarrer"}</div>` : ""}
             <div class="reglages">${case_("set_tracked", v.tracked, "Surveillée")}${case_("set_auto_restart", v.auto_restart, "Relance auto")}</div>
             ${this.#erreur ? `<div class="erreur">${esc(this.#erreur)}</div>` : ""}</div>`;
     }
 
     apresRendu(racine) {
-        const nom = this._states.machine?.value?.name ?? "cette machine";
         racine.querySelectorAll("button[data-commande]").forEach(b => b.addEventListener("click", () => {
             const c = b.dataset.commande;
-            if (c !== "start" && !confirm(`${c === "shutdown" ? "Arrêter" : "Redémarrer"} « ${nom} » ?`)) return;
+            this.#erreur = null;
+            if (c !== "start" && !this.#confirmation.demander(c)) return;
             this.#ordonner(c);
         }));
         racine.querySelectorAll("input[data-reglage]").forEach(i => i.addEventListener("change", () =>

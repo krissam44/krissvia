@@ -65,6 +65,44 @@ export class KvWidget extends HTMLElement {
     rendu() { return ""; }
 }
 
+/**
+ * Confirmer un geste lourd (arrêter une machine, redémarrer un écran) DANS la carte : le premier clic arme le bouton
+ * (la carte le montre, en rouge, avec « Cliquer encore pour… »), un second clic dans les quatre secondes envoie
+ * l'ordre, sinon tout se désarme. Pas de `confirm()` du navigateur : sa fenêtre s'ouvrait parfois en retard ou hors
+ * de vue, et bloquait toute la page en attendant une réponse — vécu le 29/10/2026 sur un redémarrage de platine.
+ *
+ * `this.#confirmation = new ConfirmationEnCarte(() => this.planifier());`, puis au clic
+ * `if (!this.#confirmation.demander(commande)) return;`, et au rendu `this.#confirmation.attendue`.
+ */
+export class ConfirmationEnCarte {
+    #commande = null;
+    #minuterie = null;
+    #rafraichir;
+    #delai;
+
+    constructor(rafraichir, delai = 4000) {
+        this.#rafraichir = rafraichir;
+        this.#delai = delai;
+    }
+
+    /** La commande armée, en attente de son second clic ; null sinon. */
+    get attendue() { return this.#commande; }
+
+    /** Vrai si l'ordre peut partir (second clic sur la même commande) ; sinon arme cette commande et rend faux. */
+    demander(commande) {
+        clearTimeout(this.#minuterie);
+        if (this.#commande === commande) {
+            this.#commande = null;
+            return true;
+        }
+
+        this.#commande = commande;
+        this.#minuterie = setTimeout(() => { this.#commande = null; this.#rafraichir(); }, this.#delai);
+        this.#rafraichir();
+        return false;
+    }
+}
+
 /** Une icône Material Symbols (la police est chargée par la page hôte, comme pour les cartes de DomoMud). */
 export function icone(nom, style = "") {
     return `<span class="ms" aria-hidden="true"${style ? ` style="${style}"` : ""}>${nom}</span>`;
