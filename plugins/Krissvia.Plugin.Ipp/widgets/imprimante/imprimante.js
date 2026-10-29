@@ -46,7 +46,11 @@ class KvImprimante extends KvWidget {
                   text-transform: uppercase; color: var(--kv-text-secondary, #777); }
         .entete .ms { font-size: 1rem; }
         .nom { font-weight: 600; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .carte { container-type: inline-size; }
         .jauges { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 4px 0; }
+        /* Quatre jauges (toner + trois pièces, la Samsung) : 2 × 2 comme Gladys plutôt que 3 + 1, sur une ligne si la carte est large. */
+        .jauges.quatre { grid-template-columns: repeat(2, 1fr); }
+        @container (min-width: 440px) { .jauges.quatre { grid-template-columns: repeat(4, 1fr); } }
         .jauge { display: flex; flex-direction: column; align-items: center; padding: 6px 4px 8px; border-radius: 12px;
                  background: color-mix(in srgb, var(--kv-surface, #fff) 88%, var(--kv-text-secondary, #888) 12%); }
         .jauge svg { width: 72px; height: 60px; }
@@ -86,7 +90,7 @@ class KvImprimante extends KvWidget {
 
         const marqueurs = Array.isArray(v.markers) ? v.markers : [];
         const jauges = marqueurs.length
-            ? `<div class="jauges">${marqueurs.map(c => `<div class="jauge">${arc(c)}<span class="lib">${esc(c.name)}</span></div>`).join("")}</div>`
+            ? `<div class="jauges${marqueurs.length === 4 ? " quatre" : ""}">${marqueurs.map(c => `<div class="jauge">${arc(c)}<span class="lib">${esc(c.name)}</span></div>`).join("")}</div>`
             : `<div class="absent">Aucun consommable annoncé</div>`;
 
         const allumee = etat.available;
