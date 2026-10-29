@@ -22,6 +22,7 @@ internal sealed partial class HistoryLoop(
     private static readonly TimeSpan Periode = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan PeriodeConsolidation = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan PeriodePurge = TimeSpan.FromDays(1);
+    private static readonly TimeSpan DelaiDerniereEcriture = TimeSpan.FromSeconds(5);
 
     private IDisposable? _abonnement;
     private DateTimeOffset _derniereConsolidation;
@@ -72,11 +73,26 @@ internal sealed partial class HistoryLoop(
         }
     }
 
+    /// <summary>
+    /// La dernière écriture, à l'arrêt, avec son PROPRE délai. L'arrêt de l'hôte a 15 s pour tous les services, arrêtés
+    /// l'un après l'autre en commençant par le serveur web ; celui-ci peut les consommer entièrement (pages encore
+    /// ouvertes), et ce service, enregistré parmi les premiers, est arrêté parmi les derniers : son jeton était déjà
+    /// annulé, l'ouverture SQLite levait, l'exception remontait jusqu'à <c>Run()</c> et le processus finissait en
+    /// core-dump (VM, 29/10/2026) — en perdant ce qu'il fallait écrire. Elle ne lève jamais : un arrêt doit aboutir.
+    /// </summary>
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _abonnement?.Dispose();
         await base.StopAsync(cancellationToken);
-        await EcrireAsync(cancellationToken);
+        using var delai = new CancellationTokenSource(DelaiDerniereEcriture);
+        try
+        {
+            await recorder.FlushAsync(delai.Token);
+        }
+        catch (Exception ex)
+        {
+            DerniereEcritureEnEchec(logger, ex);
+        }
     }
 
     private async Task EcrireAsync(CancellationToken ct)
@@ -94,6 +110,9 @@ internal sealed partial class HistoryLoop(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Historique : écriture en échec ; nouvelle tentative au prochain cycle.")]
     private static partial void EcritureEnEchec(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Historique : dernière écriture, à l'arrêt, en échec ; les points en attente sont perdus.")]
+    private static partial void DerniereEcritureEnEchec(ILogger logger, Exception ex);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Historique : consolidation ou purge en échec.")]
     private static partial void ConsolidationEnEchec(ILogger logger, Exception ex);
