@@ -11,8 +11,14 @@ public sealed record RegisteredDevice
     /// <summary>Identifiant fourni par le plugin (adresse IEEE…).</summary>
     public required string UniqueId { get; init; }
 
-    /// <summary>Champ de l'utilisateur : le plugin ne le modifie plus après la création.</summary>
+    /// <summary>
+    /// Champ de l'utilisateur. Il suit le nom proposé par le plugin tant qu'il lui est égal (<see cref="ProposedName"/>) ;
+    /// renommé par l'utilisateur, il n'est plus jamais touché.
+    /// </summary>
     public required string DisplayName { get; init; }
+
+    /// <summary>Le dernier nom proposé par le plugin ; null pour un appareil enregistré avant le schéma v7.</summary>
+    public string? ProposedName { get; init; }
 
     public string? Manufacturer { get; init; }
     public string? Model { get; init; }
@@ -43,7 +49,15 @@ public sealed record RegisteredEntity
     public IReadOnlyList<string> Commands { get; init; } = [];
     public string? ExtraJson { get; init; }
 
-    // ── Champs de l'utilisateur : jamais écrasés par un plugin ──
+    /// <summary>
+    /// Le dernier nom proposé par le plugin (« appareil + entité »). <see cref="DisplayName"/> le suit tant qu'il lui est
+    /// égal : renommer l'appareil dans Zigbee2MQTT ou dans les entités manuelles renomme la carte, sauf si l'utilisateur a
+    /// choisi un autre nom dans l'écran Entités. Null pour une entité enregistrée avant le schéma v7 : son nom ne suit
+    /// pas, car rien ne dit s'il a été choisi par l'utilisateur.
+    /// </summary>
+    public string? ProposedName { get; init; }
+
+    // ── Champs de l'utilisateur : jamais écrasés par un plugin (le nom, seulement tant qu'il est celui proposé) ──
     public required string DisplayName { get; init; }
     public string? Usage { get; init; }
     public bool Enabled { get; init; } = true;

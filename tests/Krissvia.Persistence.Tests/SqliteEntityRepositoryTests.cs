@@ -161,7 +161,7 @@ public sealed class SqliteEntityRepositoryTests : IDisposable
         var db = await OuvrirAsync();
         await using (var connexion = await db.OpenAsync())
         {
-            await Dapper.SqlMapper.ExecuteAsync(connexion, "ALTER TABLE entities DROP COLUMN widget; ALTER TABLE entities DROP COLUMN nominal_power; PRAGMA user_version = 3;");
+            await Dapper.SqlMapper.ExecuteAsync(connexion, $"{SansNomPropose} ALTER TABLE entities DROP COLUMN widget; ALTER TABLE entities DROP COLUMN nominal_power; PRAGMA user_version = 3;");
         }
 
         var registre = await OuvrirRegistreAsync();
@@ -178,7 +178,7 @@ public sealed class SqliteEntityRepositoryTests : IDisposable
         var db = await OuvrirAsync();
         await using (var connexion = await db.OpenAsync())
         {
-            await Dapper.SqlMapper.ExecuteAsync(connexion, "ALTER TABLE entities DROP COLUMN widget; PRAGMA user_version = 4;");
+            await Dapper.SqlMapper.ExecuteAsync(connexion, $"{SansNomPropose} ALTER TABLE entities DROP COLUMN widget; PRAGMA user_version = 4;");
         }
 
         var registre = await OuvrirRegistreAsync();
@@ -188,6 +188,44 @@ public sealed class SqliteEntityRepositoryTests : IDisposable
         await apres.RegisterAsync("test", [Prise()]);   // le plugin redéclare : le choix de l'utilisateur reste
 
         Assert.Equal("ma-prise", (await (await OuvrirRegistreAsync()).GetAsync("switch.prise_salon"))!.Widget);
+    }
+
+    /// <summary>Les colonnes du schéma v7, retirées pour rejouer une base plus ancienne.</summary>
+    private const string SansNomPropose = "ALTER TABLE devices DROP COLUMN proposed_name; ALTER TABLE entities DROP COLUMN proposed_name;";
+
+    [Fact]
+    public async Task Le_nom_affiche_suit_le_nom_propose_apres_redemarrage_tant_qu_il_n_a_pas_ete_change()
+    {
+        var avant = await OuvrirRegistreAsync();
+        await avant.RegisterAsync("test", [Prise()]);
+
+        var apres = await OuvrirRegistreAsync();
+        await apres.RegisterAsync("test", [Prise() with { Name = "Prise séjour" }]);
+
+        Assert.Equal("Prise séjour", (await apres.GetAsync("switch.prise_salon"))!.DisplayName);
+        Assert.Equal("Prise séjour", Assert.Single(await (await OuvrirRegistreAsync()).ListDevicesAsync()).DisplayName);
+    }
+
+    [Fact]
+    public async Task Une_base_v6_garde_ses_noms_le_plugin_ne_sachant_pas_s_ils_ont_ete_choisis()
+    {
+        // Base au schéma v6 : rien ne dit si « Prise salon » vient du plugin ou de l'utilisateur.
+        var db = await OuvrirAsync();
+        await using (var connexion = await db.OpenAsync())
+        {
+            await Dapper.SqlMapper.ExecuteAsync(connexion, $"{SansNomPropose} PRAGMA user_version = 6;");
+        }
+
+        await (await OuvrirRegistreAsync()).RegisterAsync("test", [Prise()]);
+        await using (var connexion = await db.OpenAsync())
+        {
+            await Dapper.SqlMapper.ExecuteAsync(connexion, "UPDATE entities SET proposed_name = NULL; UPDATE devices SET proposed_name = NULL;");
+        }
+
+        var registre = await OuvrirRegistreAsync();
+        await registre.RegisterAsync("test", [Prise() with { Name = "Prise séjour" }]);
+
+        Assert.Equal("Prise salon", (await registre.GetAsync("switch.prise_salon"))!.DisplayName);
     }
 
     [Fact]
