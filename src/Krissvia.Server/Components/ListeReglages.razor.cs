@@ -38,7 +38,7 @@ public partial class ListeReglages
         {
             JsonValueKind.String when valeur.GetValue<string>() is { Length: > 0 } texte =>
                 champ.Entity is null ? texte : Registre.Loaded.FirstOrDefault(e => e.EntityId == texte)?.DisplayName ?? texte,
-            JsonValueKind.Number => valeur.GetValue<double>().ToString(System.Globalization.CultureInfo.CurrentCulture),
+            JsonValueKind.Number when SettingsSchema.TryGetNumber(valeur, out var n) => n.ToString(System.Globalization.CultureInfo.CurrentCulture),
             _ => "—",
         };
     }

@@ -26,6 +26,35 @@ public class ReglagesPluginsTests
     private static SettingField Schema(string projet) => SettingsSchema.Parse(Fiche(projet).Settings)!;
 
     [Fact]
+    public void Un_nombre_se_lit_qu_il_vienne_du_JSON_ou_du_formulaire()
+    {
+        // Le formulaire écrit un entier en long : GetValue<double>() levait, et la page mourait au premier chiffre tapé.
+        Assert.True(SettingsSchema.TryGetNumber(JsonValue.Create(2L), out var entier));
+        Assert.Equal(2, entier);
+        Assert.True(SettingsSchema.TryGetNumber(JsonValue.Create(2.5), out var decimal_));
+        Assert.Equal(2.5, decimal_);
+        Assert.True(SettingsSchema.TryGetNumber(JsonNode.Parse("1883"), out var lu));
+        Assert.Equal(1883, lu);
+        Assert.False(SettingsSchema.TryGetNumber(JsonValue.Create("2"), out _));
+        Assert.False(SettingsSchema.TryGetNumber(null, out _));
+    }
+
+    [Fact]
+    public void Un_entier_tape_dans_le_formulaire_passe_la_validation()
+    {
+        var platine = Schema("Krissvia.Plugin.OpenHasp").Properties.Single(p => p.Key == "Platines").Properties
+            .Single(p => p.Key == "AffichagesPerso");
+        var ligne = SettingsSchema.Complete(platine, null);
+        ligne["Objet"] = JsonValue.Create(2L);   // ce qu'écrit SettingsEditor
+        ligne["Entite"] = "sensor.salon_temperature";
+
+        Assert.Empty(SettingsSchema.Validate(platine, ligne));
+
+        ligne["Objet"] = JsonValue.Create(300L);
+        Assert.Contains(SettingsSchema.Validate(platine, ligne), e => e.Contains("au plus 254", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void La_page_perso_d_une_platine_se_saisit_sur_plusieurs_lignes_et_ses_liaisons_ont_les_bons_droits()
     {
         var platine = Schema("Krissvia.Plugin.OpenHasp").Properties.Single(p => p.Key == "Platines").Properties;
