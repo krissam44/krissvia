@@ -35,7 +35,8 @@ internal sealed class BancBoutEnBout : IAsyncDisposable
     public SimulateurBroker Broker { get; } = new();
 
     /// <param name="avant">Ce que le broker retient déjà quand le plugin démarre (modules en service).</param>
-    public static async Task<BancBoutEnBout> DemarrerAsync(Action<SimulateurBroker>? avant = null)
+    /// <param name="manuelles">Les entités manuelles des réglages du plugin.</param>
+    public static async Task<BancBoutEnBout> DemarrerAsync(Action<SimulateurBroker>? avant = null, IEnumerable<EntiteManuelle>? manuelles = null)
     {
         // Les configurations retenues arrivent en rafale : un délai court suffit à les regrouper, sans ralentir la suite.
         MqttDiscoveryPlugin.DelaiDeclaration = TimeSpan.FromMilliseconds(100);
@@ -51,7 +52,7 @@ internal sealed class BancBoutEnBout : IAsyncDisposable
         banc.Commandeur = new CommandBus(banc.Registre, new PluginCommander(banc.Hub, NullLogger<PluginCommander>.Instance),
             banc.Bus, TimeProvider.System);
 
-        var plugin = new MqttDiscoveryPlugin(new DiscoveryTranslator(Esphome.Prefixe), banc.Broker, NullLogger<MqttDiscoveryPlugin>.Instance);
+        var plugin = new MqttDiscoveryPlugin(new DiscoveryTranslator(Esphome.Prefixe, manuelles ?? []), banc.Broker, NullLogger<MqttDiscoveryPlugin>.Instance);
         var client = new CoreClient(
             new CoreClientOptions { PluginId = "mqtt-discovery", PluginVersion = "0.1.0", ReconnectDelays = [TimeSpan.FromMilliseconds(50)] },
             plugin, TimeProvider.System, NullLogger<CoreClient>.Instance, banc.ConnecterAsync);

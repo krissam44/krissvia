@@ -47,6 +47,8 @@ internal sealed partial class MqttDiscoveryPlugin : ICorePlugin, IMqttHandler
     {
         if (Coeur is { } coeur) await coeur.ReportLinkAsync("mqtt", true);
         await TraduireEtEnvoyerAsync(_traducteur.MqttConnecte);
+        // Les entités manuelles n'attendent aucune annonce ; le délai laisse aux configurations retenues le temps d'arriver.
+        if (_traducteur.DeclarationEnAttente) PlanifierDeclaration();
         Abonner();
     }
 

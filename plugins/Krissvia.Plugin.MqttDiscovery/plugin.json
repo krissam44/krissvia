@@ -1,7 +1,7 @@
 {
   "id": "mqtt-discovery",
   "name": "MQTT Discovery",
-  "description": "Appareils qui s'annoncent à la manière de Home Assistant : modules ESPHome, Tasmota, OpenMQTTGateway… Sondes, capteurs, interrupteurs et lumières, via le broker MQTT.",
+  "description": "Appareils qui s'annoncent à la manière de Home Assistant (ESPHome, Tasmota, OpenMQTTGateway…), et entités manuelles tirées d'un topic quelconque (Rfx2Mqtt, scripts…). Sondes, capteurs, interrupteurs et lumières, via le broker MQTT.",
   "executable": "Krissvia.Plugin.MqttDiscovery",
   "settings": {
     "type": "object",
@@ -17,6 +17,32 @@
           "Username": { "type": "string", "title": "Utilisateur" },
           "Password": { "type": "string", "title": "Mot de passe", "format": "password" },
           "DiscoveryPrefix": { "type": "string", "title": "Préfixe de découverte", "default": "homeassistant", "description": "Le discovery_prefix des appareils (ESPHome : homeassistant par défaut)." }
+        }
+      },
+      "Entites": {
+        "type": "array",
+        "title": "Entités manuelles",
+        "description": "Pour ce qui ne s'annonce pas (Rfx2Mqtt, un script…) : une ligne par valeur lue sur un topic. Changer le topic ou le champ d'une ligne crée une autre entité ; la renommer ne casse rien.",
+        "items": {
+          "type": "object",
+          "required": [ "Appareil", "Type", "Topic" ],
+          "properties": {
+            "Appareil": { "type": "string", "title": "Appareil", "description": "Regroupe les entités d'un même appareil : « Sonde salon »." },
+            "Nom": { "type": "string", "title": "Nom de l'entité", "description": "« Température », « Pile »… Vide : l'entité principale de l'appareil." },
+            "Type": { "type": "string", "title": "Type", "default": "sensor",
+              "enum": [ "sensor", "binary_sensor", "switch", "light" ],
+              "x-enum-titles": [ "Capteur (valeur)", "Capteur binaire (oui / non)", "Interrupteur", "Lumière" ] },
+            "Classe": { "type": "string", "title": "Classe", "description": "Un capteur sans classe ni unité est un libellé, pas un nombre.",
+              "enum": [ "temperature", "humidity", "battery", "power", "apparent_power", "energy", "voltage", "current", "pressure", "illuminance", "carbon_dioxide", "wind_speed", "device_temperature", "enum", "opening", "occupancy", "presence", "moisture", "smoke", "tamper", "vibration", "problem", "connectivity" ],
+              "x-enum-titles": [ "Température", "Humidité", "Pile", "Puissance (W)", "Puissance apparente (VA)", "Énergie (index)", "Tension", "Courant", "Pression", "Éclairement", "CO₂", "Vitesse du vent", "Température d'un appareil", "Libellé", "Ouverture (true = ouvert)", "Mouvement", "Présence", "Fuite d'eau", "Fumée", "Sabotage", "Vibration", "Problème", "Connectivité" ] },
+            "Topic": { "type": "string", "title": "Topic d'état", "description": "Exact, sans + ni # : domomud/sensor/th/salon/temperature." },
+            "Champ": { "type": "string", "title": "Champ JSON", "description": "temperature, ou a.b dans un objet ; vide : la charge entière est la valeur." },
+            "Unite": { "type": "string", "title": "Unité", "description": "°C, %, W, kWh, mm/h… °F, Wh, kW, mV, mA et Pa sont convertis." },
+            "ValeurOn": { "type": "string", "title": "Valeur « oui »", "description": "Capteur binaire, interrupteur, lumière. Vides toutes les deux : ON, true et 1 (et leurs contraires)." },
+            "ValeurOff": { "type": "string", "title": "Valeur « non »" },
+            "TopicCommande": { "type": "string", "title": "Topic de commande", "description": "Interrupteur ou lumière : on y publie les valeurs oui / non (ON / OFF par défaut). Vide : lecture seule." },
+            "TopicDispo": { "type": "string", "title": "Topic de disponibilité", "description": "Facultatif : online / offline (dernière volonté de l'appareil)." }
+          }
         }
       }
     }

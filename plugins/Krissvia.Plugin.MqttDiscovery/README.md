@@ -54,6 +54,42 @@ ESPHome publie alors, **retenus** : la configuration de chaque capteur sous `hom
 mesures sous `krissvia/esp32-sht30-etage/sensor/<objet>/state`, et `online` / `offline` (dernière volonté) sous
 `krissvia/esp32-sht30-etage/status`. Le plugin s'abonne à ces topics à mesure qu'il lit les configurations.
 
+## Entités manuelles
+
+Pour ce qui ne s'annonce pas — Rfx2Mqtt, un script, un vieux module —, la fiche du service (page **Services**) porte
+une liste **Entités manuelles** : une ligne par valeur lue sur un topic, sans écrire de plugin. Chaque ligne est
+traduite en la configuration qu'aurait publiée l'appareil, puis suit exactement le chemin d'une entité découverte
+(lecture, conversions d'unités, ordres, joignabilité, déclaration complète).
+
+| Champ | Rôle |
+|---|---|
+| Appareil | regroupe les entités (« Sonde salon ») |
+| Nom | nom de l'entité ; vide : l'entité principale de l'appareil |
+| Type | `sensor`, `binary_sensor`, `switch`, `light` |
+| Classe, Unité | celles du contrat ; un capteur sans l'une ni l'autre est un **libellé**, pas un nombre ; `energy` est un compteur croissant |
+| Topic d'état | **exact** (pas de `+` ni de `#` : les entités sont rangées par topic) |
+| Champ JSON | `temperature`, `a.b`, `liste.0` ; vide : la charge entière |
+| Valeurs « oui » / « non » | vides toutes les deux : `ON`/`OFF`, `true`/`false`, `1`/`0`, sans tenir compte de la casse ; saisies : seules reconnues |
+| Topic de commande | interrupteur ou lumière : on y publie les valeurs oui / non (`ON` / `OFF`) ; vide : lecture seule |
+| Topic de disponibilité | facultatif, `online` / `offline` |
+
+**Identité = topic + champ** (`manuel:{topic}#{champ}`). Renommer l'entité ou son appareil ne casse rien ; changer de
+topic ou de champ crée une autre entité, l'ancienne devient disparue (supprimable dans l'écran Entités). Une ligne
+inutilisable (joker, type inconnu) ou en double est écartée, avec un avertissement au journal. Enregistrer la fiche
+relance le plugin, comme tout réglage.
+
+Exemple, une sonde Oregon publiée par Rfx2Mqtt avec le préfixe `domomud` :
+
+| Appareil | Nom | Type | Classe | Topic d'état | Champ | Unité |
+|---|---|---|---|---|---|---|
+| Sonde salon | Température | Capteur | Température | `domomud/sensor/th/salon/temperature` | | °C |
+| Sonde salon | Humidité | Capteur | Humidité | `domomud/sensor/th/salon` | `humidity` | % |
+| Sonde salon | Pile | Capteur | Pile | `domomud/sensor/th/salon/battery` | | % |
+| Sonde salon | Pile faible | Capteur binaire | Pile | `domomud/sensor/th/salon/battery_low` | | |
+| Pluviomètre | Intensité | Capteur | | `domomud/sensor/rain/jardin/rain_rate` | | mm/h |
+
+Pas de conversion m/s → km/h pour le vent : saisir l'unité que publie l'appareil.
+
 ## Ce qui devient une entité
 
 | Composant | Entité | Valeur et ordres |

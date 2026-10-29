@@ -178,14 +178,11 @@ internal sealed class EntiteHa
             case "sensor":
                 return texte is "" or "unknown" or "unavailable" or "None" ? null : JsonSerializer.SerializeToElement(texte);
             case "binary_sensor":
-                return texte == Config.ChargeOn ? Booleen(true) : texte == Config.ChargeOff ? Booleen(false) : null;
+                return Etat(texte, Config.ChargeOn, Config.ChargeOff) is { } b ? Booleen(b) : null;
             case "switch":
-                return texte == Config.EtatOn ? Booleen(true) : texte == Config.EtatOff ? Booleen(false) : null;
+                return Etat(texte, Config.EtatOn, Config.EtatOff) is { } s ? Booleen(s) : null;
             case "light":
-                bool allume;
-                if (texte == Config.EtatOn) allume = true;
-                else if (texte == Config.EtatOff) allume = false;
-                else return null;
+                if (Etat(texte, Config.EtatOn, Config.EtatOff) is not { } allume) return null;
                 return Fusion(precedente, o => o["on"] = allume);
             default:
                 return null;
@@ -229,6 +226,20 @@ internal sealed class EntiteHa
     }
 
     private static JsonElement Booleen(bool v) => JsonSerializer.SerializeToElement(v);
+
+    private bool? Etat(string texte, string on, string off)
+    {
+        if (texte == on) return true;
+        if (texte == off) return false;
+        if (!Config.BooleensSouples) return null;
+        // Un gabarit rend un booléen JSON en « True » / « False » : la casse ne compte pas.
+        return texte.Trim().ToLowerInvariant() switch
+        {
+            "on" or "true" or "1" => true,
+            "off" or "false" or "0" => false,
+            _ => null,
+        };
+    }
 
     // ── Ordres ───────────────────────────────────────────────────────────────
 

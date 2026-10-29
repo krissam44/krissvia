@@ -203,7 +203,10 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
   à la manière de Home Assistant (ESPHome, Tasmota…) : sondes, capteurs, interrupteurs, lumières, joignabilité par
   leur dernière volonté. Identité = appareil + `unique_id` (ESPHome répète le même d'un module à l'autre),
   déclaration complète différée d'une seconde, abonnements ajoutés à mesure (`IMqttLink.SubscribeAsync`). Voir son
-  README, qui donne le YAML d'une sonde ESPHome.
+  README, qui donne le YAML d'une sonde ESPHome. **Entités manuelles** (29/10/2026) : une liste dans ses réglages déclare une
+  entité sur un topic quelconque (Rfx2Mqtt…) — topic, champ JSON, type, classe, unité, topic de commande —, traduite en
+  configuration Discovery puis traitée comme les autres ; identité = topic + champ. Les réglages des plugins acceptent
+  désormais `enum` (+ `x-enum-titles`), affiché en liste de choix.
 - **Plugin Imprimantes IPP** (24/10/2026, `plugins/Krissvia.Plugin.Ipp`, C#) — imprimantes réseau découvertes en
   mDNS (`_ipp._tcp`, `_ipps._tcp`) ou saisies par leur adresse, relevées par `Get-Printer-Attributes` (IPP binaire de
   la RFC 8010, implémentation maison d'une centaine de lignes : le plugin ne sait que lire, jamais imprimer). Un

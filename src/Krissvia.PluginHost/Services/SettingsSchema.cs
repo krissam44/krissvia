@@ -19,7 +19,8 @@ public sealed record EntitySetting(IReadOnlyList<string> Kinds, IReadOnlyList<st
 /// <summary>
 /// Un réglage décrit dans <c>plugin.json</c> (<c>"settings"</c>) — un sous-ensemble de JSON Schema : <c>type</c>,
 /// <c>title</c>, <c>description</c>, <c>default</c>, <c>minimum</c>/<c>maximum</c>, <c>required</c>,
-/// <c>format: "password"</c>, <c>format: "textarea"</c> (texte sur plusieurs lignes), <c>properties</c> (objet), <c>items</c> et <c>maxItems</c> (liste d'objets). Les clés sont celles de la
+/// <c>format: "password"</c>, <c>format: "textarea"</c> (texte sur plusieurs lignes), <c>enum</c> et <c>x-enum-titles</c>
+/// (liste de choix), <c>properties</c> (objet), <c>items</c> et <c>maxItems</c> (liste d'objets). Les clés sont celles de la
 /// configuration du plugin (<c>Mqtt</c> → <c>Host</c>…) : c'est ce qui permet de les lui transmettre telles quelles.
 /// </summary>
 public sealed record SettingField
@@ -42,6 +43,21 @@ public sealed record SettingField
 
     public double? Minimum { get; init; }
     public double? Maximum { get; init; }
+
+    /// <summary>
+    /// Texte à choisir dans une liste (<c>enum</c>), avec ses libellés (<c>x-enum-titles</c>, dans le même ordre) : le type
+    /// d'une entité MQTT manuelle, sa classe. Vide : texte libre.
+    /// </summary>
+    public IReadOnlyList<string> Choices { get; init; } = [];
+
+    public IReadOnlyList<string> ChoiceTitles { get; init; } = [];
+
+    /// <summary>Le libellé d'un choix ; la valeur elle-même si elle n'en a pas.</summary>
+    public string ChoiceLabel(string valeur)
+    {
+        var i = Choices.ToList().IndexOf(valeur);
+        return i >= 0 && i < ChoiceTitles.Count && ChoiceTitles[i].Length > 0 ? ChoiceTitles[i] : valeur;
+    }
 
     /// <summary>Liste : nombre d'éléments au plus (<c>maxItems</c>) — six températures sur la page 2 d'une platine.</summary>
     public int? MaxItems { get; init; }
@@ -100,6 +116,8 @@ public static class SettingsSchema
             Required = requis,
             Secret = Chaine(s, "format") == "password",
             Multiline = type == SettingType.String && Chaine(s, "format") == "textarea",
+            Choices = type == SettingType.String ? Liste(s, "enum") : [],
+            ChoiceTitles = type == SettingType.String ? Liste(s, "x-enum-titles") : [],
             Minimum = s.TryGetProperty("minimum", out var min) && min.TryGetDouble(out var vmin) ? vmin : null,
             Maximum = s.TryGetProperty("maximum", out var max) && max.TryGetDouble(out var vmax) ? vmax : null,
             Properties = proprietes,
@@ -239,6 +257,8 @@ public static class SettingsSchema
                     break;
                 default:
                     if (v.GetValueKind() != JsonValueKind.String) erreurs.Add($"{nom} : texte attendu.");
+                    else if (champ.Choices.Count > 0 && !champ.Choices.Contains(v.GetValue<string>()))
+                        erreurs.Add($"{nom} : « {v.GetValue<string>()} » n'est pas dans la liste.");
                     break;
             }
         }
