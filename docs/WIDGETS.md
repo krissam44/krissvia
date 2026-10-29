@@ -342,6 +342,9 @@ Krissvia.Plugin.Proxmox/        (le dossier du plugin.json : bin/… pour un plu
   standard : il livre le sien sous un autre nom, et le choix par défaut le préfère s'il est plus précis (§6) — un
   widget de plugin compte comme « installé exprès ».
 - Le script peut importer la base des standards : `import { KvWidget, esc } from "/widgets/standard/commun.js";`.
+  Pour un geste lourd (arrêter, redémarrer), `ConfirmationEnCarte` du même fichier : un second clic dans la carte
+  confirme, jamais `confirm()` — la fenêtre du navigateur s'ouvrait parfois en retard ou hors de vue, et bloquait
+  toute la page en attendant (29/10/2026).
 - **Plugin C#** : faire copier le dossier à côté de l'exécutable, comme `plugin.json` :
   `<Content Include="widgets\**" CopyToOutputDirectory="PreserveNewest" />`. **Plugin Python** : rien à faire.
 - Relu à chaque chargement du catalogue : activer un plugin, ou modifier un de ses widgets, se voit sans redémarrer.

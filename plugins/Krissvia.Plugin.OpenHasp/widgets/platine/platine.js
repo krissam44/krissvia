@@ -1,4 +1,4 @@
-import { KvWidget, esc, absence, icone, depuis } from "/widgets/standard/commun.js";
+import { KvWidget, esc, absence, icone, depuis, ConfirmationEnCarte } from "/widgets/standard/commun.js";
 
 const VERT = "#66bb6a", GRIS = "#78909c", ROUGE = "#ef5350", BLEU = "#42a5f5";
 
@@ -6,7 +6,7 @@ const VERT = "#66bb6a", GRIS = "#78909c", ROUGE = "#ef5350", BLEU = "#42a5f5";
  * Carte « Platine openHASP », livrée par le plugin (WIDGETS.md §13) : l'état de l'écran mural et ses deux gestes de
  * dépannage. Repeindre efface la platine et lui renvoie toutes ses pages (le cas d'un écran resté sur l'ancien
  * affichage de sa mémoire) ; Redémarrer relance l'ESP32, qui se repeint de lui-même à son retour. Le redémarrage
- * demande confirmation : l'écran reste noir une quinzaine de secondes.
+ * se confirme d'un second clic, dans la carte (ConfirmationEnCarte) : l'écran reste noir une quinzaine de secondes.
  */
 class KvPlatine extends KvWidget {
     static css = `
@@ -20,9 +20,11 @@ class KvPlatine extends KvWidget {
                           border: 1px solid color-mix(in srgb, var(--kv-text-secondary, #888) 35%, transparent); }
         .actions button .ms { font-size: 1rem; }
         .actions button[disabled] { opacity: .45; cursor: default; }
+        .actions button.confirmer { background: ${ROUGE}; border-color: ${ROUGE}; color: #fff; }
         .ok { font-size: .75rem; color: ${VERT}; }`;
 
     #attente = false;
+    #confirmation = new ConfirmationEnCarte(() => this.planifier());
     #message = null;
     #erreur = null;
 
@@ -46,17 +48,19 @@ class KvPlatine extends KvWidget {
             <div class="detail">${esc(detail)}</div>
             <div class="actions bas">
                 <button data-commande="repaint"${actif ? "" : " disabled"}>${icone("format_paint")}Repeindre</button>
-                <button data-commande="reboot"${actif ? "" : " disabled"}>${icone("restart_alt")}Redémarrer</button>
+                <button data-commande="reboot"${actif ? "" : " disabled"} class="${this.#confirmation.attendue === "reboot" ? "confirmer" : ""}">${icone("restart_alt")}Redémarrer</button>
             </div>
+            ${this.#confirmation.attendue === "reboot" ? `<div class="erreur">Cliquer encore pour redémarrer</div>` : ""}
             ${this.#message ? `<div class="ok">${esc(this.#message)}</div>` : ""}
             ${this.#erreur ? `<div class="erreur">${esc(this.#erreur)}</div>` : ""}</div>`;
     }
 
     apresRendu(racine) {
-        const noeud = this._states.ecran?.value?.node ?? "cette platine";
         racine.querySelectorAll("button[data-commande]").forEach(b => b.addEventListener("click", () => {
             const c = b.dataset.commande;
-            if (c === "reboot" && !confirm(`Redémarrer la platine ${noeud} ? Son écran restera noir une quinzaine de secondes.`)) return;
+            // Armer efface le message précédent : « Pages renvoyées » sous « Cliquer encore » prêterait à confusion.
+            this.#message = this.#erreur = null;
+            if (c === "reboot" && !this.#confirmation.demander(c)) return;
             this.#ordonner(c);
         }));
     }
