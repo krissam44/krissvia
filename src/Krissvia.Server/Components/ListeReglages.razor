@@ -2,7 +2,7 @@
    crayon ouvrent la même fenêtre, sur une copie : « Annuler » ne laisse rien. L'ordre compte (position sur la platine),
    d'où les flèches. Comme le reste du formulaire, rien n'est enregistré avant « Enregistrer » en bas de la page. *@
 
-<MudDataGrid T="JsonObject" Items="Elements" Dense="true" Hover="true" Elevation="0" Outlined="true" Class="rounded-lg"
+<MudDataGrid @key="_version" T="JsonObject" Items="Elements" Dense="true" Hover="true" Elevation="0" Outlined="true" Class="rounded-lg"
              Breakpoint="Breakpoint.Sm">
     <Columns>
         <TemplateColumn T="JsonObject" Title="N°" HeaderStyle="width: 48px" Sortable="false">

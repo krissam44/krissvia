@@ -15,6 +15,13 @@ public partial class ListeReglages
 
     private List<JsonObject> Elements => [.. Liste.OfType<JsonObject>()];
 
+    /// <summary>
+    /// Change à chaque modification de la liste, et reconstruit le tableau (<c>@key</c>). MudDataGrid ne redessine pas
+    /// une ligne dont l'élément a été REMPLACÉ à la même place : la ligne modifiée gardait son ancien contenu à l'écran
+    /// alors que la valeur était bien prise, et enregistrée — corriger un topic semblait sans effet (29/10/2026).
+    /// </summary>
+    private int _version;
+
     private bool Plein => Champ.MaxItems is { } plafond && Liste.Count >= plafond;
 
     /// <summary>Les colonnes : les champs simples, et le nombre d'éléments d'une sous-liste (les interrupteurs d'une platine).</summary>
@@ -51,13 +58,17 @@ public partial class ListeReglages
         var element = Liste[indice];
         Liste.RemoveAt(indice);
         Liste.Insert(cible, element);
+        _version++;
     }
 
     private async Task AjouterAsync()
     {
         if (Plein) return;
         if (await OuvrirAsync(SettingsSchema.Complete(Champ, null), $"Ajouter — {Entete(Champ)}") is { } nouveau)
+        {
             Liste.Add(nouveau);
+            _version++;
+        }
     }
 
     private async Task ModifierAsync(JsonObject element)
@@ -66,7 +77,10 @@ public partial class ListeReglages
         if (indice < 0) return;
         // Sur une copie : « Annuler » doit laisser la ligne telle qu'elle était, sous-listes comprises.
         if (await OuvrirAsync((JsonObject)element.DeepClone(), $"{Entete(Champ)} n° {indice + 1}") is { } modifie)
+        {
             Liste[indice] = modifie;
+            _version++;
+        }
     }
 
     private async Task RetirerAsync(JsonObject element)
@@ -75,7 +89,10 @@ public partial class ListeReglages
         if (indice < 0) return;
         if (await Dialogues.ShowMessageBoxAsync("Retirer", $"Retirer la ligne n° {indice + 1} de « {Entete(Champ)} » ?",
                 yesText: "Retirer", cancelText: "Annuler") == true)
+        {
             Liste.RemoveAt(indice);
+            _version++;
+        }
     }
 
     private async Task<JsonObject?> OuvrirAsync(JsonObject element, string titre)
