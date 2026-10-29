@@ -134,8 +134,14 @@ public static partial class WidgetCatalog
 
     /// <summary>Origine des widgets Blazor, déclarés dans les bibliothèques de <c>Widgets:Assemblies</c>.</summary>
     public const string Blazor = "blazor";
-    /// <summary>Contrat 2 : largeurs en douzièmes. Le contrat 1 (largeurs en sixièmes) est encore lu, converti.</summary>
-    public const int ContractVersion = 2;
+    /// <summary>
+    /// Contrat 3 (29/10/2026) : largeurs en 24ᵉ. Les contrats 2 (douzièmes) et 1 (sixièmes) sont encore lus, convertis
+    /// au chargement : le reste de Krissvia ne voit que des 24ᵉ.
+    /// </summary>
+    public const int ContractVersion = 3;
+
+    /// <summary>Le deuxième contrat, en douzièmes : celui des widgets écrits jusqu'au 29/10/2026, et des widgets Blazor.</summary>
+    public const int TwelfthsContractVersion = 2;
 
     /// <summary>Lit un <c>widget.json</c> ; lève <see cref="JsonException"/> s'il est mal formé.</summary>
     public static WidgetManifest? ReadManifest(string json) => JsonSerializer.Deserialize<WidgetManifest>(json, Json);
@@ -143,8 +149,15 @@ public static partial class WidgetCatalog
     /// <summary>Le premier contrat, dont la grille n'avait que 6 colonnes.</summary>
     public const int LegacyContractVersion = 1;
 
-    /// <summary>Largeur maximale : 12 colonnes, toute la largeur d'un grand écran (la grille de MudGrid et de DomoMud).</summary>
-    public const int MaxCols = 12;
+    /// <summary>Largeur maximale : 24 colonnes, toute la largeur d'un grand écran (<see cref="DashboardService.GridColumns"/>).</summary>
+    public const int MaxCols = 24;
+
+    /// <summary>Combien de colonnes du contrat <paramref name="contrat"/> font la largeur d'un grand écran.</summary>
+    public static int ColumnsOf(int contrat) => contrat switch { LegacyContractVersion => 6, TwelfthsContractVersion => 12, _ => MaxCols };
+
+    /// <summary>Le manifeste en 24ᵉ, quel que soit son contrat : la même carte, exactement.</summary>
+    public static WidgetManifest InColumns(WidgetManifest m) =>
+        m.Contract == ContractVersion ? m : m with { Size = m.Size with { Cols = m.Size.Cols * (MaxCols / ColumnsOf(m.Contract)) } };
 
     public const int MaxRows = 4;
 
@@ -200,9 +213,7 @@ public static partial class WidgetCatalog
                     continue;
                 }
 
-                // Contrat 1 : largeur en sixièmes, la même carte en douzièmes.
-                if (manifeste.Contract == LegacyContractVersion)
-                    manifeste = manifeste with { Size = manifeste.Size with { Cols = manifeste.Size.Cols * 2 } };
+                manifeste = InColumns(manifeste);
 
                 widgets.Add(new CatalogWidget(manifeste, source.Origin, $"{source.BaseUrl.TrimEnd('/')}/{dossier.Name}/{manifeste.Script}"));
             }
@@ -215,7 +226,7 @@ public static partial class WidgetCatalog
             else if (widgets.Any(w => w.Manifest.Id == composant.Id))
                 erreurs.Add($"{Blazor}/{composant.Blazor} : l'identifiant « {composant.Id} » est déjà pris");
             else
-                widgets.Add(new CatalogWidget(composant, Blazor, ""));
+                widgets.Add(new CatalogWidget(InColumns(composant), Blazor, ""));
         }
 
         return new WidgetCatalogSnapshot(widgets, erreurs);
@@ -225,7 +236,7 @@ public static partial class WidgetCatalog
     /// <param name="dossier">Le dossier d'un Web Component ; null pour un widget Blazor, qui n'a pas de script.</param>
     public static string? Validate(WidgetManifest m, IWidgetFolder? dossier)
     {
-        if (m.Contract is not (ContractVersion or LegacyContractVersion))
+        if (m.Contract is not (ContractVersion or TwelfthsContractVersion or LegacyContractVersion))
             return $"contrat {m.Contract} non pris en charge (attendu : {ContractVersion})";
         if (!Identifiant().IsMatch(m.Id)) return "id : minuscules, chiffres et « - », 64 caractères au plus";
         if (m.Name.Length == 0) return "name manquant";
@@ -250,7 +261,7 @@ public static partial class WidgetCatalog
         if (m.Slots.Select(s => s.Name).Distinct(StringComparer.Ordinal).Count() != m.Slots.Count) return "deux slots portent le même nom";
         if (m.Slots.Any(s => s.Type != "entity")) return "slot : seul le type « entity » existe";
         if (!m.Slots[0].Required) return "le premier slot (principal) doit être obligatoire";
-        var maxCols = m.Contract == LegacyContractVersion ? MaxCols / 2 : MaxCols;
+        var maxCols = ColumnsOf(m.Contract);
         if (m.Size.Cols < 1 || m.Size.Cols > maxCols || !IsValidRows(m.Size.Rows))
             return $"size : de 1 à {maxCols} colonnes et de 1 à {MaxRows} lignes, par demi-ligne";
         return null;

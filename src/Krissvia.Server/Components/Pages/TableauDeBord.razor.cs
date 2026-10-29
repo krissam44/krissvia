@@ -297,7 +297,7 @@ public partial class TableauDeBord
     private void RenommerSection(string id, string titre) => ChangerSection(id, s => s with { Title = titre });
 
     /// <summary>Largeurs proposées pour une section : toute la ligne, puis les fractions qui en mettent plusieurs côte à côte.</summary>
-    private static readonly int[] LargeursSection = [DashboardService.GridColumns, 9, 8, 6, 4, 3];
+    private static readonly int[] LargeursSection = [DashboardService.GridColumns, 18, 16, 12, 8, 6];
 
     private static string LibelleSection(int cols) =>
         cols >= DashboardService.GridColumns ? "Toute la ligne" : Krissvia.Server.Components.Widgets.Largeurs.Libelle(cols);
@@ -311,8 +311,8 @@ public partial class TableauDeBord
 
     private void ColorerSection(string id, string? couleur) => ChangerSection(id, s => s with { Color = couleur });
 
-    private static string ClasseSection(DashboardSection s, int largeur) =>
-        s.Color is null ? $"kv-section s{largeur}" : $"kv-section s{largeur} kv-section-teinte";
+    /// <summary>La largeur passe par --kv-cols (<see cref="StyleSection"/>) : la classe ne dit que la teinte.</summary>
+    private static string ClasseSection(DashboardSection s) => s.Color is null ? "kv-section" : "kv-section kv-section-teinte";
 
     /// <summary>La couleur passe par une variable CSS : la feuille de style en tire la teinte du fond et du liseré.</summary>
     private static string StyleSection(DashboardSection s, int largeur) =>

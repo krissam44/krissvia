@@ -3,16 +3,18 @@ using Krissvia.Core.Widgets;
 namespace Krissvia.Server.Components.Widgets;
 
 /// <summary>
-/// Largeur d'une carte, en douzièmes de la grille d'un grand écran (WIDGETS.md §3), dite comme on la pense : « 1/4 »
-/// plutôt que « 3 colonnes ».
+/// Largeur d'une carte, en 24ᵉ de la grille d'un grand écran (WIDGETS.md §3), dite comme on la pense : « 1/4 »
+/// plutôt que « 6 colonnes ».
 /// </summary>
 public static class Largeurs
 {
     /// <summary>
     /// Celles du menu de la carte : les fractions qui tombent juste, de douze à une carte par ligne. 1/12 pour les
-    /// petites cartes à icône (un spot, un interrupteur), qu'on aligne en rangée.
+    /// petites cartes à icône (un spot, un interrupteur), qu'on aligne en rangée ; 1/8 et 3/8, que seule la grille de
+    /// 24 donne (huit cartes par ligne, ou une grande et une petite qui se complètent avec 5/8). Pas de 1/24 : à
+    /// 1600 px, 54 px de large, moins qu'un bouton.
     /// </summary>
-    public static readonly int[] Usuelles = [1, 2, 3, 4, 6, 8, 9, WidgetCatalog.MaxCols];
+    public static readonly int[] Usuelles = [2, 3, 4, 6, 8, 9, 12, 15, 16, 18, WidgetCatalog.MaxCols];
 
     public static string Libelle(int cols)
     {

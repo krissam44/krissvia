@@ -231,8 +231,8 @@ ouvrirait le flux avec le cookie de session.
 {
   "name": "Confort", "order": 0,
   "sections": [
-    { "id": "thermo", "title": "Thermostats", "collapsed": false, "cols": 6,
-      "cards": [ { "id": "a1", "widget": "thermostat", "entities": { "thermostat": "climate.salon" }, "cols": 3 } ] }
+    { "id": "thermo", "title": "Thermostats", "collapsed": false, "cols": 12,
+      "cards": [ { "id": "a1", "widget": "thermostat", "entities": { "thermostat": "climate.salon" }, "cols": 6 } ] }
   ]
 }
 ```
@@ -242,10 +242,12 @@ widget choisi pour l'entité (champ `widget` du registre, réglé dans l'écran 
 les entités du même appareil. Avec `widget`, ce sont ses `entities` qui comptent (WIDGETS.md §12).
 
 Identifiant de page : minuscules, chiffres et `-`. Une carte est unique dans sa page (pas seulement dans sa
-section). `cols` (1 à 12, en douzièmes d'un grand écran : 3 = quatre cartes par ligne) et `rows` (1 à 4, par demi-ligne : `1.5`) sont
-facultatifs : sans eux, la taille du manifeste. La réponse porte `"grid": 12`, le nombre de colonnes dans lequel
-`cols` est compté ; à l'envoi, `grid` est facultatif, mais toute autre valeur que 12 est refusée. Un widget ou une
+section). `cols` (1 à 24, en 24ᵉ d'un grand écran : 6 = quatre cartes par ligne, 3 = huit) et `rows` (1 à 4, par demi-ligne : `1.5`) sont
+facultatifs : sans eux, la taille du manifeste. La réponse porte `"grid": 24`, le nombre de colonnes dans lequel
+`cols` est compté. À l'envoi, `grid` est facultatif (les largeurs sont alors en 24ᵉ) ; `"grid": 12` dit qu'elles sont
+en douzièmes, comme avant le 29/10/2026 : la page est convertie (largeurs doublées, de 1 à 12 seulement). Toute autre
+valeur est refusée. Un widget ou une
 entité disparus ne bloquent pas l'enregistrement : la carte affiche le widget « valeur » et un bandeau.
 Une **section** peut avoir une `color` (`#RRGGBB`, absente = sans fond : l'écran en peint une teinte légère derrière
-ses cartes), et un `cols` (1 à 12, absent = toute la ligne) : deux sections de 6 se partagent une
+ses cartes), et un `cols` (1 à 24, absent = toute la ligne) : deux sections de 12 se partagent une
 ligne sur grand écran. Ses cartes gardent les colonnes de la page ; une carte plus large que la section en prend la largeur.

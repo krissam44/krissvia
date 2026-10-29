@@ -18,7 +18,7 @@ public sealed class WidgetCatalogTests : IDisposable
     }
 
     private static string Manifeste(string id, string slots = """[{ "name": "entite", "required": true }]""",
-        string element = "", string script = "w.js", int contrat = 2) => $$"""
+        string element = "", string script = "w.js", int contrat = 3) => $$"""
         { "contract": {{contrat}}, "id": "{{id}}", "name": "Widget {{id}}", "element": "{{(element.Length > 0 ? element : "kv-" + id)}}",
           "script": "{{script}}", "slots": {{slots}}, "size": { "cols": 2, "rows": 1 } }
         """;
@@ -67,29 +67,49 @@ public sealed class WidgetCatalogTests : IDisposable
         Assert.Equal("/widgets/local/jauge/w.js", w.ScriptUrl);
         Assert.Equal(WidgetCatalog.Local, w.Origin);
         Assert.Equal([EntityKind.Sensor, EntityKind.BinarySensor], w.Manifest.Slots[0].Kinds);
-        Assert.Equal(new WidgetSize(2, 1), w.Manifest.Size);
-    }
-
-    [Fact]
-    public void Un_widget_du_contrat_1_garde_sa_largeur_comptee_en_douziemes()
-    {
-        Deposer(Locaux, "ancien", Manifeste("ancien", contrat: 1));
-
-        var w = Assert.Single(Charger().Widgets);
-
-        // 2 sixièmes = 4 douzièmes : la carte garde exactement sa largeur dans la grille de 12.
-        Assert.Equal(new WidgetSize(4, 1), w.Manifest.Size);
+        Assert.Equal(new WidgetSize(2, 1), w.Manifest.Size);   // contrat 3 : déjà en 24ᵉ
     }
 
     [Theory]
-    [InlineData("contrat", """{ "contract": 3, "id": "a", "name": "A", "element": "kv-a", "script": "w.js", "slots": [{ "name": "e", "required": true }] }""", "contrat 3")]
+    [InlineData(1, 8)]   // 2 sixièmes = 8 vingt-quatrièmes
+    [InlineData(2, 4)]   // 2 douzièmes = 4 vingt-quatrièmes
+    [InlineData(3, 2)]
+    public void Un_widget_garde_sa_largeur_quel_que_soit_son_contrat(int contrat, int cols)
+    {
+        Deposer(Locaux, "ancien", Manifeste("ancien", contrat: contrat));
+
+        var w = Assert.Single(Charger().Widgets);
+
+        Assert.Equal(new WidgetSize(cols, 1), w.Manifest.Size);
+    }
+
+    [Fact]
+    public void Un_widget_du_contrat_3_peut_prendre_un_huitieme()
+    {
+        Deposer(Locaux, "spot", Manifeste("spot").Replace("\"cols\": 2", "\"cols\": 3"));
+
+        Assert.Equal(3, Assert.Single(Charger().Widgets).Manifest.Size.Cols);
+    }
+
+    [Fact]
+    public void Un_widget_Blazor_declare_sa_largeur_en_douziemes()
+    {
+        // L'attribut Cols des widgets Blazor compte en douzièmes : BlazorWidgets les déclare au contrat 2.
+        var catalogue = WidgetCatalog.Load([], [Composant("jauge") with { Contract = WidgetCatalog.TwelfthsContractVersion, Size = new WidgetSize(3, 1) }]);
+
+        Assert.Equal(6, Assert.Single(catalogue.Widgets).Manifest.Size.Cols);
+    }
+
+    [Theory]
+    [InlineData("contrat", """{ "contract": 4, "id": "a", "name": "A", "element": "kv-a", "script": "w.js", "slots": [{ "name": "e", "required": true }] }""", "contrat 4")]
     [InlineData("element", """{ "contract": 1, "id": "a", "name": "A", "element": "ma-jauge", "script": "w.js", "slots": [{ "name": "e", "required": true }] }""", "kv-")]
     [InlineData("exterieur", """{ "contract": 1, "id": "a", "name": "A", "element": "kv-a", "script": "https://exemple.org/w.js", "slots": [{ "name": "e", "required": true }] }""", "chemin relatif")]
     [InlineData("remonte", """{ "contract": 1, "id": "a", "name": "A", "element": "kv-a", "script": "../autre/w.js", "slots": [{ "name": "e", "required": true }] }""", "chemin relatif")]
     [InlineData("remontemilieu", """{ "contract": 1, "id": "a", "name": "A", "element": "kv-a", "script": "js/../../autre/w.js", "slots": [{ "name": "e", "required": true }] }""", "chemin relatif")]
     [InlineData("sansslot", """{ "contract": 1, "id": "a", "name": "A", "element": "kv-a", "script": "w.js", "slots": [] }""", "au moins un slot")]
     [InlineData("principal", """{ "contract": 1, "id": "a", "name": "A", "element": "kv-a", "script": "w.js", "slots": [{ "name": "e" }] }""", "principal")]
-    [InlineData("taille", """{ "contract": 2, "id": "a", "name": "A", "element": "kv-a", "script": "w.js", "slots": [{ "name": "e", "required": true }], "size": { "cols": 13 } }""", "size")]
+    [InlineData("taille", """{ "contract": 2, "id": "a", "name": "A", "element": "kv-a", "script": "w.js", "slots": [{ "name": "e", "required": true }], "size": { "cols": 13 } }""", "de 1 à 12 colonnes")]
+    [InlineData("taillev3", """{ "contract": 3, "id": "a", "name": "A", "element": "kv-a", "script": "w.js", "slots": [{ "name": "e", "required": true }], "size": { "cols": 25 } }""", "de 1 à 24 colonnes")]
     [InlineData("taillev1", """{ "contract": 1, "id": "a", "name": "A", "element": "kv-a", "script": "w.js", "slots": [{ "name": "e", "required": true }], "size": { "cols": 7 } }""", "de 1 à 6 colonnes")]
     [InlineData("json", """{ "contract": 1, "id": """, "illisible")]
     public void Un_widget_invalide_est_ecarte_avec_sa_raison_sans_gener_les_autres(string dossier, string manifeste, string raison)
@@ -365,7 +385,7 @@ public class DashboardServiceTests
     }
 
     [Fact]
-    public async Task Une_page_enregistree_en_sixiemes_est_relue_en_douziemes_une_seule_fois()
+    public async Task Une_page_enregistree_en_sixiemes_est_relue_en_24e_une_seule_fois()
     {
         var magasin = new Magasin();
         // Une page d'avant la grille de 12 : pas de « grid », largeurs en sixièmes.
@@ -377,12 +397,61 @@ public class DashboardServiceTests
 
         var lue = (await service.GetAsync("confort"))!;
         Assert.Equal(DashboardService.GridColumns, lue.Grid);
-        Assert.Equal(new int?[] { 4, null, 12 }, lue.AllCards.Select(c => c.Cols));
+        Assert.Equal(new int?[] { 8, null, 24 }, lue.AllCards.Select(c => c.Cols));
 
         await service.SaveAsync(lue);
         var relue = (await new DashboardService(magasin).GetAsync("confort"))!;
-        Assert.Equal(new int?[] { 4, null, 12 }, relue.AllCards.Select(c => c.Cols));
-        Assert.Contains("\"grid\":12", magasin.Documents[(DashboardService.Collection, "confort")]);
+        Assert.Equal(new int?[] { 8, null, 24 }, relue.AllCards.Select(c => c.Cols));
+        Assert.Contains("\"grid\":24", magasin.Documents[(DashboardService.Collection, "confort")]);
+    }
+
+    [Fact]
+    public async Task Une_page_en_douziemes_garde_ses_largeurs_cartes_et_sections_comprises()
+    {
+        var magasin = new Magasin();
+        // Une page de la grille de 12 (19/10 → 29/10/2026) : « grid »: 12, une demi-section, une carte de 1/4.
+        magasin.Documents[(DashboardService.Collection, "confort")] = """
+            { "name": "Confort", "grid": 12, "sections": [ { "id": "s", "cols": 6, "cards": [
+              { "id": "a", "widget": "temperature", "cols": 3 }, { "id": "b", "widget": "temperature" } ] }, { "id": "t" } ] }
+            """;
+        var service = new DashboardService(magasin);
+
+        var lue = (await service.GetAsync("confort"))!;
+        Assert.Equal(new int?[] { 6, null }, lue.AllCards.Select(c => c.Cols));
+        Assert.Equal(new int?[] { 12, null }, lue.Sections.Select(s => s.Cols));   // toujours une demi-ligne
+
+        await service.SaveAsync(lue);
+        var relue = (await new DashboardService(magasin).GetAsync("confort"))!;
+        Assert.Equal(new int?[] { 6, null }, relue.AllCards.Select(c => c.Cols));   // pas doublée une seconde fois
+        Assert.Equal(new int?[] { 12, null }, relue.Sections.Select(s => s.Cols));
+    }
+
+    [Fact]
+    public async Task Une_page_envoyee_en_douziemes_par_l_API_est_convertie()
+    {
+        var magasin = new Magasin();
+        var service = new DashboardService(magasin);
+
+        // Un script écrit avant les 24 colonnes envoie ses largeurs en douzièmes, en le disant.
+        var page = Page("confort", Section("s", Carte("a", cols: 12)) with { Cols = 6 }) with { Grid = DashboardService.TwelveColumnGrid };
+        var rendue = await service.SaveAsync(page);
+
+        Assert.Equal(24, rendue.AllCards.Single().Cols);
+        Assert.Equal(24, (await service.GetAsync("confort"))!.AllCards.Single().Cols);
+        Assert.Equal(12, (await service.GetAsync("confort"))!.Sections.Single().Cols);
+        // Une carte de 13 douzièmes n'existe pas, même si 13 vingt-quatrièmes existent.
+        await Assert.ThrowsAsync<DashboardValidationException>(() =>
+            service.SaveAsync(Page("confort", Section("s", Carte("a", cols: 13))) with { Grid = DashboardService.TwelveColumnGrid }));
+    }
+
+    [Fact]
+    public async Task Tout_enregistrer_convertit_aussi_une_page_en_douziemes()
+    {
+        var service = new DashboardService(new Magasin());
+
+        var pages = await service.SaveAllAsync([Page("confort", Section("s", Carte("a", cols: 3))) with { Grid = DashboardService.TwelveColumnGrid }]);
+
+        Assert.Equal(6, pages.Single().AllCards.Single().Cols);
     }
 
     [Fact]
@@ -435,7 +504,7 @@ public class DashboardServiceTests
         var relue = (await new DashboardService(magasin).GetAsync("accueil"))!;
         Assert.Equal([6, 6, null], relue.Sections.Select(s => s.Cols));
         var refus = await Assert.ThrowsAsync<DashboardValidationException>(() =>
-            service.SaveAsync(Page("accueil", Section("radiateurs") with { Cols = 13 })));
+            service.SaveAsync(Page("accueil", Section("radiateurs") with { Cols = 25 })));
         Assert.Contains("radiateurs", refus.Message);
         await Assert.ThrowsAsync<DashboardValidationException>(() => service.SaveAsync(Page("accueil", Section("radiateurs") with { Cols = 0 })));
     }
@@ -461,8 +530,9 @@ public class DashboardServiceTests
 
         var refus = await Assert.ThrowsAsync<DashboardValidationException>(() => service.SaveAsync(Page("confort") with { Grid = 6 }));
         Assert.Contains("grid", refus.Message);
-        await Assert.ThrowsAsync<DashboardValidationException>(() => service.SaveAsync(Page("confort", Section("s", Carte("a", cols: 13)))));
-        await service.SaveAsync(Page("confort", Section("s", Carte("a", cols: 12))));
+        await Assert.ThrowsAsync<DashboardValidationException>(() => service.SaveAsync(Page("confort", Section("s", Carte("a", cols: 25)))));
+        await service.SaveAsync(Page("confort", Section("s", Carte("a", cols: 24))));
+        await service.SaveAsync(Page("confort", Section("s", Carte("a", cols: 3))));   // 1/8
     }
 
     [Fact]
@@ -540,7 +610,7 @@ public class DashboardServiceTests
             // Une carte est unique dans la PAGE, pas seulement dans sa section : le JS les retrouve par identifiant.
             "doublecarte" => Page("p", Section("a", Carte("x")), Section("b", Carte("x"))),
             "doublesection" => Page("p", Section("a"), Section("a")),
-            "taille" => Page("p", Section("a", Carte("x", cols: 13))),
+            "taille" => Page("p", Section("a", Carte("x", cols: 25))),
             "widget" => Page("p", Section("a", Carte("x") with { Widget = "" })),
             "slot" => Page("p", Section("a", Carte("x") with { Entities = new Dictionary<string, string> { ["t"] = "" } })),
             "idpage" => Page("Ma Page"),
