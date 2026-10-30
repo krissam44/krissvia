@@ -28,6 +28,21 @@ se règlent sur le web ; ici on les suit et on les commande.
 | `src/Krissvia.Mobile.Client` | Tout ce qui ne dépend pas de MAUI : client de l'API, flux en direct, lecture des entités `climate`, adresse normalisée. Dans `Krissvia.slnx`, testé par `tests/Krissvia.Mobile.Client.Tests`. |
 | `mobile/Krissvia.Mobile` | L'appli (Android, et Windows pour essayer depuis le PC). **Hors de `Krissvia.slnx`** : le workload MAUI n'existe ni sur la VM ni sur le Pi, et `publier.ps1` doit continuer à marcher. Solution à part : `mobile/Krissvia.Mobile.slnx`. |
 
+## Plusieurs lieux
+
+Une installation Krissvia par lieu (l'appartement sur le Pi, la maison sur Proxmox) : l'écran **Lieux** (l'engrenage)
+les liste, chacun avec son nom, son adresse et sa clé d'API ; un appui en affiche un. Avec deux lieux ou plus, le titre
+de la barre du haut est le nom du lieu affiché et ouvre le menu pour passer à l'autre. Un seul APK pour tous les lieux.
+
+- Le carnet (noms, adresses) est dans les Preferences ; chaque clé dans le coffre de l'appareil, sous l'identifiant de
+  son lieu (`krissvia.apikey.<id>`). Logique pure dans `CarnetLieux`, testée.
+- Changer de lieu vide les thermostats affichés, relance le flux et **recrée l'écran** (`@key` du lieu dans
+  `MainLayout`) : il relit tout chez le nouveau lieu au lieu de montrer ce qu'il avait chargé chez l'ancien.
+- « Tester » essaie ce qui est saisi sans rien enregistrer ; « Enregistrer » garde le lieu même injoignable (la
+  maison n'est peut-être pas encore branchée), et dit pourquoi.
+- Mise à jour depuis une version à un seul serveur : l'adresse et la clé deviennent le premier lieu, nommé
+  « Krissvia » — à renommer.
+
 ## Ce qu'elle fait avec le serveur
 
 - **Clé d'API** (`X-Api-Key`) : la valeur de `Api:Key` (ou `Api__Key`) du serveur, gardée dans le coffre de l'appareil.

@@ -8,11 +8,18 @@ public partial class App : Application
     private readonly FluxEnDirect _flux;
     private readonly ReveilAppli _reveil;
 
-    public App(FluxEnDirect flux, ReveilAppli reveil)
+    public App(FluxEnDirect flux, ReveilAppli reveil, ConnexionSettings connexion, ThermostatsEnDirect thermostats)
     {
         InitializeComponent();
         _flux = flux;
         _reveil = reveil;
+        // Autre lieu : les thermostats affichés sont ceux de l'ancien, on les oublie avant que le flux du nouveau réponde.
+        // Les écrans, eux, sont recréés par MainLayout.
+        connexion.LieuChange += () =>
+        {
+            thermostats.Vider();
+            _flux.Reveiller();
+        };
     }
 
     protected override Window CreateWindow(IActivationState? activationState)

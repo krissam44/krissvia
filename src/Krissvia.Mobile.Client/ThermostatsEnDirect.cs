@@ -48,6 +48,21 @@ public sealed class ThermostatsEnDirect
         }
     }
 
+    /// <summary>
+    /// Oublie tout, comme avant la première liste : au changement de lieu, les thermostats de l'appartement ne doivent
+    /// pas rester affichés sous le nom de la maison le temps que le flux de la maison réponde.
+    /// </summary>
+    public void Vider()
+    {
+        lock (_verrou)
+        {
+            _entites = new(StringComparer.Ordinal);
+            _etats.Clear();
+            _recu = false;
+        }
+        Changed?.Invoke();
+    }
+
     /// <summary>Remplace la liste par celle de <c>/api/entities</c> (toutes les entités : seules les climate sont gardées).</summary>
     public void Remplacer(JsonElement entites)
     {
