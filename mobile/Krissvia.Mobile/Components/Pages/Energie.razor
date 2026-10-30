@@ -1,0 +1,90 @@
+@page "/energie"
+@implements IDisposable
+
+<PageTitle>Énergie</PageTitle>
+
+<div style="display:flex;align-items:center;gap:8px;">
+    <MudText Typo="Typo.h6" Style="font-weight:400;">Énergie</MudText>
+    <MudSpacer />
+    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" aria-label="Actualiser" Disabled="@_charge" OnClick="ActualiserAsync" />
+</div>
+
+@if (_serveurAncien)
+{
+    <MudAlert Severity="Severity.Info" Dense="true" Class="my-2">
+        Cet écran demande une version plus récente de Krissvia sur le serveur (route /api/energy). Les autres écrans
+        fonctionnent ; republiez le serveur pour celui-ci.
+    </MudAlert>
+}
+else if (_erreur is not null)
+{
+    <MudAlert Severity="@(_vue is null ? Severity.Error : Severity.Warning)" Dense="true" Class="my-2">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="flex:1;min-width:0;">@(_vue is null ? "" : "Valeurs plus à jour. ")@_erreur</span>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Inherit"
+                       StartIcon="@Icons.Material.Filled.Settings" OnClick="@(() => Nav.NavigateTo("/reglages"))">Connexion</MudButton>
+        </div>
+    </MudAlert>
+}
+
+@if (_vue is null)
+{
+    @if (_erreur is null && !_serveurAncien)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2" />
+    }
+}
+else if (_vue.Compteurs.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Dense="true" Class="my-2">
+        Aucun compteur : il faut un index d'énergie en kWh (Linky par le plugin Téléinfo, Shelly EM, prise qui mesure sa consommation).
+    </MudAlert>
+}
+else
+{
+    @foreach (var compteur in _vue.Compteurs)
+    {
+        var c = compteur;
+        <MudCard Elevation="2" Class="mb-3" Style="border-radius:12px;">
+            <MudCardContent Class="pa-3">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Bolt" Style="color:#ffb300;" />
+                    <MudText Typo="Typo.body1" Style="font-weight:600;flex:1;min-width:0;">@c.Nom</MudText>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    @Tuile(c.Puissance is { } w ? w.ToString("#,0", Fr) : "—", c.UnitePuissance ?? "W", c.UnitePuissance == "VA" ? "PUISSANCE APPARENTE" : "PUISSANCE", "#ffb300")
+                    @Tuile(c.Tension is { } v ? v.ToString("0.#", Fr) : "—", "V", "TENSION", "#66bb6a")
+                    @Tuile(c.AujourdhuiKwh is { } k ? Kwh(k) : "—", "kWh", "DEPUIS MINUIT", "#42a5f5")
+                    @if (_vue.Prix is not null)
+                    {
+                        @Tuile(c.AujourdhuiCout is { } e ? e.ToString("0.00", Fr) : "—", "€", "COÛT DU JOUR", "#ce93d8")
+                    }
+                </div>
+
+                @* Les jours, du plus récent au plus ancien, en barres à l'échelle du plus fort. *@
+                <div class="kv-legende" style="margin-top:14px;margin-bottom:4px;">@Jours DERNIERS JOURS</div>
+                @foreach (var jour in c.Jours.Reverse())
+                {
+                    var largeur = c.MaxKwh > 0 && jour.Kwh is { } x ? x / c.MaxKwh * 100 : 0;
+                    <div class="kv-jour">
+                        <span class="kv-jour-date">@jour.Jour.ToString("ddd dd/MM", Fr)</span>
+                        <span class="kv-jour-barre"><span style="@($"width:{largeur.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}%;")"></span></span>
+                        <span class="kv-jour-valeur">@(jour.Kwh is { } j ? Kwh(j) : "—")</span>
+                        @if (_vue.Prix is not null)
+                        {
+                            <span class="kv-jour-cout">@(jour.Cout is { } e ? e.ToString("0.00 €", Fr) : "")</span>
+                        }
+                    </div>
+                }
+            </MudCardContent>
+        </MudCard>
+    }
+}
+
+@code {
+    private static RenderFragment Tuile(string valeur, string unite, string libelle, string couleur) => @<div style="text-align:center;">
+        <div style="@($"font-size:1.5rem;font-weight:700;line-height:1.1;color:{couleur};")">@valeur<span class="kv-unite"> @unite</span></div>
+        <div class="kv-legende" style="letter-spacing:.05em;">@libelle</div>
+    </div>;
+}

@@ -61,11 +61,9 @@ public partial class CompteurElectrique
         var aujourdhui = EnergyDays.Jour(maintenant, zone);
         var minuit = EnergyDays.Midnight(aujourdhui, zone);
 
-        // Depuis minuit : l'index maintenant moins celui en vigueur à minuit (le premier point lu peut le précéder).
-        var index = await Historique.ReadAsync(Compteur.Index.EntityId, minuit, maintenant);
-        var aMinuit = index.FirstOrDefault(p => p.Value is not null)?.Value;
-        var actuel = Nombre(Compteur.Index.EntityId) ?? index.LastOrDefault(p => p.Value is not null)?.Value;
-        _depuisMinuit = aMinuit is { } a && actuel is { } b ? Math.Max(0, b - a) : null;
+        // Depuis minuit et les 30 derniers jours : le même calcul que GET /api/energy (LectureCompteur).
+        var conso = await LectureCompteur.LireAsync(Compteur, Jours, Historique, Etats, Horloge);
+        _depuisMinuit = conso.DepuisMinuit;
 
         // La puissance du jour, de minuit à maintenant, par cases de 5 min.
         _tempsJour = [.. Enumerable.Range(0, (int)Math.Ceiling((maintenant - minuit) / Pas)).Select(i => minuit + i * Pas)];
@@ -77,15 +75,10 @@ public partial class CompteurElectrique
                 StyleSerie.Ligne, [.. cases.Select(c => c.Min)], [.. cases.Select(c => c.Max)])];
         }
 
-        // Les 30 derniers jours, depuis les heures consolidées (la veille du premier jour donne l'index de départ).
-        var premier = aujourdhui.AddDays(-(Jours - 1));
-        var depuis = EnergyDays.Midnight(premier.AddDays(-1), zone);
-        var heures = await Historique.ReadHourlyAsync(Compteur.Index.EntityId, depuis, maintenant);
-        var heuresPuissance = Compteur.Puissance is { } p2 ? await Historique.ReadHourlyAsync(p2.EntityId, depuis, maintenant) : [];
-        var jours = EnergyDays.FromHours(heures, heuresPuissance, zone, premier, aujourdhui).ToList();
-        // Aujourd'hui : les points bruts, plus frais que l'heure consolidée toutes les 10 min.
-        if (_depuisMinuit is not null) jours[^1] = jours[^1] with { Kwh = _depuisMinuit };
+        var jours = conso.Jours;
         _jours = jours;
+        var premier = jours[0].Day;
+        var depuis = EnergyDays.Midnight(premier.AddDays(-1), zone);
         _tempsJours = [.. jours.Select(j => EnergyDays.Midnight(j.Day, zone))];
         _serieJours = [new SerieCourbe("Consommation", [.. jours.Select(j => j.Kwh)], Bleu, StyleSerie.Barres)];
 
@@ -126,8 +119,7 @@ public partial class CompteurElectrique
     private string NomPartiel(Krissvia.Core.Registry.RegisteredEntity e) =>
         e.DisplayName.StartsWith(Compteur.Nom + " ", StringComparison.Ordinal) ? e.DisplayName[(Compteur.Nom.Length + 1)..] : e.DisplayName;
 
-    private double? Nombre(string entityId) =>
-        Etats.Get(entityId) is { Available: true } s && s.TryGetNumber(out var v) ? v : null;
+    private double? Nombre(string entityId) => LectureCompteur.Nombre(Etats, entityId);
 
     private static string Kwh(double kwh) => $"{kwh.ToString(kwh >= 100 ? "#,0" : "0.##", Fr)} kWh";
 

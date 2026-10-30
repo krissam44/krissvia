@@ -294,3 +294,45 @@ h1:focus {
         .kv-clavier button:disabled {
             opacity: .4;
         }
+
+/* ── Écran Énergie ────────────────────────────────────────────────────── */
+
+.kv-jour {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: .8rem;
+}
+
+.kv-jour-date {
+    width: 74px;
+    color: var(--mud-palette-text-secondary);
+    text-transform: capitalize;
+}
+
+.kv-jour-barre {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--mud-palette-text-secondary) 15%, transparent);
+}
+
+    .kv-jour-barre > span {
+        display: block;
+        height: 100%;
+        background: #42a5f5;
+    }
+
+.kv-jour-valeur {
+    width: 52px;
+    text-align: right;
+    font-weight: 600;
+}
+
+.kv-jour-cout {
+    width: 52px;
+    text-align: right;
+    color: #ce93d8;
+}

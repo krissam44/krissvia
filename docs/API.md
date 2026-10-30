@@ -166,6 +166,14 @@ règle. Lecture seule.
 `controllable` (joignable et pas le radiateur d'un thermostat). Les ordres passent par
 `POST /api/entities/{id}/commands` (`turn_on` / `turn_off`, vérifiés). Lecture seule.
 
+## Énergie
+
+`GET /api/energy?days=7` (1 à 30) : les compteurs de l'écran Électricité, calculés d'après l'historique —
+`price` (€/kWh, **null** s'il n'est pas renseigné : aucun coût n'est donné), et `meters` : `name`, `index_entity_id`,
+`power` et `power_unit` (W, ou VA pour un Linky), `voltage`, `today_kwh` (index maintenant − index à minuit local),
+`today_cost`, `days` du plus ancien au plus récent (`day`, `kwh`, `cost`, `peak_power` ; **null** = pas de mesure,
+pas zéro). Même calcul que les cartes de l'écran (`LectureCompteur`). Lecture seule.
+
 ## Supervision
 
 `GET /api/supervision` : le dernier contrôle (chaque point surveillé, en panne ou non, depuis quand, alerte partie ou
