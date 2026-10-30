@@ -6,7 +6,7 @@
     var teinte = inertie ? P.Inertie : t.Chauffe ? P.Chauffe : null;
     var couleurStatut = P.CouleurStatut(t.Statut);
     var couleurMode = P.CouleurMode(t.Mode);
-    var sousTitre = string.Join(" · ", new[] { t.Piece, t.Radiateurs is { } r ? $"{r} rad." : null }.Where(s => s is { Length: > 0 }));
+    var sousTitre = t.Piece ?? "";
 }
 
 <MudCard Elevation="2" Class="mb-3"
