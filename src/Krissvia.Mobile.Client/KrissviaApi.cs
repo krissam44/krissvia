@@ -35,40 +35,51 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
     public const string Source = "mobile";
 
     /// <summary>Les thermostats et leur dernier état, d'un coup (<c>/api/entities</c>, filtré ici sur les climate).</summary>
-    public Task<(JsonElement? Entites, string? Erreur)> EntitesAsync(CancellationToken ct = default) => LireAsync("/api/entities", ct);
-
-    /// <summary>Un GET, rendu en JSON brut ; une erreur (réseau, clé, route) rend son motif lisible.</summary>
-    private async Task<(JsonElement? Json, string? Erreur)> LireAsync(string route, CancellationToken ct)
+    public async Task<(JsonElement? Entites, string? Erreur)> EntitesAsync(CancellationToken ct = default)
     {
-        if (connexion.BaseUrl.Length == 0) return (null, "Serveur non configuré.");
+        var (json, erreur, _) = await LireAsync("/api/entities", ct);
+        return (json, erreur);
+    }
+
+    /// <summary>
+    /// Un GET, rendu en JSON brut ; une erreur (réseau, clé, route) rend son motif lisible. <c>RouteAbsente</c> : le
+    /// serveur répond, mais ne connaît pas la route — il est plus ancien que l'appli.
+    /// </summary>
+    private async Task<(JsonElement? Json, string? Erreur, bool RouteAbsente)> LireAsync(string route, CancellationToken ct)
+    {
+        if (connexion.BaseUrl.Length == 0) return (null, "Serveur non configuré.", false);
         try
         {
             using var requete = Requete(HttpMethod.Get, route);
             using var reponse = await http.SendAsync(requete, ct);
-            if (await RefusAsync(reponse, route, ct) is { } refus) return (null, refus);
+            if (await RefusAsync(reponse, route, ct) is ({ } refus, var absente)) return (null, refus, absente);
 
             await using var flux = await reponse.Content.ReadAsStreamAsync(ct);
             using var document = await JsonDocument.ParseAsync(flux, cancellationToken: ct);
-            return (document.RootElement.Clone(), null);
+            return (document.RootElement.Clone(), null, false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
-            return (null, MessageLisible(ex));
+            return (null, MessageLisible(ex), false);
         }
     }
 
-    /// <summary>L'écran Sondes calculé par le serveur : moyennes par pièce et état de chaque sonde.</summary>
-    public async Task<(VueSondes? Vue, string? Erreur)> SondesAsync(CancellationToken ct = default)
+    /// <summary>
+    /// L'écran Sondes calculé par le serveur : moyennes par pièce et état de chaque sonde. <c>ServeurAncien</c> : la
+    /// connexion est bonne, mais le serveur n'a pas encore <c>/api/sensors</c> — à dire autrement qu'une panne, sinon
+    /// on cherche le problème dans l'adresse ou la clé.
+    /// </summary>
+    public async Task<(VueSondes? Vue, string? Erreur, bool ServeurAncien)> SondesAsync(CancellationToken ct = default)
     {
-        var (json, erreur) = await LireAsync("/api/sensors", ct);
-        if (erreur is not null) return (null, erreur);
+        var (json, erreur, absente) = await LireAsync("/api/sensors", ct);
+        if (erreur is not null) return (null, erreur, absente);
         try
         {
-            return VueSondes.Lire(json!.Value) is { } vue ? (vue, null) : (null, "Réponse vide du serveur.");
+            return VueSondes.Lire(json!.Value) is { } vue ? (vue, null, false) : (null, "Réponse vide du serveur.", false);
         }
         catch (JsonException ex)
         {
-            return (null, MessageLisible(ex));
+            return (null, MessageLisible(ex), false);
         }
     }
 
@@ -98,7 +109,7 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
             using var requete = Requete(HttpMethod.Post, route);
             requete.Content = JsonContent.Create(new { command = commande, args, source = Source });
             using var reponse = await http.SendAsync(requete, ct);
-            if (await RefusAsync(reponse, route, ct) is { } refus) return ResultatOrdre.Echec(refus);
+            if (await RefusAsync(reponse, route, ct) is ({ } refus, _)) return ResultatOrdre.Echec(refus);
 
             var corps = await reponse.Content.ReadFromJsonAsync<ReponseOrdre>(Thermostat.Json, ct);
             return corps?.Outcome == "accepted"
@@ -118,10 +129,13 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
         return requete;
     }
 
-    /// <summary>Le motif d'une réponse en erreur, null si elle a réussi. Le <c>error</c> du serveur se lit tel quel.</summary>
-    private static async Task<string?> RefusAsync(HttpResponseMessage reponse, string route, CancellationToken ct)
+    /// <summary>
+    /// Le motif d'une réponse en erreur, null si elle a réussi. Le <c>error</c> du serveur se lit tel quel. Un 404 sans
+    /// <c>error</c> est une route que le serveur ne connaît pas (un 404 de Krissvia sur une entité porte son motif).
+    /// </summary>
+    private static async Task<(string? Motif, bool RouteAbsente)> RefusAsync(HttpResponseMessage reponse, string route, CancellationToken ct)
     {
-        if (reponse.IsSuccessStatusCode) return null;
+        if (reponse.IsSuccessStatusCode) return (null, false);
 
         string? erreur = null;
         try
@@ -133,7 +147,8 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
             // Pas de corps JSON : le code suffit.
         }
 
-        return reponse.StatusCode switch
+        var absente = reponse.StatusCode == HttpStatusCode.NotFound && erreur is null;
+        return (reponse.StatusCode switch
         {
             HttpStatusCode.Unauthorized => "Clé d'API refusée : vérifiez-la dans la connexion.",
             // En production sans clé configurée, l'API se ferme au lieu de s'ouvrir à tout le réseau.
@@ -141,7 +156,7 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
             // Une appli plus récente que le serveur tombe ici : le dire évite de chercher l'erreur dans l'adresse.
             HttpStatusCode.NotFound when erreur is null => $"Route {route} introuvable : serveur Krissvia à mettre à jour, ou adresse qui ne pointe pas sur Krissvia.",
             _ => erreur ?? $"Erreur du serveur ({(int)reponse.StatusCode}).",
-        };
+        }, absente);
     }
 
     /// <summary>

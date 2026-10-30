@@ -20,6 +20,7 @@ public partial class Sondes : IDisposable
 
     private VueSondes? _vue;
     private string? _erreur;
+    private bool _serveurAncien;
     private bool _charge;
     private readonly CancellationTokenSource _fin = new();
 
@@ -45,10 +46,11 @@ public partial class Sondes : IDisposable
         _charge = true;
         try
         {
-            var (vue, erreur) = await Api.SondesAsync(_fin.Token);
+            var (vue, erreur, ancien) = await Api.SondesAsync(_fin.Token);
             // Une erreur garde la dernière vue : le bandeau dit qu'elle n'est plus à jour.
             if (vue is not null) _vue = vue;
             _erreur = erreur;
+            _serveurAncien = ancien;
         }
         catch (OperationCanceledException)
         {
