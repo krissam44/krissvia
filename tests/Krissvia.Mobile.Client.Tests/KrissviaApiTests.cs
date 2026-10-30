@@ -9,14 +9,21 @@ public class KrissviaApiTests
     internal sealed record Connexion(string BaseUrl, string ApiKey) : IConnexion;
 
     /// <summary>Répond ce qu'on lui dit et garde les requêtes, corps compris (il est relu après l'envoi).</summary>
-    private sealed class FauxServeur(HttpStatusCode code, string corps) : HttpMessageHandler
+    /// <remarks>
+    /// <paramref name="redirigeVers"/> imite ce que HttpClient laisse après avoir suivi une redirection : la réponse
+    /// porte la DERNIÈRE requête, en GET, à la nouvelle adresse.
+    /// </remarks>
+    private sealed class FauxServeur(HttpStatusCode code, string corps, string? redirigeVers = null) : HttpMessageHandler
     {
         public List<(HttpRequestMessage Requete, string? Corps)> Recues { get; } = [];
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Recues.Add((request, request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken)));
-            return new HttpResponseMessage(code) { Content = new StringContent(corps, Encoding.UTF8, "application/json") };
+            var reponse = new HttpResponseMessage(code) { Content = new StringContent(corps, Encoding.UTF8, "application/json") };
+            if (redirigeVers is not null)
+                reponse.RequestMessage = new HttpRequestMessage(HttpMethod.Get, redirigeVers + request.RequestUri!.PathAndQuery);
+            return reponse;
         }
     }
 
@@ -117,5 +124,41 @@ public class KrissviaApiTests
 
         Assert.StartsWith("Serveur injoignable", erreur, StringComparison.Ordinal);
         Assert.Contains("(", erreur, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Une_adresse_redirigee_est_nommee_au_lieu_du_405()
+    {
+        // http:// redirigé vers https:// par le proxy : le POST est devenu un GET, et le serveur répond 405.
+        var serveur = new FauxServeur(HttpStatusCode.MethodNotAllowed, "", redirigeVers: "https://home.exemple.fr");
+        var api = new KrissviaApi(new HttpClient(serveur), new Connexion("http://home.exemple.fr", "secret"));
+
+        var resultat = await api.ChoisirModeAsync("climate.salon", "eco");
+
+        Assert.False(resultat.Ok);
+        Assert.Contains("redirige vers https://home.exemple.fr,", resultat.Motif, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Le_test_de_connexion_signale_une_adresse_qui_redirige()
+    {
+        var serveur = new FauxServeur(HttpStatusCode.OK, "[]", redirigeVers: "https://home.exemple.fr");
+        var api = new KrissviaApi(new HttpClient(serveur), new Connexion("http://home.exemple.fr", "secret"));
+
+        var erreur = await api.TesterAsync();
+
+        Assert.NotNull(erreur);
+        Assert.Contains("Enregistrez https://home.exemple.fr.", erreur, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("http://home.exemple.fr", "http://home.exemple.fr")]
+    [InlineData("http://HOME.exemple.fr:80", "http://home.exemple.fr")]
+    public async Task Sans_redirection_le_test_reussit(string adresse, string servie)
+    {
+        var serveur = new FauxServeur(HttpStatusCode.OK, "[]", redirigeVers: servie);
+        var api = new KrissviaApi(new HttpClient(serveur), new Connexion(adresse, "secret"));
+
+        Assert.Null(await api.TesterAsync());
     }
 }

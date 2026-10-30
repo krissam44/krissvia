@@ -56,7 +56,7 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
         {
             using var requete = Requete(HttpMethod.Get, route);
             using var reponse = await http.SendAsync(requete, ct);
-            if (await RefusAsync(reponse, route, ct) is ({ } refus, var absente)) return (null, refus, absente);
+            if (await RefusAsync(reponse, route, Redirection(reponse), ct) is ({ } refus, var absente)) return (null, refus, absente);
 
             await using var flux = await reponse.Content.ReadAsStreamAsync(ct);
             using var document = await JsonDocument.ParseAsync(flux, cancellationToken: ct);
@@ -150,7 +150,7 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
             using var requete = Requete(HttpMethod.Post, route);
             requete.Content = JsonContent.Create(new { code });
             using var reponse = await http.SendAsync(requete, ct);
-            if (await RefusAsync(reponse, route, ct) is ({ } refus, _)) return new ResultatCode(false, Majuscule(refus));
+            if (await RefusAsync(reponse, route, Redirection(reponse), ct) is ({ } refus, _)) return new ResultatCode(false, Majuscule(refus));
 
             var corps = await reponse.Content.ReadFromJsonAsync<ReponseCode>(Thermostat.Json, ct);
             var qui = corps?.User is { Length: > 0 } u ? $" par {u}" : "";
@@ -191,7 +191,7 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
             bool? away = forcage switch { Forcage.Absent => true, Forcage.Present => false, _ => null };
             requete.Content = JsonContent.Create(new { away });
             using var reponse = await http.SendAsync(requete, ct);
-            return await RefusAsync(reponse, route, ct) is ({ } refus, _) ? ResultatOrdre.Echec(refus) : ResultatOrdre.Reussi;
+            return await RefusAsync(reponse, route, Redirection(reponse), ct) is ({ } refus, _) ? ResultatOrdre.Echec(refus) : ResultatOrdre.Reussi;
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
@@ -201,8 +201,31 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
 
     private static string Majuscule(string texte) => texte.Length == 0 ? texte : char.ToUpperInvariant(texte[0]) + texte[1..];
 
-    /// <summary>Teste l'adresse et la clé : null si tout va bien, sinon le motif.</summary>
-    public async Task<string?> TesterAsync(CancellationToken ct = default) => (await EntitesAsync(ct)).Erreur;
+    /// <summary>
+    /// Teste l'adresse et la clé : null si tout va bien, sinon le motif. Une adresse qui redirige est un échec même si
+    /// la lecture a réussi : les lectures suivent la redirection, les ordres non (<see cref="Redirection"/>).
+    /// </summary>
+    public async Task<string?> TesterAsync(CancellationToken ct = default)
+    {
+        if (connexion.BaseUrl.Length == 0) return "Serveur non configuré.";
+        const string route = "/api/entities";
+        try
+        {
+            using var requete = Requete(HttpMethod.Get, route);
+            using var reponse = await http.SendAsync(requete, ct);
+            var redirection = Redirection(reponse);
+            if (await RefusAsync(reponse, route, redirection, ct) is ({ } refus, _)) return refus;
+
+            await using var flux = await reponse.Content.ReadAsStreamAsync(ct);
+            using var _ = await JsonDocument.ParseAsync(flux, cancellationToken: ct);
+            return redirection is null ? null
+                : $"Le serveur répond, mais l'adresse redirige vers {redirection} : l'affichage marcherait, pas les commandes. Enregistrez {redirection}.";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            return MessageLisible(ex);
+        }
+    }
 
     public Task<ResultatOrdre> ChoisirModeAsync(string entityId, string mode, CancellationToken ct = default) =>
         OrdreAsync(entityId, StandardCommands.SetMode, new { mode }, ct);
@@ -227,7 +250,7 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
             using var requete = Requete(HttpMethod.Post, route);
             requete.Content = JsonContent.Create(new { command = commande, args, source = Source });
             using var reponse = await http.SendAsync(requete, ct);
-            if (await RefusAsync(reponse, route, ct) is ({ } refus, _)) return ResultatOrdre.Echec(refus);
+            if (await RefusAsync(reponse, route, Redirection(reponse), ct) is ({ } refus, _)) return ResultatOrdre.Echec(refus);
 
             var corps = await reponse.Content.ReadFromJsonAsync<ReponseOrdre>(Thermostat.Json, ct);
             return corps?.Outcome != "accepted"
@@ -242,6 +265,19 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
         }
     }
 
+    /// <summary>
+    /// La nouvelle adresse du lieu si le serveur a redirigé la requête ailleurs (autre schéma, hôte ou port), sinon null.
+    /// HttpClient suit une redirection 301/302 en changeant un POST en GET : avec <c>http://</c> redirigé vers
+    /// <c>https://</c> par le proxy, tout s'affichait et chaque ordre tombait en « Erreur du serveur (405) » (31/10/2026).
+    /// </summary>
+    internal string? Redirection(HttpResponseMessage reponse)
+    {
+        if (reponse.RequestMessage?.RequestUri is not { IsAbsoluteUri: true } finale
+            || !Uri.TryCreate(connexion.BaseUrl, UriKind.Absolute, out var origine)) return null;
+        if (Uri.Compare(finale, origine, UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0) return null;
+        return finale.GetLeftPart(UriPartial.Authority) + origine.AbsolutePath.TrimEnd('/');
+    }
+
     internal HttpRequestMessage Requete(HttpMethod methode, string route)
     {
         var requete = new HttpRequestMessage(methode, connexion.BaseUrl + route);
@@ -253,9 +289,12 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
     /// Le motif d'une réponse en erreur, null si elle a réussi. Le <c>error</c> du serveur se lit tel quel. Un 404 sans
     /// <c>error</c> est une route que le serveur ne connaît pas (un 404 de Krissvia sur une entité porte son motif).
     /// </summary>
-    private static async Task<(string? Motif, bool RouteAbsente)> RefusAsync(HttpResponseMessage reponse, string route, CancellationToken ct)
+    private static async Task<(string? Motif, bool RouteAbsente)> RefusAsync(HttpResponseMessage reponse, string route, string? redirection, CancellationToken ct)
     {
         if (reponse.IsSuccessStatusCode) return (null, false);
+        // Le code d'une requête redirigée ne dit rien de vrai (405 : le POST est devenu un GET) : la cause est l'adresse.
+        if (redirection is not null)
+            return ($"L'adresse du lieu redirige vers {redirection}, ce qui change les commandes en lectures (erreur {(int)reponse.StatusCode}). Enregistrez {redirection} dans Lieux.", false);
 
         string? erreur = null;
         try
