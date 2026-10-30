@@ -19,6 +19,9 @@ public partial class Thermostats : IAsyncDisposable
     /// <summary>Le widget d'un thermostat dont l'entité n'en a pas d'affichable ici (un widget Blazor).</summary>
     private const string WidgetParDefaut = "thermostat";
 
+    /// <summary>Ici seulement, la carte montre l'engrenage vers la configuration du thermostat ; pas sur le tableau de bord.</summary>
+    private static readonly object ReglagesCarte = new { show_configuration = true };
+
     [Inject] private ThermostatService Service { get; set; } = default!;
     [Inject] private IEntityRegistry Registre { get; set; } = default!;
     [Inject] private WidgetCatalogService Widgets { get; set; } = default!;
@@ -89,7 +92,7 @@ public partial class Thermostats : IAsyncDisposable
             {
                 _aAppliquer = false;
                 await _module.InvokeVoidAsync("appliquer", _cartes.Where(c => c.EntityId is not null)
-                    .Select(c => new { id = c.Id, widget = c.Widget, entities = c.Entities }));
+                    .Select(c => new { id = c.Id, widget = c.Widget, entities = c.Entities, settings = ReglagesCarte }));
             }
         }
         catch (JSException ex)

@@ -1,0 +1,67 @@
+@implements IDisposable
+
+@if (_etat is null)
+{
+    @if (_erreur is not null)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true">Présence : @_erreur</MudAlert>
+    }
+}
+else
+{
+    var p = _etat;
+    var couleur = Couleur(p);
+    <MudCard Elevation="2" Style="border-radius:12px;">
+        <MudCardContent Class="pa-3">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <MudIcon Icon="@Icone(p)" Style="@($"font-size:2rem;color:{couleur};")" />
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:1.05rem;font-weight:600;">@p.Libelle</div>
+                    <div class="kv-legende" style="font-size:.75rem;">@p.Explication</div>
+                </div>
+            </div>
+
+            <div class="kv-legende" style="margin:12px 0 4px;">FORCER</div>
+            <div class="kv-forcage" role="group" aria-label="Forcer la présence">
+                @foreach (var (forcage, libelle) in Choix)
+                {
+                    var f = forcage;
+                    <button type="button" aria-pressed="@(p.Forcage == f ? "true" : "false")" disabled="@_envoi"
+                            @onclick="@(() => ForcerAsync(f))">@libelle</button>
+                }
+            </div>
+
+            @if (p.Suivis > 0)
+            {
+                <div class="kv-legende" style="margin:12px 0 0;">DÉTECTION DE PRÉSENCE</div>
+                <div class="kv-appareils">
+                    @foreach (var nom in p.Presents)
+                    {
+                        <span class="present"><MudIcon Icon="@Icons.Material.Filled.Smartphone" Size="Size.Small" />@nom</span>
+                    }
+                    @foreach (var nom in p.Absents)
+                    {
+                        <span><MudIcon Icon="@Icons.Material.Filled.MobileOff" Size="Size.Small" />@nom</span>
+                    }
+                    @foreach (var nom in p.Inconnus)
+                    {
+                        <span class="inconnu"><MudIcon Icon="@Icons.Material.Filled.QuestionMark" Size="Size.Small" />@nom</span>
+                    }
+                </div>
+            }
+
+            @if (p.Periode is { } periode && p.Source != "scheduled")
+            {
+                <div class="kv-legende" style="margin-top:10px;font-size:.75rem;display:flex;align-items:center;gap:4px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Luggage" Size="Size.Small" Style="color:#ab47bc;" />
+                    Absence programmée du @Date(periode.Depart) au @Date(periode.Retour)
+                </div>
+            }
+
+            @if (_erreur is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-3">@_erreur</MudAlert>
+            }
+        </MudCardContent>
+    </MudCard>
+}

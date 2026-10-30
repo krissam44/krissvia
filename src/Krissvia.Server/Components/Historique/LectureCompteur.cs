@@ -40,6 +40,26 @@ public static class LectureCompteur
         return new Consommation(depuisMinuit, liste);
     }
 
+    /// <summary>La case de la courbe de puissance du jour, la même à l'écran Électricité et dans <c>GET /api/energy</c>.</summary>
+    public static readonly TimeSpan PasDuJour = TimeSpan.FromMinutes(5);
+
+    /// <summary>La grille du jour : une case de <see cref="PasDuJour"/> de minuit à maintenant.</summary>
+    public static IReadOnlyList<DateTimeOffset> GrilleDuJour(TimeProvider horloge)
+    {
+        var maintenant = horloge.GetUtcNow();
+        var minuit = EnergyDays.Midnight(EnergyDays.Jour(maintenant, horloge.LocalTimeZone), horloge.LocalTimeZone);
+        return [.. Enumerable.Range(0, (int)Math.Ceiling((maintenant - minuit) / PasDuJour)).Select(i => minuit + i * PasDuJour)];
+    }
+
+    /// <summary>La puissance du jour, case par case (moyenne, min, max) ; vide pour un compteur sans entité de puissance.</summary>
+    public static async Task<IReadOnlyList<CurvePoint>> PuissanceDuJourAsync(
+        Compteur compteur, IReadOnlyList<DateTimeOffset> grille, IHistoryRepository historique, TimeProvider horloge, CancellationToken ct = default)
+    {
+        if (compteur.Puissance is not { } puissance || grille.Count == 0) return [];
+        var maintenant = horloge.GetUtcNow();
+        return HistoryCurve.FromPoints(await historique.ReadAsync(puissance.EntityId, grille[0], maintenant, ct), grille, PasDuJour, maintenant);
+    }
+
     /// <summary>La valeur du moment d'une entité joignable ; null sinon (une valeur d'un appareil injoignable n'est pas une mesure).</summary>
     public static double? Nombre(IEntityStateReader etats, string entityId) =>
         etats.Get(entityId) is { Available: true } s && s.TryGetNumber(out var v) ? v : null;

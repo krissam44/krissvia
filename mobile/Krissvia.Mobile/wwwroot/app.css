@@ -252,7 +252,7 @@ h1:focus {
     display: flex;
     justify-content: center;
     gap: 12px;
-    margin: 8px 0 14px;
+    margin: 4px 0 10px;
 }
 
     .kv-code span {
@@ -270,19 +270,19 @@ h1:focus {
 .kv-clavier {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    max-width: 320px;
+    gap: 8px;
+    max-width: 280px;
     margin: 0 auto;
 }
 
     .kv-clavier button {
-        height: 58px;
-        border-radius: 14px;
+        height: 46px;
+        border-radius: 12px;
         border: 1px solid color-mix(in srgb, var(--mud-palette-text-secondary) 35%, transparent);
         background: var(--mud-palette-surface);
         color: var(--mud-palette-text-primary);
         font-family: inherit;
-        font-size: 1.5rem;
+        font-size: 1.3rem;
         cursor: pointer;
         touch-action: manipulation;
     }
@@ -336,3 +336,94 @@ h1:focus {
     text-align: right;
     color: #ce93d8;
 }
+
+/* La courbe de puissance du jour : la moyenne en ligne, l'étendue min-max en bande pâle, comme sur le web. */
+.kv-courbe {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-top: 12px;
+}
+
+    .kv-courbe text {
+        font-size: 9px;
+        fill: var(--mud-palette-text-secondary);
+    }
+
+    .kv-courbe .grille {
+        stroke: color-mix(in srgb, var(--mud-palette-text-secondary) 20%, transparent);
+        stroke-width: .5;
+    }
+
+/* ── Écran Alarme : la présence, sous le clavier ──────────────────────── */
+
+.kv-separateur {
+    border: 0;
+    border-top: 1px solid color-mix(in srgb, var(--mud-palette-text-secondary) 30%, transparent);
+    margin: 18px 0 14px;
+}
+
+.kv-forcage {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid var(--mud-palette-primary);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+    .kv-forcage button {
+        border: 0;
+        padding: 8px 4px;
+        background: transparent;
+        color: var(--mud-palette-primary);
+        font-family: inherit;
+        font-size: .78rem;
+        font-weight: 600;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+        .kv-forcage button + button {
+            border-left: 1px solid var(--mud-palette-primary);
+        }
+
+        .kv-forcage button[aria-pressed="true"] {
+            background: var(--mud-palette-primary);
+            color: var(--mud-palette-primary-text);
+        }
+
+        .kv-forcage button:disabled {
+            opacity: .5;
+        }
+
+.kv-appareils {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+    .kv-appareils span {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px 3px 6px;
+        border-radius: 14px;
+        font-size: .78rem;
+        border: 1px solid color-mix(in srgb, var(--mud-palette-text-secondary) 45%, transparent);
+        color: var(--mud-palette-text-secondary);
+    }
+
+        .kv-appareils span.present {
+            background: #66bb6a;
+            border-color: #66bb6a;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .kv-appareils span.inconnu {
+            border-color: #ffa726;
+            color: #ffa726;
+        }

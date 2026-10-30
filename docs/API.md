@@ -172,7 +172,9 @@ règle. Lecture seule.
 `price` (€/kWh, **null** s'il n'est pas renseigné : aucun coût n'est donné), et `meters` : `name`, `index_entity_id`,
 `power` et `power_unit` (W, ou VA pour un Linky), `voltage`, `today_kwh` (index maintenant − index à minuit local),
 `today_cost`, `days` du plus ancien au plus récent (`day`, `kwh`, `cost`, `peak_power` ; **null** = pas de mesure,
-pas zéro). Même calcul que les cartes de l'écran (`LectureCompteur`). Lecture seule.
+pas zéro), `today_power` : la puissance de minuit à maintenant par cases de 5 min (`at`, `mean`, `min`, `max` ;
+`mean` **null** = case sans mesure ; liste vide sans entité de puissance). Même calcul que les cartes de l'écran
+(`LectureCompteur`). Lecture seule.
 
 ## Supervision
 
