@@ -63,6 +63,20 @@ réseau local, l'accès hors de la maison passera par une adresse https.
 
 ## APK Android
 
-Comme pour DomoMud (pièges détaillés dans sa mémoire) : `-p:AndroidPackageFormat=apk` (sinon un `.aab`), signer avec
-`-t:SignAndroidPackage`, prendre le `…-Signed.apk` dans `bin/Release/net10.0-android/` (pas dans `publish/`), et
-vérifier sa date avant de le copier. Le keystore reste hors du dépôt.
+```powershell
+.\mobile\publier-apk.ps1
+```
+
+Le script construit l'APK signé dans `publish\apk\Krissvia-<version>.apk` (dossier vidé d'abord : un APK périmé ne
+peut pas être pris pour le bon), vérifie qu'il est bien signé, et donne sa taille et sa date. Par défaut il signe avec
+`D:\Cles\krissvia.keystore`, alias `krissvia` (`-Keystore`, `-Alias` pour d'autres) ; sans keystore, il propose de le
+créer avec `keytool`, qui demande lui-même mot de passe et nom.
+
+- Le mot de passe se tape dans le script, masqué, et passe à la construction par une variable d'environnement du seul
+  processus (`env:` des propriétés de signature) : ni ligne de commande, ni fichier, ni journal.
+- Un mot de passe faux se lit « java.exe … code 2 ».
+- **Le keystore reste hors du dépôt et se sauvegarde** : sans lui, plus de mise à jour de l'appli installée sans la
+  désinstaller (Réglages et clé à ressaisir). `.gitignore` écarte `*.keystore`, `*.jks`, `*.apk`, `*.aab`.
+- Monter `ApplicationVersion` (entier) dans le `.csproj` à chaque nouvel APK, sinon Android refuse la mise à jour.
+- `INSTALL_FAILED_UPDATE_INCOMPATIBLE` malgré une désinstallation : un second profil Android (Xiaomi « security space »)
+  garde l'appli — `adb shell pm list packages --user 10`, puis `adb uninstall --user 10 com.chrissconsulting.krissvia`.
