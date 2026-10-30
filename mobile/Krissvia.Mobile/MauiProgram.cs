@@ -24,6 +24,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<KrissviaApi>();
         builder.Services.AddSingleton<ThermostatsEnDirect>();
         builder.Services.AddSingleton<FluxEnDirect>();
+        builder.Services.AddSingleton<ReveilAppli>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

@@ -19,6 +19,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Krissvia.Core\Krissvia.Core.csproj" />
     <ProjectReference Include="..\..\src\Krissvia.Contracts\Krissvia.Contracts.csproj" />
+    <!-- Contrat avec l'appli mobile : elle lit /api/sensors sans DTO commun avec le cœur. -->
+    <ProjectReference Include="..\..\src\Krissvia.Mobile.Client\Krissvia.Mobile.Client.csproj" />
   </ItemGroup>
 
 </Project>

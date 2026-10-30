@@ -220,6 +220,7 @@ api.MapDeviceScheduleApi();
 api.MapAutomationApi();
 api.MapAlarmApi();
 api.MapSupervisionApi();
+api.MapSensorApi();
 api.MapEntityApi();
 api.MapHistoryApi();
 api.MapWidgetApi();

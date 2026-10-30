@@ -1,0 +1,106 @@
+@page "/sondes"
+@implements IDisposable
+@using P = Krissvia.Mobile.Components.Thermostats.PresentationThermostat
+
+<PageTitle>Sondes</PageTitle>
+
+<div style="display:flex;align-items:center;gap:8px;">
+    <MudText Typo="Typo.h6" Style="font-weight:400;">Sondes</MudText>
+    <MudSpacer />
+    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" aria-label="Actualiser" Disabled="@_charge" OnClick="ChargerAsync" />
+</div>
+
+@if (_erreur is not null)
+{
+    @* Les dernières valeurs restent affichées : on dit seulement qu'elles ne sont plus à jour, et pourquoi. *@
+    <MudAlert Severity="@(_vue is null ? Severity.Error : Severity.Warning)" Dense="true" Class="my-2">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="flex:1;min-width:0;">@(_vue is null ? "" : "Valeurs plus à jour. ")@_erreur</span>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Inherit"
+                       StartIcon="@Icons.Material.Filled.Settings" OnClick="@(() => Nav.NavigateTo("/reglages"))">Connexion</MudButton>
+        </div>
+    </MudAlert>
+}
+
+@if (_vue is null)
+{
+    @if (_erreur is null)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2" />
+    }
+}
+else if (_vue.Sondes.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Dense="true" Class="my-2">Aucune sonde de température : les plugins s'activent depuis l'interface web.</MudAlert>
+}
+else
+{
+    @foreach (var groupe in Groupes())
+    {
+        var piece = groupe.Piece;
+        var couleur = piece?.Moyenne is { } m ? Echelle.Couleur(m) : Echelle.Eteinte;
+        <MudCard Elevation="2" Class="mb-3" Style="@($"border-radius:12px;border-top:3px solid {couleur};")">
+            <MudCardContent Class="pa-3">
+
+                @* La pièce et sa moyenne, calculée par le serveur sur ses seules sondes à jour *@
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <MudIcon Icon="@(piece is null ? Icons.Material.Filled.DevicesOther : Icons.Material.Filled.Room)" Size="Size.Small"
+                             Style="color:var(--mud-palette-text-secondary);" />
+                    <MudText Typo="Typo.body1" Style="font-weight:600;flex:1;min-width:0;">@groupe.Titre</MudText>
+                    @if (piece is not null)
+                    {
+                        @if (piece.Moyenne is { } moyenne)
+                        {
+                            <span class="kv-valeur" style="@($"font-size:1.4rem;color:{couleur};")">@P.Nombre(moyenne)<span class="kv-unite">°C</span></span>
+                        }
+                        else
+                        {
+                            <span class="kv-legende">aucune sonde à jour</span>
+                        }
+                    }
+                </div>
+                @if (piece is { Total: > 1 } || piece is { Ecartees: > 0 })
+                {
+                    <div class="kv-legende" style="display:flex;gap:8px;">
+                        <span>moyenne de @piece.AJour/@piece.Total</span>
+                        @if (piece.Ecartees > 0)
+                        {
+                            <span style="color:#ffa726;">@piece.Ecartees écartée(s)</span>
+                        }
+                    </div>
+                }
+
+                @* Ses sondes *@
+                @foreach (var sonde in groupe.Sondes)
+                {
+                    var alerte = _vue.Alerte(sonde);
+                    var teinte = !sonde.Douteuse && sonde.Temperature is { } t ? Echelle.Couleur(t) : Echelle.Eteinte;
+                    <div class="kv-sonde">
+                        <div style="flex:1;min-width:0;">
+                            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@sonde.Nom</div>
+                            <div class="kv-legende" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                @if (alerte is not null)
+                                {
+                                    <span style="@($"color:{(sonde.Sante == "offline" ? "#ef5350" : "#ffa726")};font-weight:600;")">@alerte</span>
+                                }
+                                @if (sonde.Humidite is { } h)
+                                {
+                                    <span style="color:#42a5f5;"><MudIcon Icon="@Icons.Material.Filled.WaterDrop" Style="font-size:.8rem;" /> @P.Nombre(h, 0) %</span>
+                                }
+                                @if (sonde.Batterie is { } pile)
+                                {
+                                    <span style="@($"color:{Echelle.CouleurPile(pile)};")"><MudIcon Icon="@Echelle.IconePile(pile)" Style="font-size:.8rem;" /> @P.Nombre(pile, 0) %</span>
+                                }
+                                @if (sonde.Douteuse && sonde.MesureeA is { } quand)
+                                {
+                                    <span>@quand.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                                }
+                            </div>
+                        </div>
+                        <span class="kv-valeur" style="@($"font-size:1.25rem;color:{teinte};")">@P.Nombre(sonde.Temperature)<span class="kv-unite">°C</span></span>
+                    </div>
+                }
+            </MudCardContent>
+        </MudCard>
+    }
+}

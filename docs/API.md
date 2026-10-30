@@ -150,6 +150,14 @@ créneaux que les thermostats (un créneau de nuit finit le lendemain matin).
 Code faux **403**, clavier bloqué après trois codes faux **429** (`Retry-After`), armement refusé (porte ouverte,
 capteur muet) **409** avec la liste. La clé d'API ne suffit pas à désarmer. Détail : `ALARME.md` §6.
 
+## Sondes
+
+`GET /api/sensors` : ce que montre l'écran Sondes, calculé par le cœur (`SensorOverview`) — `rooms` (pièce, `average`
+sur les seules sondes à jour, ou **null** s'il n'y en a aucune ; `active`, `total`, `unreliable` = écartées) et `sensors`
+(`entity_id`, `name`, `room`, `temperature`, `humidity` et `battery` de l'appareil, `measured_at`, `health` : `ok`,
+`stale`, `offline`, `never_received`), plus `stale_after_minutes` (60). Un client affiche ces valeurs, il ne refait pas la
+règle. Lecture seule.
+
 ## Supervision
 
 `GET /api/supervision` : le dernier contrôle (chaque point surveillé, en panne ou non, depuis quand, alerte partie ou
