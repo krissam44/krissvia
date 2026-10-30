@@ -35,20 +35,38 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
     public const string Source = "mobile";
 
     /// <summary>Les thermostats et leur dernier état, d'un coup (<c>/api/entities</c>, filtré ici sur les climate).</summary>
-    public async Task<(JsonElement? Entites, string? Erreur)> EntitesAsync(CancellationToken ct = default)
+    public Task<(JsonElement? Entites, string? Erreur)> EntitesAsync(CancellationToken ct = default) => LireAsync("/api/entities", ct);
+
+    /// <summary>Un GET, rendu en JSON brut ; une erreur (réseau, clé, route) rend son motif lisible.</summary>
+    private async Task<(JsonElement? Json, string? Erreur)> LireAsync(string route, CancellationToken ct)
     {
         if (connexion.BaseUrl.Length == 0) return (null, "Serveur non configuré.");
         try
         {
-            using var requete = Requete(HttpMethod.Get, "/api/entities");
+            using var requete = Requete(HttpMethod.Get, route);
             using var reponse = await http.SendAsync(requete, ct);
-            if (await RefusAsync(reponse, ct) is { } refus) return (null, refus);
+            if (await RefusAsync(reponse, route, ct) is { } refus) return (null, refus);
 
             await using var flux = await reponse.Content.ReadAsStreamAsync(ct);
             using var document = await JsonDocument.ParseAsync(flux, cancellationToken: ct);
             return (document.RootElement.Clone(), null);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            return (null, MessageLisible(ex));
+        }
+    }
+
+    /// <summary>L'écran Sondes calculé par le serveur : moyennes par pièce et état de chaque sonde.</summary>
+    public async Task<(VueSondes? Vue, string? Erreur)> SondesAsync(CancellationToken ct = default)
+    {
+        var (json, erreur) = await LireAsync("/api/sensors", ct);
+        if (erreur is not null) return (null, erreur);
+        try
+        {
+            return VueSondes.Lire(json!.Value) is { } vue ? (vue, null) : (null, "Réponse vide du serveur.");
+        }
+        catch (JsonException ex)
         {
             return (null, MessageLisible(ex));
         }
@@ -76,10 +94,11 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
         if (connexion.BaseUrl.Length == 0) return ResultatOrdre.Echec("Serveur non configuré.");
         try
         {
-            using var requete = Requete(HttpMethod.Post, $"/api/entities/{Uri.EscapeDataString(entityId)}/commands");
+            var route = $"/api/entities/{Uri.EscapeDataString(entityId)}/commands";
+            using var requete = Requete(HttpMethod.Post, route);
             requete.Content = JsonContent.Create(new { command = commande, args, source = Source });
             using var reponse = await http.SendAsync(requete, ct);
-            if (await RefusAsync(reponse, ct) is { } refus) return ResultatOrdre.Echec(refus);
+            if (await RefusAsync(reponse, route, ct) is { } refus) return ResultatOrdre.Echec(refus);
 
             var corps = await reponse.Content.ReadFromJsonAsync<ReponseOrdre>(Thermostat.Json, ct);
             return corps?.Outcome == "accepted"
@@ -100,7 +119,7 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
     }
 
     /// <summary>Le motif d'une réponse en erreur, null si elle a réussi. Le <c>error</c> du serveur se lit tel quel.</summary>
-    private static async Task<string?> RefusAsync(HttpResponseMessage reponse, CancellationToken ct)
+    private static async Task<string?> RefusAsync(HttpResponseMessage reponse, string route, CancellationToken ct)
     {
         if (reponse.IsSuccessStatusCode) return null;
 
@@ -119,7 +138,8 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
             HttpStatusCode.Unauthorized => "Clé d'API refusée : vérifiez-la dans la connexion.",
             // En production sans clé configurée, l'API se ferme au lieu de s'ouvrir à tout le réseau.
             HttpStatusCode.ServiceUnavailable => "API fermée : aucune clé d'API n'est configurée sur le serveur (Api__Key).",
-            HttpStatusCode.NotFound when erreur is null => "Route introuvable : l'adresse pointe-t-elle bien sur Krissvia ?",
+            // Une appli plus récente que le serveur tombe ici : le dire évite de chercher l'erreur dans l'adresse.
+            HttpStatusCode.NotFound when erreur is null => $"Route {route} introuvable : serveur Krissvia à mettre à jour, ou adresse qui ne pointe pas sur Krissvia.",
             _ => erreur ?? $"Erreur du serveur ({(int)reponse.StatusCode}).",
         };
     }

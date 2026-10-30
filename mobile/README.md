@@ -1,7 +1,8 @@
 # Appli mobile Krissvia
 
-MAUI Blazor Hybrid + MudBlazor, sur le modèle de l'appli de DomoMud. Premier écran : **Thermostats** (température,
-consigne régulée, statut, part de chauffe, modes, ±0,5 °C, planning et prochaine bascule). Les thermostats se créent et
+MAUI Blazor Hybrid + MudBlazor, sur le modèle de l'appli de DomoMud. Écrans : **Thermostats** (température,
+consigne régulée, statut, part de chauffe, modes, ±0,5 °C, planning et prochaine bascule) et **Sondes** (une carte par
+pièce avec la moyenne du serveur, ses sondes, humidité, pile, sondes muettes ou hors ligne signalées). Les thermostats se créent et
 se règlent sur le web ; ici on les suit et on les commande.
 
 | Dossier | Rôle |
@@ -23,6 +24,10 @@ se règlent sur le web ; ici on les suit et on les commande.
   partent des codes (`heating`, `eco`…), jamais des libellés. Le test `L_appli_mobile_lit_l_etat_et_les_modes_publies`
   (Climate.Tests) fait lire à l'appli l'état que `ThermostatEntities` publie vraiment : un champ renommé côté cœur le
   fait échouer.
+
+- **Sondes** : `GET /api/sensors`, relu toutes les 30 s et au retour au premier plan. Moyennes et santé des sondes
+  (règle des 60 min) viennent du cœur ; contrat gardé par `L_appli_mobile_lit_les_moyennes_et_la_sante_des_sondes`
+  (Core.Tests). Contre un serveur qui ne connaît pas encore la route, l'appli dit qu'il faut le mettre à jour.
 
 ## Construire et essayer
 

@@ -76,7 +76,7 @@ public class KrissviaApiTests
     [InlineData(HttpStatusCode.Unauthorized, "", "Clé d'API refusée")]
     [InlineData(HttpStatusCode.ServiceUnavailable, "", "aucune clé d'API n'est configurée")]
     [InlineData(HttpStatusCode.BadRequest, """{ "error": "« climate.salon » n'accepte pas « turn_on »" }""", "n'accepte pas")]
-    [InlineData(HttpStatusCode.NotFound, "", "Route introuvable")]
+    [InlineData(HttpStatusCode.NotFound, "", "à mettre à jour")]
     public async Task Une_erreur_http_se_lit(HttpStatusCode code, string corps, string attendu)
     {
         var (api, _) = Creer(code, corps);
