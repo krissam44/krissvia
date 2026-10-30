@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Ce que l'appli mobile sait de Krissvia, sans MAUI : client de l'API publique, flux en direct, lecture des
+       entités climate. Testable sur un poste, sans émulateur (tests/Krissvia.Mobile.Client.Tests). -->
+
+  <ItemGroup>
+    <!-- Les noms des ordres (set_mode…) : la même constante que le cœur, pas une copie. -->
+    <ProjectReference Include="..\Krissvia.Contracts\Krissvia.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Krissvia.Mobile.Client.Tests" />
+  </ItemGroup>
+
+</Project>

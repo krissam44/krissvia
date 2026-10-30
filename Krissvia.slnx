@@ -16,6 +16,7 @@
     <Project Path="src/Krissvia.Sdk.Mqtt/Krissvia.Sdk.Mqtt.csproj" />
     <Project Path="src/Krissvia.Server/Krissvia.Server.csproj" />
     <Project Path="src/Krissvia.Widgets.Blazor/Krissvia.Widgets.Blazor.csproj" />
+    <Project Path="src/Krissvia.Mobile.Client/Krissvia.Mobile.Client.csproj" />
   </Folder>
   <Folder Name="/plugins/">
     <Project Path="plugins/Krissvia.Plugin.Ipp/Krissvia.Plugin.Ipp.csproj" />
@@ -35,6 +36,7 @@
     <Project Path="tests/Krissvia.Climate.Tests/Krissvia.Climate.Tests.csproj" />
     <Project Path="tests/Krissvia.Contracts.Tests/Krissvia.Contracts.Tests.csproj" />
     <Project Path="tests/Krissvia.Core.Tests/Krissvia.Core.Tests.csproj" />
+    <Project Path="tests/Krissvia.Mobile.Client.Tests/Krissvia.Mobile.Client.Tests.csproj" />
     <Project Path="tests/Krissvia.Persistence.Tests/Krissvia.Persistence.Tests.csproj" />
     <Project Path="tests/Krissvia.PluginHost.Tests/Krissvia.PluginHost.Tests.csproj" />
     <Project Path="tests/Krissvia.Plugin.Ipp.Tests/Krissvia.Plugin.Ipp.Tests.csproj" />

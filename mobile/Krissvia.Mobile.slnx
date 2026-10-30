@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Krissvia.Mobile/Krissvia.Mobile.csproj" />
+  <Project Path="../src/Krissvia.Mobile.Client/Krissvia.Mobile.Client.csproj" />
+  <Project Path="../src/Krissvia.Contracts/Krissvia.Contracts.csproj" />
+  <Project Path="../tests/Krissvia.Mobile.Client.Tests/Krissvia.Mobile.Client.Tests.csproj" />
+</Solution>

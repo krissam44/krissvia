@@ -1,0 +1,158 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   ZONES SÛRES (barre d'état, encoche, barre gestuelle)
+
+   Dans une application Blazor Hybrid, la WebView occupe TOUT l'écran, barre
+   d'état comprise : sans décalage, la barre d'application se retrouve sous
+   l'heure et les icônes système. Le modèle de projet ne traitait que iOS
+   (@supports -webkit-touch-callout), d'où le chevauchement sur Android.
+
+   env(safe-area-inset-*) n'est renseigné que grâce à « viewport-fit=cover »,
+   présent dans index.html.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* La barre d'application descend sous la barre d'état. Le décalage est un
+   PADDING (et non une marge) pour que le fond de la barre remplisse aussi la
+   zone de la barre d'état — sinon on verrait une bande vide au-dessus.
+   content-box : la hauteur définie par MudBlazor reste inchangée, le padding
+   s'y ajoute. */
+.mud-appbar {
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    box-sizing: content-box !important;
+}
+
+/* Le contenu descend d'autant, en s'ajoutant au décalage que MudBlazor
+   applique déjà pour la barre d'application (d'où margin et non padding). */
+.mud-main-content {
+    margin-top: env(safe-area-inset-top, 0px);
+}
+
+/* Encoches latérales (mode paysage) */
+body {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Reliquat du modèle de projet : cet élément servait à réserver la barre
+   d'état sur iOS, désormais géré ci-dessus pour toutes les plateformes. */
+.status-bar-safe-area {
+    display: none;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────── */
+
+html, body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    /* Évite le rebond élastique au défilement, qui laisse voir le fond blanc
+       sous la barre d'application sur mobile. */
+    overscroll-behavior-y: none;
+}
+
+h1:focus {
+    outline: none;
+}
+
+/* ── Erreurs Blazor (référencé par index.html) ────────────────────────── */
+
+#blazor-error-ui {
+    color-scheme: light only;
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }
+
+.blazor-error-boundary {
+    background: #b32121;
+    padding: 1rem;
+    color: white;
+}
+
+    .blazor-error-boundary::after {
+        content: "Une erreur s'est produite."
+    }
+
+/* ── Carte de thermostat (reprise du widget du tableau de bord) ─────────── */
+
+.kv-badge {
+    font-size: .7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+.kv-valeur {
+    font-size: 1.7rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.kv-unite {
+    font-size: .8rem;
+    font-weight: 400;
+}
+
+.kv-legende {
+    font-size: .68rem;
+    color: var(--mud-palette-text-secondary);
+    margin-top: 2px;
+}
+
+.kv-annexes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-top: 8px;
+    font-size: .75rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+    .kv-annexes span {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+    }
+
+.kv-jauge {
+    height: 4px;
+    border-radius: 2px;
+    margin-top: 3px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--mud-palette-text-secondary) 20%, transparent);
+}
+
+    .kv-jauge > div {
+        height: 100%;
+    }
+
+.kv-mode {
+    flex: 1;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 0;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-text-secondary) 35%, transparent);
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+    .kv-mode:disabled {
+        opacity: .5;
+    }

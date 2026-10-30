@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Couleurs du thème Android (barre d'état, écran de démarrage système, accents).
+     Alignées sur l'identité de Krissvia : ardoise sombre + ambre énergie.
+     Sans ça, l'application conserve le violet .NET du modèle de projet. -->
+<resources>
+    <color name="colorPrimary">#1E1E2D</color>
+    <color name="colorPrimaryDark">#16161F</color>
+    <color name="colorAccent">#FFB300</color>
+</resources>

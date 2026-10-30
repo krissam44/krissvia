@@ -1,0 +1,154 @@
+@using P = PresentationThermostat
+
+@{
+    var t = Thermostat;
+    var inertie = t.Statut == "coasting";
+    var teinte = inertie ? P.Inertie : t.Chauffe ? P.Chauffe : null;
+    var couleurStatut = P.CouleurStatut(t.Statut);
+    var couleurMode = P.CouleurMode(t.Mode);
+    var sousTitre = string.Join(" · ", new[] { t.Piece, t.Radiateurs is { } r ? $"{r} rad." : null }.Where(s => s is { Length: > 0 }));
+}
+
+<MudCard Elevation="2" Class="mb-3"
+         Style="@($"border-radius:12px;{(teinte is null ? "" : $"box-shadow:inset 0 0 0 1px {teinte}55, inset 0 -24px 40px -28px {teinte}55;")}")">
+    <MudCardContent Class="pa-3">
+
+        @* En-tête : flamme, nom, statut du serveur, planning *@
+        <div style="display:flex;align-items:center;gap:8px;">
+            <MudIcon Icon="@(inertie ? Icons.Material.Filled.Air : Icons.Material.Filled.LocalFireDepartment)"
+                     Style="@($"color:{teinte ?? "var(--mud-palette-text-disabled)"};")" />
+            <div style="flex:1;min-width:0;">
+                <MudText Typo="Typo.body1" Style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@t.Nom</MudText>
+                @if (sousTitre.Length > 0)
+                {
+                    <MudText Typo="Typo.caption" Style="color:var(--mud-palette-text-secondary);">@sousTitre</MudText>
+                }
+            </div>
+            @if (t.LibelleStatut is { Length: > 0 } libelle)
+            {
+                <span class="kv-badge" style="@($"background:{couleurStatut}22;color:{couleurStatut};border:1px solid {couleurStatut}44;")">@libelle</span>
+            }
+            @if (t.APublie)
+            {
+                <MudIconButton Icon="@(t.PlanningActif ? Icons.Material.Filled.CalendarMonth : Icons.Material.Outlined.CalendarMonth)"
+                               Size="Size.Small" Disabled="@Occupe"
+                               Style="@(t.PlanningActif ? $"color:{P.Planning};" : "")"
+                               title="@(t.PlanningActif ? "Planning actif : passer en manuel" : "Mode manuel : reprendre le planning")"
+                               OnClick="@(() => OnPlanning.InvokeAsync(!t.PlanningActif))" />
+            }
+        </div>
+
+        @if (!t.APublie)
+        {
+            <MudText Typo="Typo.body2" Class="mt-3" Style="color:var(--mud-palette-text-secondary);">
+                En attente de la première publication du moteur…
+            </MudText>
+        }
+        else
+        {
+            @if (!t.Disponible)
+            {
+                <MudText Typo="Typo.caption" Class="mt-1" Style="color:#ffa726;display:block;">Indisponible : dernières valeurs connues.</MudText>
+            }
+
+            @* Ambiante → consigne régulée, avec − / + *@
+            <div style="display:flex;align-items:center;gap:6px;margin-top:10px;">
+                <div style="flex:1;text-align:center;">
+                    <div class="kv-valeur" style="@($"color:{P.CouleurAmbiante(t.Temperature)};")">@P.Nombre(t.Temperature)<span class="kv-unite">°C</span></div>
+                    <div class="kv-legende">ambiance</div>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.ArrowRightAlt" Style="opacity:.5;" />
+                @if (t.ConsigneReglable)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small" Disabled="@Occupe"
+                                   aria-label="Baisser la consigne" OnClick="@(() => OnPas.InvokeAsync(-t.PasConsigne))" />
+                }
+                <div style="text-align:center;min-width:72px;">
+                    <div class="kv-valeur" style="@($"color:{couleurMode};")">@P.Nombre(t.Consigne)<span class="kv-unite">°C</span></div>
+                    <div class="kv-legende">@(t.ConsigneAjustee ? "consigne ajustée" : "consigne")</div>
+                </div>
+                @if (t.ConsigneReglable)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Disabled="@Occupe"
+                                   aria-label="Monter la consigne" OnClick="@(() => OnPas.InvokeAsync(t.PasConsigne))" />
+                }
+            </div>
+
+            @* Mesures annexes et situations *@
+            <div class="kv-annexes">
+                @if (t.Humidite is { } h)
+                {
+                    <span><MudIcon Icon="@Icons.Material.Filled.WaterDrop" Size="Size.Small" /> @P.Nombre(h, 0) %</span>
+                }
+                @if (t.Exterieure is { } ext)
+                {
+                    <span style="color:#42a5f5;"><MudIcon Icon="@Icons.Material.Filled.Cloud" Size="Size.Small" /> @P.Nombre(ext)°C ext.</span>
+                }
+                @if (t.FenetreOuverte)
+                {
+                    <span style="color:#42a5f5;"><MudIcon Icon="@Icons.Material.Filled.SensorDoor" Size="Size.Small" /> Fenêtre ouverte</span>
+                }
+                @if (t.Absence)
+                {
+                    <span style="color:#ab47bc;"><MudIcon Icon="@Icons.Material.Filled.Luggage" Size="Size.Small" /> Absence</span>
+                }
+                @if (t.PlanningActif && t.ProchaineBascule is { } bascule)
+                {
+                    <span style="@($"color:{P.Planning};")"><MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" /> @bascule.Texte(DateTime.Now)</span>
+                }
+            </div>
+
+            @* Part de chauffe du cycle, ou l'inertie qui redescend *@
+            @if (t.Mode != "off" && t.Puissance is { } puissance)
+            {
+                <div style="margin-top:8px;">
+                    <div class="kv-legende" style="display:flex;justify-content:space-between;">
+                        @if (inertie)
+                        {
+                            <span style="@($"color:{P.Inertie};")">Refroidissement naturel</span>
+                        }
+                        else
+                        {
+                            <span>Chauffe du cycle : @Math.Round(puissance * 100) %</span>
+                        }
+                    </div>
+                    <div class="kv-jauge">
+                        <div style="@($"width:{(inertie ? 100 : Math.Clamp(puissance * 100, 0, 100)).ToString(System.Globalization.CultureInfo.InvariantCulture)}%;background:{(inertie ? P.Inertie : couleurMode)};")"></div>
+                    </div>
+                </div>
+            }
+
+            @* Modes, du plus chaud au plus froid, tous sur une ligne *@
+            <div style="display:flex;gap:4px;margin-top:10px;">
+                @foreach (var mode in t.Modes)
+                {
+                    var actif = mode.Id == t.ModeActif;
+                    var c = P.CouleurMode(mode.Id);
+                    <button type="button" class="kv-mode" disabled="@Occupe" title="@mode.Label" aria-label="@mode.Label" aria-pressed="@(actif ? "true" : "false")"
+                            style="@(actif ? $"background:{c}22;color:{c};border-color:{c}88;font-weight:700;" : "")"
+                            @onclick="@(() => OnMode.InvokeAsync(mode.Id))">
+                        @if (P.Palier(mode.Id) is { } palier)
+                        {
+                            <span style="font-size:1rem;font-weight:700;">@palier</span>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@P.IconeMode(mode.Id)" Size="Size.Small" />
+                        }
+                    </button>
+                }
+            </div>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired] public Thermostat Thermostat { get; set; } = null!;
+
+    /// <summary>Un ordre est en route : les boutons attendent sa réponse.</summary>
+    [Parameter] public bool Occupe { get; set; }
+
+    [Parameter] public EventCallback<string> OnMode { get; set; }
+    [Parameter] public EventCallback<double> OnPas { get; set; }
+    [Parameter] public EventCallback<bool> OnPlanning { get; set; }
+}
