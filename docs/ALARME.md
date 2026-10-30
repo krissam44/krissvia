@@ -110,6 +110,9 @@ Réglages (`PUT /api/alarm/settings`) :
 
 Rôles : `immediate`, `delayed`, `fault_only`. Activer l'alarme sans capteur est refusé.
 
+**L'appli mobile** (`mobile/`, écran Alarme) passe par `GET /api/alarm` et `POST /api/alarm/arm|disarm` avec le code :
+mêmes règles, même blocage. Elle montre les défauts du moment avant qu'on tape son code.
+
 ## 7. Ce qui reste
 
 - **Digicode ESPHome** (l'écran de l'appartement sous DomoMud, qui parle `domomud/alarme/*`) : pas repris. Le

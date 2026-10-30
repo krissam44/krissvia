@@ -8,7 +8,13 @@ liste, avec trois actions rapides Confort / Éco / Arrêt — seulement celles q
 Mêmes données que l'écran Thermostats (le flux partagé) : rien à relire en passant de l'un à l'autre.
 **Prises** : interrupteurs et lumières par pièce (`GET /api/actuators`), basculés d'un appui sur la ligne. Ordre
 vérifié, pas d'état optimiste : la ligne attend la réponse, un ordre non confirmé le dit, puis l'écran se relit. Un
-radiateur de thermostat ne se commande pas d'ici, un équipement délesté se rallume après confirmation. Les thermostats se créent et
+radiateur de thermostat ne se commande pas d'ici, un équipement délesté se rallume après confirmation.
+**Alarme** : l'état de la centrale en grand (décompte de sortie ou d'entrée, capteur et heure d'un déclenchement), les
+défauts qui empêcheraient d'armer — affichés AVANT de taper son code —, le blocage après trois codes faux, et un clavier
+qui arme ou désarme **par code** (`/api/alarm/arm|disarm`, le code dans le corps : la clé d'API ne suffit pas). Le code
+ne s'affiche jamais et s'efface à l'envoi ou après 30 s. Relu chaque seconde pendant un décompte, toutes les 3 s sinon.
+Aucune route ajoutée : l'écran marche avec le serveur actuel. Un code faux est un 403, à ne pas confondre avec une
+clé d'API refusée. Les thermostats se créent et
 se règlent sur le web ; ici on les suit et on les commande.
 
 | Dossier | Rôle |

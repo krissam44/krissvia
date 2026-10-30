@@ -106,6 +106,49 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
     public Task<ResultatOrdre> AllumerAsync(string entityId, bool allumer, CancellationToken ct = default) =>
         OrdreAsync(entityId, allumer ? StandardCommands.TurnOn : StandardCommands.TurnOff, null, ct);
 
+    /// <summary>L'état de l'alarme, les défauts du moment et le blocage du clavier.</summary>
+    public async Task<(EtatAlarme? Etat, string? Erreur)> AlarmeAsync(CancellationToken ct = default)
+    {
+        var (json, erreur, _) = await LireAsync("/api/alarm", ct);
+        if (erreur is not null) return (null, erreur);
+        try
+        {
+            return EtatAlarme.Lire(json!.Value) is { } etat ? (etat, null) : (null, "Réponse vide du serveur.");
+        }
+        catch (JsonException ex)
+        {
+            return (null, MessageLisible(ex));
+        }
+    }
+
+    /// <summary>
+    /// Armer ou désarmer PAR CODE : la clé d'API ne suffit pas (ALARME.md §6). Le code part dans le corps, jamais dans
+    /// l'adresse. Les refus du serveur — code incorrect (403), clavier bloqué (429), armement refusé ou alarme
+    /// désactivée (409) — reviennent avec son motif.
+    /// </summary>
+    public async Task<ResultatCode> CommanderAlarmeAsync(bool armer, string code, CancellationToken ct = default)
+    {
+        if (connexion.BaseUrl.Length == 0) return new ResultatCode(false, "Serveur non configuré.");
+        try
+        {
+            var route = armer ? "/api/alarm/arm" : "/api/alarm/disarm";
+            using var requete = Requete(HttpMethod.Post, route);
+            requete.Content = JsonContent.Create(new { code });
+            using var reponse = await http.SendAsync(requete, ct);
+            if (await RefusAsync(reponse, route, ct) is ({ } refus, _)) return new ResultatCode(false, Majuscule(refus));
+
+            var corps = await reponse.Content.ReadFromJsonAsync<ReponseCode>(Thermostat.Json, ct);
+            var qui = corps?.User is { Length: > 0 } u ? $" par {u}" : "";
+            return new ResultatCode(true, (armer ? "Armement lancé" : "Alarme désarmée") + qui + ".");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            return new ResultatCode(false, MessageLisible(ex));
+        }
+    }
+
+    private static string Majuscule(string texte) => texte.Length == 0 ? texte : char.ToUpperInvariant(texte[0]) + texte[1..];
+
     /// <summary>Teste l'adresse et la clé : null si tout va bien, sinon le motif.</summary>
     public async Task<string?> TesterAsync(CancellationToken ct = default) => (await EntitesAsync(ct)).Erreur;
 
@@ -206,4 +249,6 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
     private sealed record ReponseOrdre(string? Outcome, string? Verification, string? Detail);
 
     private sealed record ReponseErreur(string? Error);
+
+    private sealed record ReponseCode(string? User);
 }

@@ -1,0 +1,109 @@
+@page "/alarme"
+@implements IDisposable
+
+<PageTitle>Alarme</PageTitle>
+
+<div style="display:flex;align-items:center;gap:8px;">
+    <MudText Typo="Typo.h6" Style="font-weight:400;">Alarme</MudText>
+    <MudSpacer />
+    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" aria-label="Actualiser" OnClick="ActualiserAsync" />
+</div>
+
+@if (_erreur is not null)
+{
+    <MudAlert Severity="@(_etat is null ? Severity.Error : Severity.Warning)" Dense="true" Class="my-2">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="flex:1;min-width:0;">@(_etat is null ? "" : "État plus à jour. ")@_erreur</span>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Inherit"
+                       StartIcon="@Icons.Material.Filled.Settings" OnClick="@(() => Nav.NavigateTo("/reglages"))">Connexion</MudButton>
+        </div>
+    </MudAlert>
+}
+
+@if (_etat is null)
+{
+    @if (_erreur is null)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2" />
+    }
+}
+else
+{
+    var e = _etat;
+    var couleur = Couleur(e);
+
+    @* L'état, en grand : c'est la seule chose qu'on vient chercher. *@
+    <MudCard Elevation="2" Class="mb-3" Style="@($"border-radius:12px;border:1px solid {couleur}66;background:{couleur}14;")">
+        <MudCardContent Class="pa-4" Style="text-align:center;">
+            <MudIcon Icon="@Icone(e)" Style="@($"font-size:3rem;color:{couleur};")" />
+            <div style="@($"font-size:1.5rem;font-weight:700;color:{couleur};")">@e.Libelle</div>
+            @if (e.EnDecompte)
+            {
+                <div style="@($"font-size:3rem;font-weight:800;line-height:1.1;color:{couleur};")">@e.Decompte s</div>
+            }
+            @if (e.Etat == "triggered")
+            {
+                <div class="kv-legende" style="font-size:.85rem;">
+                    @(e.Capteur ?? "Capteur inconnu")@(e.DeclencheeA is { } quand ? $" · {quand.ToLocalTime():dd/MM HH:mm}" : "")
+                    @(e.Sonne ? " · sirène en marche" : "")
+                </div>
+            }
+            @if (!e.Activee)
+            {
+                <div class="kv-legende" style="font-size:.85rem;">L'alarme est désactivée dans ses réglages (interface web).</div>
+            }
+        </MudCardContent>
+    </MudCard>
+
+    @if (e.Desarmee && e.DefautsMaintenant.Count > 0)
+    {
+        @* À voir AVANT de taper son code : l'armement serait refusé. *@
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
+            Armement impossible pour l'instant : @string.Join(", ", e.DefautsMaintenant)
+        </MudAlert>
+    }
+    else if (e.Desarmee && e.DernierRefus is { } refus)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">Dernier armement refusé : @refus</MudAlert>
+    }
+
+    @if (e.BloqueSecondes > 0)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">Trop de codes faux : clavier bloqué encore @e.BloqueSecondes s.</MudAlert>
+    }
+
+    @* Le clavier. Le code n'est jamais affiché : des points. *@
+    <div class="kv-code">
+        @for (var i = 0; i < Math.Max(4, _code.Length); i++)
+        {
+            <span class="@(i < _code.Length ? "plein" : "")"></span>
+        }
+    </div>
+
+    <div class="kv-clavier">
+        @foreach (var touche in Touches)
+        {
+            var t = touche;
+            if (t == "")
+            {
+                <span></span>
+            }
+            else
+            {
+                <button type="button" disabled="@ClavierInactif" aria-label="@(t == "⌫" ? "Effacer" : t)" @onclick="@(() => Taper(t))">@t</button>
+            }
+        }
+    </div>
+
+    <MudButton Variant="Variant.Filled" FullWidth="true" Size="Size.Large" Class="mt-3"
+               Color="@(e.Desarmee ? Color.Error : Color.Success)"
+               StartIcon="@(e.Desarmee ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
+               Disabled="@(ClavierInactif || _code.Length < 4)" OnClick="EnvoyerAsync">
+        @(e.Desarmee ? "Armer" : "Désarmer")
+    </MudButton>
+
+    @if (_resultat is not null)
+    {
+        <MudAlert Severity="@(_resultat.Ok ? Severity.Success : Severity.Error)" Dense="true" Class="mt-3">@_resultat.Message</MudAlert>
+    }
+}
