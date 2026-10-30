@@ -217,6 +217,10 @@ horloge simulée. Les deux sirènes (intérieure, extérieure) suivent le même 
   RFC 3805, `GetNext` seulement, codec maison) en complément de l'IPP (29/10/2026).
 - **Alarme : `ALARME.md`** (22/10/2026) — machine à états de DomoMud, sonneries du §9, codes PBKDF2 et blocage,
   page `/alarme`, API `/api/alarm` par code.
+- **Appli mobile** (30/10/2026, `mobile/README.md`) — MAUI Blazor + MudBlazor sur le modèle de l'appli de DomoMud,
+  premier écran Thermostats. Clé d'API, flux `/api/live` restreint aux thermostats, ordres par le bus de commandes ;
+  rien n'est recalculé sur le téléphone. La partie sans MAUI (`Krissvia.Mobile.Client`) est dans la solution et testée ;
+  l'appli elle-même est hors de `Krissvia.slnx`, faute de workload MAUI sur la VM et le Pi.
 - **Présence et supervision : `PRESENCE.md`** (19/10/2026) — présence du foyer calculée par le cœur sur les capteurs
   `presence` de n'importe quelle source ; classes standard de supervision, indépendantes de la box.
 

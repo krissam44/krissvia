@@ -18,6 +18,10 @@ Ces règles sont vérifiées par `tests/Krissvia.Architecture.Tests`.
     dotnet build
     dotnet test
 
+## Appli mobile
+
+`mobile/` (MAUI, hors de la solution) : voir `mobile/README.md`.
+
 ## Déploiement
 
 Sur le Raspberry Pi (linux-arm64, systemd) : `deploy/publier.ps1`, puis `docs/DEPLOIEMENT.md`.
