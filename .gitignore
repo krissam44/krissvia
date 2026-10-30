@@ -14,3 +14,8 @@ src/Krissvia.Server/widgets/
 __pycache__/
 # Archive de deploy/publier.ps1
 publish/
+# Appli mobile : paquets construits et clés de signature (jamais dans le dépôt)
+*.apk
+*.aab
+*.keystore
+*.jks
