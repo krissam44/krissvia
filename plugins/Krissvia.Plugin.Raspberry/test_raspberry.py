@@ -16,7 +16,8 @@ FICHIERS = {
     "sys/class/thermal/thermal_zone0/temp": "52582\n",
     "proc/stat": "cpu  1000 0 500 8000 500 0 0 0 0 0\ncpu0 1 2 3 4\n",
     "proc/loadavg": "0.42 0.30 0.25 1/234 5678\n",
-    "proc/meminfo": "MemTotal:        3884000 kB\nMemFree:          200000 kB\nMemAvailable:    2913000 kB\n",
+    "proc/meminfo": "MemTotal:        3884000 kB\nMemFree:          200000 kB\nMemAvailable:    2913000 kB\n"
+                    "SwapTotal:        102396 kB\nSwapFree:          76797 kB\n",
     "proc/uptime": "93784.12 350000.00\n",
     "proc/device-tree/model": "Raspberry Pi 4 Model B Rev 1.4\x00",
     "sys/firmware/get_throttled": "50005\n",
@@ -95,7 +96,7 @@ class EntitesTests(unittest.TestCase):
     def test_une_machine_qui_ne_sait_rien_ne_declare_que_ce_qu_elle_sait(self):
         e = self._entites(FausseMachine({}))   # ni /proc ni /sys : un poste Windows, par exemple
 
-        self.assertEqual({"sante", "disque"}, set(e))
+        self.assertEqual({"sante", "disque", "disque_plein"}, set(e))
 
     def test_les_valeurs_publiees_disent_le_probleme_en_cours(self):
         machine = FausseMachine()
@@ -106,6 +107,102 @@ class EntitesTests(unittest.TestCase):
         self.assertIs(True, valeurs["bridage"])
         self.assertEqual(52.6, valeurs["temperature"])
         self.assertEqual("pi", valeurs["sante"]["hostname"])
+
+
+# La sortie de « systemctl show » pour trois services : Zigbee2MQTT n'est pas installé sur cette machine.
+SHOW = """Id=krissvia.service
+LoadState=loaded
+ActiveState=active
+
+Id=mosquitto.service
+LoadState=loaded
+ActiveState=failed
+
+Id=zigbee2mqtt.service
+LoadState=not-found
+ActiveState=inactive
+"""
+
+
+def cgroup(machine, service, anon_octets):
+    machine.ecrire(f"sys/fs/cgroup/system.slice/{service}.service/memory.stat", f"anon {anon_octets}\nfile 999999999\nkernel 4096\n")
+
+
+class ComplementsTests(unittest.TestCase):
+    def test_swap_et_charges_sur_5_et_15_minutes(self):
+        m = FausseMachine()
+        r, _ = raspberry.relever(m.racine, m.racine, None)
+
+        self.assertEqual(25.0, r.swap)                # (102 396 − 76 797) / 102 396
+        self.assertEqual((0.42, 0.30, 0.25), (r.charge, r.charge_5, r.charge_15))
+
+    def test_sans_swap_rien_n_est_declare(self):
+        m = FausseMachine()
+        m.ecrire("proc/meminfo", "MemTotal: 3884000 kB\nMemAvailable: 2913000 kB\nSwapTotal: 0 kB\nSwapFree: 0 kB\n")
+        e = {x["unique_id"] for x in raspberry.Raspberry("pi", m.racine, m.racine, 30).entites()}
+
+        self.assertNotIn("swap", e)
+
+    def test_un_service_inconnu_de_systemd_est_ignore(self):
+        etats = raspberry.etats_services(["krissvia", "mosquitto", "zigbee2mqtt"], lambda noms: SHOW)
+
+        self.assertEqual({"krissvia": "active", "mosquitto": "failed"}, etats)
+
+    def test_sans_systemd_aucun_service(self):
+        self.assertEqual({}, raspberry.etats_services(["krissvia"], lambda noms: None))
+
+    def test_la_memoire_d_un_service_est_son_tas_pas_son_cache(self):
+        m = FausseMachine()
+        cgroup(m, "krissvia", 157286400)              # 150 Mo anonymes ; le cache (« file ») ne compte pas
+
+        self.assertEqual(150.0, raspberry.memoire_service(m.racine, "krissvia"))
+        self.assertIsNone(raspberry.memoire_service(m.racine, "mosquitto"))
+
+    def test_services_entites_et_valeurs(self):
+        m = FausseMachine()
+        cgroup(m, "krissvia", 157286400)              # mosquitto est en échec : plus de groupe, plus de mémoire
+        plugin = raspberry.Raspberry("pi", m.racine, m.racine, 30, services=["krissvia", "mosquitto", "zigbee2mqtt"],
+                                     show=lambda noms: SHOW)
+        e = {x["unique_id"]: x for x in plugin.entites()}
+        valeurs = {v["entity_unique_id"]: v["value"] for v in plugin.valeurs()}
+
+        self.assertEqual("problem", e["service_mosquitto"]["device_class"])
+        self.assertIn("memoire_mosquitto", e)         # déclarée quand même : elle reviendra avec le service
+        self.assertNotIn("service_zigbee2mqtt", e)
+        self.assertIs(False, valeurs["service_krissvia"])
+        self.assertIs(True, valeurs["service_mosquitto"])
+        self.assertEqual(150.0, valeurs["memoire_krissvia"])
+        self.assertNotIn("memoire_mosquitto", valeurs)   # pas de 0 inventé : la courbe s'interrompt
+        self.assertEqual([{"name": "krissvia", "state": "active", "memory_mb": 150.0},
+                          {"name": "mosquitto", "state": "failed", "memory_mb": None}], valeurs["sante"]["services"])
+
+    def test_la_taille_de_la_base_compte_le_journal(self):
+        m = FausseMachine()
+        m.ecrire("krissvia.db", "x" * (1024 * 1024))
+        m.ecrire("krissvia.db-wal", "x" * (512 * 1024))
+
+        self.assertEqual(1.5, raspberry.taille_base(os.path.join(m.racine, "krissvia.db")))
+        self.assertIsNone(raspberry.taille_base(os.path.join(m.racine, "absente.db")))
+
+    def test_un_seuil_ne_retombe_que_sous_sa_marge(self):
+        s = raspberry.Seuil(90, 5)
+
+        self.assertEqual([False, True, True, True, False, False, True],
+                         [s.evaluer(v) for v in (89.9, 90, 86, 85.1, 84.9, None, 91)])
+
+    def test_les_depassements_sont_publies(self):
+        m = FausseMachine()                           # 52,6 °C, mémoire 25 %
+        plugin = raspberry.Raspberry("pi", m.racine, m.racine, 30, seuils={"temperature": 50, "memoire": 90})
+        e = {x["unique_id"]: x for x in plugin.entites()}
+        valeurs = {v["entity_unique_id"]: v["value"] for v in plugin.valeurs()}
+
+        self.assertEqual("problem", e["surchauffe"]["device_class"])
+        self.assertIs(True, valeurs["surchauffe"])
+        self.assertIs(False, valeurs["memoire_pleine"])
+        self.assertEqual({"temperature": 50, "memoire": 90, "disque": 85}, valeurs["sante"]["thresholds"])
+
+    def test_liste_des_services(self):
+        self.assertEqual(["krissvia", "mosquitto", "zigbee2mqtt"], raspberry.liste(" krissvia, mosquitto.service,,zigbee2mqtt "))
 
 
 if __name__ == "__main__":

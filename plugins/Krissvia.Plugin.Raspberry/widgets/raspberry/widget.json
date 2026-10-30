@@ -2,10 +2,10 @@
   "contract": 2,
   "id": "raspberry",
   "name": "Santé de la machine",
-  "description": "Température et occupation du processeur, mémoire, disque, alimentation (sous-tension, bridage) et durée de fonctionnement. Livré par le plugin Raspberry.",
-  "version": "1.0.0",
+  "description": "Température et occupation du processeur, mémoire, swap, disque, taille de la base, état et mémoire des services, alimentation (sous-tension, bridage) et durée de fonctionnement. Livré par le plugin Raspberry.",
+  "version": "1.1.0",
   "element": "kv-raspberry",
   "script": "raspberry.js",
   "slots": [ { "name": "sante", "kinds": ["sensor"], "device_classes": ["system_health"], "required": true } ],
-  "size": { "cols": 3, "rows": 2 }
+  "size": { "cols": 3, "rows": 3 }
 }
