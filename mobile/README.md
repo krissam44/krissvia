@@ -2,7 +2,10 @@
 
 MAUI Blazor Hybrid + MudBlazor, sur le modèle de l'appli de DomoMud. Écrans : **Thermostats** (température,
 consigne régulée, statut, part de chauffe, modes, ±0,5 °C, planning et prochaine bascule) et **Sondes** (une carte par
-pièce avec la moyenne du serveur, ses sondes, humidité, pile, sondes muettes ou hors ligne signalées). Les thermostats se créent et
+pièce avec la moyenne du serveur, ses sondes, humidité, pile, sondes muettes ou hors ligne signalées).
+**Radiateurs** : qui chauffe en ce moment (le `heating` du cœur, qui suit le relais, préchauffage compris), en tête de
+liste, avec trois actions rapides Confort / Éco / Arrêt — seulement celles que le thermostat déclare, avec ses libellés.
+Mêmes données que l'écran Thermostats (le flux partagé) : rien à relire en passant de l'un à l'autre. Les thermostats se créent et
 se règlent sur le web ; ici on les suit et on les commande.
 
 | Dossier | Rôle |

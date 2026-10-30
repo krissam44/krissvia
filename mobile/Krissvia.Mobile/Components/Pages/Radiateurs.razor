@@ -1,0 +1,99 @@
+@page "/radiateurs"
+@implements IDisposable
+@using P = Krissvia.Mobile.Components.Thermostats.PresentationThermostat
+
+<PageTitle>Radiateurs</PageTitle>
+
+<div style="display:flex;align-items:center;gap:8px;">
+    <MudText Typo="Typo.h6" Style="font-weight:400;">Radiateurs</MudText>
+    <MudSpacer />
+    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" aria-label="Actualiser" OnClick="@(() => Flux.Reveiller())" />
+</div>
+
+@if (!Flux.Connecte && Live.Recu)
+{
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="my-2">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="flex:1;min-width:0;">Valeurs plus à jour. @(Flux.Erreur ?? "Reconnexion…")</span>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Inherit"
+                       StartIcon="@Icons.Material.Filled.Settings" OnClick="@(() => Nav.NavigateTo("/reglages"))">Connexion</MudButton>
+        </div>
+    </MudAlert>
+}
+
+@if (!Live.Recu)
+{
+    @if (Flux.Erreur is { } erreur)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="my-2">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="flex:1;min-width:0;">@erreur</span>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Inherit"
+                           StartIcon="@Icons.Material.Filled.Settings" OnClick="@(() => Nav.NavigateTo("/reglages"))">Connexion</MudButton>
+            </div>
+        </MudAlert>
+    }
+    else
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2" />
+    }
+}
+else if (_liste.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Dense="true" Class="my-2">Aucun thermostat. Ils se créent depuis l'interface web.</MudAlert>
+}
+else
+{
+    var actifs = Krissvia.Mobile.Client.Radiateurs.EnChauffe(_liste);
+    <MudAlert Severity="@(actifs > 0 ? Severity.Warning : Severity.Success)" Dense="true" Class="my-2">
+        @(actifs == 0 ? "Aucun radiateur en chauffe." : $"{actifs} thermostat(s) en chauffe sur {_liste.Count}.")
+    </MudAlert>
+
+    @foreach (var thermostat in _liste)
+    {
+        var t = thermostat;
+        var chauffe = t.APublie && t.Chauffe;
+        var couleurStatut = P.CouleurStatut(t.Statut);
+        <MudCard @key="t.EntityId" Elevation="2" Class="mb-2"
+                 Style="@($"border-radius:12px;{(chauffe ? $"border:1px solid {P.Chauffe}55;" : "")}")">
+            <MudCardContent Class="pa-3">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" Size="Size.Medium"
+                             Style="@($"color:{(chauffe ? P.Chauffe : "var(--mud-palette-text-disabled)")};")" />
+                    <div style="flex:1;min-width:0;">
+                        <MudText Typo="Typo.body1" Style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@t.Nom</MudText>
+                        <MudText Typo="Typo.caption" Style="color:var(--mud-palette-text-secondary);">
+                            @string.Join(" · ", new[] { t.Piece, t.Radiateurs is { } r ? $"{r} rad." : null, t.LibelleMode, t.Absence ? "absence" : null }.Where(s => s is { Length: > 0 }))
+                        </MudText>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:1.05rem;font-weight:600;white-space:nowrap;">
+                            @P.Nombre(t.Temperature) → <span style="@($"color:{P.CouleurMode(t.Mode)};")">@P.Nombre(t.Consigne)°C</span>
+                        </div>
+                        @if (t.LibelleStatut is { Length: > 0 } statut)
+                        {
+                            <span class="kv-badge" style="@($"background:{couleurStatut}22;color:{couleurStatut};border:1px solid {couleurStatut}44;")">@statut</span>
+                        }
+                    </div>
+                </div>
+
+                @* Les trois modes qu'on change à distance ; le sélecteur complet reste sur l'écran Thermostats. *@
+                @if (t.APublie)
+                {
+                    <div style="display:flex;gap:6px;margin-top:10px;">
+                        @foreach (var mode in Krissvia.Mobile.Client.Radiateurs.Actions(t))
+                        {
+                            var actif = mode.Id == t.ModeActif;
+                            var c = P.CouleurMode(mode.Id);
+                            <button type="button" class="kv-mode" disabled="@_occupes.Contains(t.EntityId)" aria-pressed="@(actif ? "true" : "false")"
+                                    style="@(actif ? $"background:{c}22;color:{c};border-color:{c}88;font-weight:700;" : "")"
+                                    @onclick="@(() => ChoisirAsync(t, mode.Id))">
+                                @mode.Label
+                            </button>
+                        }
+                    </div>
+                }
+            </MudCardContent>
+        </MudCard>
+    }
+}
