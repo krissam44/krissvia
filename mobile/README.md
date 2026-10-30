@@ -67,7 +67,7 @@ réseau local, l'accès hors de la maison passera par une adresse https.
 .\mobile\publier-apk.ps1
 ```
 
-Le script construit l'APK signé dans `publishpk\Krissvia-<version>.apk` (dossier vidé d'abord : un APK périmé ne
+Le script construit l'APK signé dans `publish\apk\Krissvia-<version>.apk` (dossier vidé d'abord : un APK périmé ne
 peut pas être pris pour le bon), vérifie qu'il est bien signé, et donne sa taille et sa date. Par défaut il signe avec
 `D:\Cles\krissvia.keystore`, alias `krissvia` (`-Keystore`, `-Alias` pour d'autres) ; sans keystore, il propose de le
 créer avec `keytool`, qui demande lui-même mot de passe et nom.
