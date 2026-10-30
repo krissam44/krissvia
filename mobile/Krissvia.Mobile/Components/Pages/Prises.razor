@@ -1,0 +1,86 @@
+@page "/prises"
+@implements IDisposable
+
+<PageTitle>Prises</PageTitle>
+
+<div style="display:flex;align-items:center;gap:8px;">
+    <MudText Typo="Typo.h6" Style="font-weight:400;">Prises et éclairages</MudText>
+    <MudSpacer />
+    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" aria-label="Actualiser" Disabled="@_charge" OnClick="ActualiserAsync" />
+</div>
+
+@if (_serveurAncien)
+{
+    <MudAlert Severity="Severity.Info" Dense="true" Class="my-2">
+        Cet écran demande une version plus récente de Krissvia sur le serveur (route /api/actuators). Les autres écrans
+        fonctionnent ; republiez le serveur pour celui-ci.
+    </MudAlert>
+}
+else if (_erreur is not null)
+{
+    <MudAlert Severity="@(_vue is null ? Severity.Error : Severity.Warning)" Dense="true" Class="my-2">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="flex:1;min-width:0;">@(_vue is null ? "" : "Valeurs plus à jour. ")@_erreur</span>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Inherit"
+                       StartIcon="@Icons.Material.Filled.Settings" OnClick="@(() => Nav.NavigateTo("/reglages"))">Connexion</MudButton>
+        </div>
+    </MudAlert>
+}
+
+@if (_vue is null)
+{
+    @if (_erreur is null && !_serveurAncien)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2" />
+    }
+}
+else if (_vue.Total == 0)
+{
+    <MudAlert Severity="Severity.Info" Dense="true" Class="my-2">Aucun interrupteur ni éclairage.</MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.caption" Class="mb-2" Style="color:var(--mud-palette-text-secondary);display:block;">
+        @_vue.Allumes allumé(s) sur @_vue.Total
+    </MudText>
+
+    @foreach (var piece in _vue.Pieces)
+    {
+        <MudCard Elevation="2" Class="mb-3" Style="border-radius:12px;">
+            <MudCardContent Class="pa-3">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <MudIcon Icon="@(piece.Nom is null ? Icons.Material.Filled.DevicesOther : Icons.Material.Filled.Room)" Size="Size.Small"
+                             Style="color:var(--mud-palette-text-secondary);" />
+                    <MudText Typo="Typo.body1" Style="font-weight:600;">@(piece.Nom ?? "Sans pièce")</MudText>
+                </div>
+
+                @foreach (var actionneur in piece.Actionneurs)
+                {
+                    var a = actionneur;
+                    var enAttente = _enAttente.Contains(a.EntityId);
+                    var allume = a.Allume == true;
+                    @* Toute la ligne est le bouton : plus facile au pouce qu'un petit interrupteur. *@
+                    <button type="button" class="kv-actionneur @(allume ? "allume" : "")" disabled="@(!a.Commandable || enAttente)"
+                            aria-pressed="@(allume ? "true" : "false")" @onclick="@(() => BasculerAsync(a))">
+                        <MudIcon Icon="@Icone(a)" Style="@($"color:{(allume ? "#ffb300" : "var(--mud-palette-text-disabled)")};")" />
+                        <span style="flex:1;min-width:0;text-align:left;">
+                            <span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@a.Nom</span>
+                            @if (a.Remarque is { } remarque)
+                            {
+                                <span class="kv-legende" style="@($"display:block;color:{(a.Deleste || !a.Disponible ? "#ffa726" : "var(--mud-palette-text-secondary)")};")">@remarque</span>
+                            }
+                        </span>
+                        @if (enAttente)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        }
+                        else
+                        {
+                            <span class="kv-etat">@(a.Allume switch { true => "ON", false => "OFF", null => "—" })</span>
+                        }
+                    </button>
+                }
+            </MudCardContent>
+        </MudCard>
+    }
+}

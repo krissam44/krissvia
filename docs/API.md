@@ -158,6 +158,14 @@ sur les seules sondes à jour, ou **null** s'il n'y en a aucune ; `active`, `tot
 `stale`, `offline`, `never_received`), plus `stale_after_minutes` (60). Un client affiche ces valeurs, il ne refait pas la
 règle. Lecture seule.
 
+## Actionneurs
+
+`GET /api/actuators` : ce que montre l'écran Actionneurs — `rooms` (`room`, null pour « sans pièce »), chacune avec ses
+`actuators` : `entity_id`, `name`, `usage` (celui de l'écran Entités), `on` (**null** : jamais publié), `available`,
+`driven_by` (le thermostat qui le pilote), `scheduled_by` (la programmation), `shed` (coupé par le délesteur) et
+`controllable` (joignable et pas le radiateur d'un thermostat). Les ordres passent par
+`POST /api/entities/{id}/commands` (`turn_on` / `turn_off`, vérifiés). Lecture seule.
+
 ## Supervision
 
 `GET /api/supervision` : le dernier contrôle (chaque point surveillé, en panne ou non, depuis quand, alerte partie ou

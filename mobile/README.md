@@ -5,7 +5,10 @@ consigne régulée, statut, part de chauffe, modes, ±0,5 °C, planning et proch
 pièce avec la moyenne du serveur, ses sondes, humidité, pile, sondes muettes ou hors ligne signalées).
 **Radiateurs** : qui chauffe en ce moment (le `heating` du cœur, qui suit le relais, préchauffage compris), en tête de
 liste, avec trois actions rapides Confort / Éco / Arrêt — seulement celles que le thermostat déclare, avec ses libellés.
-Mêmes données que l'écran Thermostats (le flux partagé) : rien à relire en passant de l'un à l'autre. Les thermostats se créent et
+Mêmes données que l'écran Thermostats (le flux partagé) : rien à relire en passant de l'un à l'autre.
+**Prises** : interrupteurs et lumières par pièce (`GET /api/actuators`), basculés d'un appui sur la ligne. Ordre
+vérifié, pas d'état optimiste : la ligne attend la réponse, un ordre non confirmé le dit, puis l'écran se relit. Un
+radiateur de thermostat ne se commande pas d'ici, un équipement délesté se rallume après confirmation. Les thermostats se créent et
 se règlent sur le web ; ici on les suit et on les commande.
 
 | Dossier | Rôle |

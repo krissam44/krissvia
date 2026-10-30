@@ -15,8 +15,12 @@ public interface IConnexion
     string ApiKey { get; }
 }
 
-/// <summary>Résultat d'un ordre : <see cref="Motif"/> est à afficher tel quel en cas d'échec.</summary>
-public sealed record ResultatOrdre(bool Ok, string? Motif)
+/// <summary>
+/// Résultat d'un ordre : <see cref="Motif"/> est à afficher tel quel en cas d'échec. <see cref="NonConfirme"/> : accepté,
+/// mais l'appareil n'a pas montré le nouvel état dans le délai (<c>verification: not_confirmed</c>) — ni un succès, ni
+/// un échec, à dire comme tel.
+/// </summary>
+public sealed record ResultatOrdre(bool Ok, string? Motif, bool NonConfirme = false)
 {
     public static readonly ResultatOrdre Reussi = new(true, null);
 
@@ -83,6 +87,25 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
         }
     }
 
+    /// <summary>L'écran Actionneurs calculé par le serveur : par pièce, avec ce qui pilote déjà chaque appareil.</summary>
+    public async Task<(VueActionneurs? Vue, string? Erreur, bool ServeurAncien)> ActionneursAsync(CancellationToken ct = default)
+    {
+        var (json, erreur, absente) = await LireAsync("/api/actuators", ct);
+        if (erreur is not null) return (null, erreur, absente);
+        try
+        {
+            return VueActionneurs.Lire(json!.Value) is { } vue ? (vue, null, false) : (null, "Réponse vide du serveur.", false);
+        }
+        catch (JsonException ex)
+        {
+            return (null, MessageLisible(ex), false);
+        }
+    }
+
+    /// <summary>Allumer ou éteindre : un ordre vérifié, dont le résultat dit si l'appareil a suivi.</summary>
+    public Task<ResultatOrdre> AllumerAsync(string entityId, bool allumer, CancellationToken ct = default) =>
+        OrdreAsync(entityId, allumer ? StandardCommands.TurnOn : StandardCommands.TurnOff, null, ct);
+
     /// <summary>Teste l'adresse et la clé : null si tout va bien, sinon le motif.</summary>
     public async Task<string?> TesterAsync(CancellationToken ct = default) => (await EntitesAsync(ct)).Erreur;
 
@@ -112,9 +135,11 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
             if (await RefusAsync(reponse, route, ct) is ({ } refus, _)) return ResultatOrdre.Echec(refus);
 
             var corps = await reponse.Content.ReadFromJsonAsync<ReponseOrdre>(Thermostat.Json, ct);
-            return corps?.Outcome == "accepted"
-                ? ResultatOrdre.Reussi
-                : ResultatOrdre.Echec(corps?.Detail is { Length: > 0 } d ? d : $"Ordre refusé ({corps?.Outcome ?? "réponse vide"}).");
+            return corps?.Outcome != "accepted"
+                ? ResultatOrdre.Echec(corps?.Detail is { Length: > 0 } d ? d : $"Ordre refusé ({corps?.Outcome ?? "réponse vide"}).")
+                : corps.Verification == "not_confirmed"
+                    ? new ResultatOrdre(true, "l'appareil n'a pas confirmé l'ordre", NonConfirme: true)
+                    : ResultatOrdre.Reussi;
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
