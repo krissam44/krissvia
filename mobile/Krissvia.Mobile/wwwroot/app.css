@@ -245,3 +245,52 @@ h1:focus {
     background: #ffb30022;
     border-color: #ffb30066;
 }
+
+/* ── Écran Alarme ─────────────────────────────────────────────────────── */
+
+.kv-code {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 8px 0 14px;
+}
+
+    .kv-code span {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 2px solid var(--mud-palette-text-secondary);
+    }
+
+        .kv-code span.plein {
+            background: var(--mud-palette-text-primary);
+            border-color: var(--mud-palette-text-primary);
+        }
+
+.kv-clavier {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    max-width: 320px;
+    margin: 0 auto;
+}
+
+    .kv-clavier button {
+        height: 58px;
+        border-radius: 14px;
+        border: 1px solid color-mix(in srgb, var(--mud-palette-text-secondary) 35%, transparent);
+        background: var(--mud-palette-surface);
+        color: var(--mud-palette-text-primary);
+        font-family: inherit;
+        font-size: 1.5rem;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+        .kv-clavier button:active {
+            background: color-mix(in srgb, var(--mud-palette-primary) 25%, transparent);
+        }
+
+        .kv-clavier button:disabled {
+            opacity: .4;
+        }
