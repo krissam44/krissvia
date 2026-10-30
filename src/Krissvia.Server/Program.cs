@@ -105,6 +105,7 @@ builder.Services.AddSingleton<Krissvia.Climate.Presence.HomePresence>();   // pr
 builder.Services.AddSingleton<Krissvia.Climate.Presence.AbsenceService>();
 builder.Services.AddSingleton<Krissvia.Climate.Presence.IHomeAbsence>(sp => sp.GetRequiredService<Krissvia.Climate.Presence.AbsenceService>());
 builder.Services.AddSingleton<Krissvia.Core.Overview.RoomAverageEntities>();   // moyennes par pièce, sondes à part entière
+builder.Services.AddSingleton<Krissvia.Server.ActuatorSources>();   // ce qui pilote chaque interrupteur : écran Actionneurs et /api/actuators
 
 // Programmations des équipements (prises, chauffe-eau…) : même règle de créneaux que les thermostats.
 builder.Services.AddSingleton<DeviceScheduleEngine>();

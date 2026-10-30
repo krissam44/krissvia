@@ -205,3 +205,43 @@ h1:focus {
         color: var(--mud-palette-primary);
         font-weight: 600;
     }
+
+/* ── Écran Prises ─────────────────────────────────────────────────────── */
+
+.kv-actionneur {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 2px;
+    margin-top: 6px;
+    border: none;
+    border-top: 1px solid color-mix(in srgb, var(--mud-palette-text-secondary) 15%, transparent);
+    background: transparent;
+    color: var(--mud-palette-text-primary);
+    font-family: inherit;
+    font-size: .95rem;
+    cursor: pointer;
+}
+
+    .kv-actionneur:disabled {
+        cursor: default;
+        opacity: .75;
+    }
+
+.kv-etat {
+    min-width: 42px;
+    text-align: center;
+    font-size: .75rem;
+    font-weight: 700;
+    padding: 3px 6px;
+    border-radius: 10px;
+    color: var(--mud-palette-text-secondary);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-text-secondary) 35%, transparent);
+}
+
+.kv-actionneur.allume .kv-etat {
+    color: #ffb300;
+    background: #ffb30022;
+    border-color: #ffb30066;
+}

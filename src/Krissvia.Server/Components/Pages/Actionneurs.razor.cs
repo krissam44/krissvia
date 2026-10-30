@@ -1,5 +1,3 @@
-using Krissvia.Climate.DeviceSchedules;
-using Krissvia.Climate.LoadShedding;
 using Krissvia.Contracts;
 using Krissvia.Core.Commands;
 using Krissvia.Core.Live;
@@ -18,9 +16,7 @@ public partial class Actionneurs : IDisposable
     [Inject] private IEntityRegistry Registre { get; set; } = default!;
     [Inject] private IEntityStateReader Etats { get; set; } = default!;
     [Inject] private ICommandBus Commandes { get; set; } = default!;
-    [Inject] private ThermostatService Thermostats { get; set; } = default!;
-    [Inject] private DeviceScheduleService Programmations { get; set; } = default!;
-    [Inject] private LoadShedder Delesteur { get; set; } = default!;
+    [Inject] private ActuatorSources Sources { get; set; } = default!;
     [Inject] private LiveFeed Flux { get; set; } = default!;
     [Inject] private IDialogService Dialogues { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
@@ -56,18 +52,7 @@ public partial class Actionneurs : IDisposable
         _appareils = await Registre.ListDevicesAsync();
     }
 
-    private void Calculer()
-    {
-        var pilotes = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var t in Thermostats.List())
-            foreach (var radiateur in t.SwitchEntityIds) pilotes.TryAdd(radiateur, t.Name is { Length: > 0 } n ? n : t.Id);
-
-        var programmes = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var p in Programmations.List().Where(p => p.Enabled))
-            foreach (var prise in p.SwitchEntityIds) programmes.TryAdd(prise, p.Name);
-
-        _pieces = ActuatorOverview.Build(_entites, _appareils, Etats, pilotes, programmes, Delesteur.IsSwitchShed);
-    }
+    private void Calculer() => _pieces = Sources.Build(_entites, _appareils);
 
     private async Task BasculerAsync(Actuator a)
     {
