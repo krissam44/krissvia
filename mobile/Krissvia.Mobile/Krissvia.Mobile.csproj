@@ -14,8 +14,8 @@
 
         <ApplicationTitle>Krissvia</ApplicationTitle>
         <ApplicationId>com.chrissconsulting.krissvia</ApplicationId>
-        <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
-        <ApplicationVersion>1</ApplicationVersion>
+        <ApplicationDisplayVersion>0.2</ApplicationDisplayVersion>
+        <ApplicationVersion>2</ApplicationVersion>
 
         <WindowsPackageType>None</WindowsPackageType>
 
