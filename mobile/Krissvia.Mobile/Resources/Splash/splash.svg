@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Écran de démarrage : même maison + flamme que l'icône, sur fond transparent
+     (la couleur de fond vient de l'attribut Color de MauiSplashScreen dans le
+     .csproj). Le dessin est volontairement identique à l'icône pour la continuité
+     visuelle entre le lancement et l'application. -->
+<svg width="456" height="456" viewBox="0 0 456 456" version="1.1" xmlns="http://www.w3.org/2000/svg">
+
+    <path d="M228 140 L140 216 V302 a14 14 0 0 0 14 14 h148 a14 14 0 0 0 14 -14 V216 Z"
+          fill="none" stroke="#FFFFFF" stroke-width="22"
+          stroke-linejoin="round" stroke-linecap="round" />
+
+    <path d="M228 230
+             c 18 22 28 35 28 48
+             a 28 28 0 0 1 -56 0
+             c 0 -13 10 -26 28 -48 Z"
+          fill="#FFB300" />
+
+    <path d="M228 266
+             c 8 10 13 16 13 22
+             a 13 13 0 0 1 -26 0
+             c 0 -6 5 -12 13 -22 Z"
+          fill="#FFE082" />
+</svg>

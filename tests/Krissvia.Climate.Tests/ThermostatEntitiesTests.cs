@@ -176,6 +176,60 @@ public class ThermostatEntitiesTests
         Assert.Equal(new TpiSettings().CoastingLow, etat.GetProperty("coasting_low").GetDouble());
     }
 
+    /// <summary>
+    /// L'appli mobile lit cet état sans DTO commun avec le cœur : un champ renommé ici la laisserait afficher « — » sans
+    /// que rien ne casse. Ce test la fait lire ce que le cœur publie vraiment.
+    /// </summary>
+    [Fact]
+    public async Task L_appli_mobile_lit_l_etat_et_les_modes_publies()
+    {
+        var b = new Banc();
+        await b.AjouterAsync();
+        b.Etats.Update(Sonde, JsonSerializer.SerializeToElement(18.4));
+        b.Etats.Update(Humidite, JsonSerializer.SerializeToElement(74.0));
+        await b.PasserAsync();
+        await b.OrdonnerAsync(StandardCommands.SetSchedule, new { active = true });
+        await b.PasserAsync();
+
+        var entite = (await b.Registre.GetAsync(Entite))!;
+        var message = JsonSerializer.Serialize(new
+        {
+            type = "entities",
+            entities = new[]
+            {
+                new
+                {
+                    entity_id = Entite, name = entite.DisplayName, kind = "climate", enabled = true, missing = false,
+                    extra = JsonSerializer.Deserialize<JsonElement>(entite.ExtraJson!),
+                    state = new { value = b.Etat(), available = true, measured_at = b.Horloge.GetUtcNow() },
+                },
+            },
+        });
+        var live = new Krissvia.Mobile.Client.ThermostatsEnDirect();
+
+        Assert.True(live.Appliquer(message));
+
+        // Le planning actif a ramené le mode par défaut (éco) : on compare à ce qui est publié, pas à une valeur supposée.
+        var etat = b.Etat();
+        var t = Assert.Single(live.Thermostats);
+        Assert.Equal("Salon", t.Nom);
+        Assert.Equal(18.4, t.Temperature);
+        Assert.Equal(74, t.Humidite);
+        Assert.Equal(etat.GetProperty("target").GetDouble(), t.Consigne);
+        Assert.Equal(etat.GetProperty("mode").GetString(), t.Mode);
+        Assert.Equal(etat.GetProperty("status").GetString(), t.Statut);
+        Assert.Equal(etat.GetProperty("status_label").GetString(), t.LibelleStatut);
+        Assert.Equal(etat.GetProperty("heating").GetBoolean(), t.Chauffe);
+        Assert.Equal(etat.GetProperty("power").GetDouble(), t.Puissance);
+        Assert.True(t.PlanningActif);
+        Assert.NotNull(t.Mode);
+        Assert.NotNull(t.LibelleStatut);
+        Assert.Equal(1, t.Radiateurs);
+        Assert.Equal(ThermostatEntities.TargetStep, t.PasConsigne);
+        Assert.Equal(["comfort", "comfort1", "comfort2", "eco", "frost_protection", "off"], t.Modes.Select(m => m.Id));
+        Assert.Equal("Confort −1", t.Modes[1].Label);
+    }
+
     [Fact]
     public async Task Une_fenetre_ouverte_se_voit_dans_l_etat_mais_pas_un_delestage()
     {

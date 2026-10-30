@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Fond de l'icône : bleu ardoise profond, repris de la surface sombre de
+     l'application web (#1e1e2d) pour garder une identité commune. Léger dégradé
+     pour éviter l'aspect plat aux grandes tailles (tablette, boutique). -->
+<svg width="456" height="456" viewBox="0 0 456 456" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="fond" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2A2A3E" />
+            <stop offset="100%" stop-color="#16161F" />
+        </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="456" height="456" fill="url(#fond)" />
+</svg>

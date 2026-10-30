@@ -1,0 +1,54 @@
+@page "/"
+@implements IDisposable
+
+<PageTitle>Thermostats</PageTitle>
+
+<div style="display:flex;align-items:center;gap:8px;">
+    <MudText Typo="Typo.h6" Style="font-weight:400;">Thermostats</MudText>
+    <MudSpacer />
+    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" aria-label="Actualiser" OnClick="Actualiser" />
+</div>
+
+@if (!Flux.Connecte && Live.Recu)
+{
+    @* Hors ligne : les cartes restent, mais on dit qu'elles ne sont plus à jour, et pourquoi. *@
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="my-2">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="flex:1;min-width:0;">Valeurs plus à jour. @(Flux.Erreur ?? "Reconnexion…")</span>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Inherit"
+                       StartIcon="@Icons.Material.Filled.Settings" OnClick="@(() => Nav.NavigateTo("/reglages"))">Connexion</MudButton>
+        </div>
+    </MudAlert>
+}
+
+@if (!Live.Recu)
+{
+    @if (Flux.Erreur is { } erreur)
+    {
+        @* La sortie de secours est dans l'alerte : c'est là qu'on regarde quand l'adresse ou la clé est fausse. *@
+        <MudAlert Severity="Severity.Error" Dense="true" Class="my-2">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="flex:1;min-width:0;">@erreur</span>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Inherit"
+                           StartIcon="@Icons.Material.Filled.Settings" OnClick="@(() => Nav.NavigateTo("/reglages"))">Connexion</MudButton>
+            </div>
+        </MudAlert>
+    }
+    else
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2" />
+    }
+}
+else if (_cartes.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Dense="true" Class="my-2">Aucun thermostat. Ils se créent depuis l'interface web.</MudAlert>
+}
+
+@foreach (var thermostat in _cartes)
+{
+    var t = thermostat;
+    <CarteThermostat @key="t.EntityId" Thermostat="t" Occupe="@_occupes.Contains(t.EntityId)"
+                     OnMode="@(mode => OrdonnerAsync(t, a => a.ChoisirModeAsync(t.EntityId, mode)))"
+                     OnPas="@(delta => OrdonnerAsync(t, a => a.AjusterConsigneAsync(t.EntityId, delta)))"
+                     OnPlanning="@(actif => OrdonnerAsync(t, a => a.ActiverPlanningAsync(t.EntityId, actif)))" />
+}

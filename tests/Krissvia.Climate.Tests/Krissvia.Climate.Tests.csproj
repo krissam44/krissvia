@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Krissvia.Climate\Krissvia.Climate.csproj" />
+    <!-- Contrat avec l'appli mobile : elle lit l'état publié par ThermostatEntities, sans DTO commun. -->
+    <ProjectReference Include="..\..\src\Krissvia.Mobile.Client\Krissvia.Mobile.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>

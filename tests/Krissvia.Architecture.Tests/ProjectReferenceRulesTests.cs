@@ -21,6 +21,8 @@ public class ProjectReferenceRulesTests
         ["Krissvia.Sdk.Mqtt"] = [],
         // Ce que référence un widget Blazor : rien d'autre de Krissvia (WIDGETS.md §2.2).
         ["Krissvia.Widgets.Blazor"] = [],
+        // Client de l'appli mobile : un tiers de l'API publique, comme un widget. Le contrat pour les noms d'ordres.
+        ["Krissvia.Mobile.Client"] = ["Krissvia.Contracts"],
         ["Krissvia.Server"] =
         [
             "Krissvia.Contracts", "Krissvia.Core", "Krissvia.Climate",

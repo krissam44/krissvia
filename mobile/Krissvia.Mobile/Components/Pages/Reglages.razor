@@ -1,0 +1,43 @@
+@page "/reglages"
+
+<PageTitle>Connexion</PageTitle>
+
+<MudText Typo="Typo.h6" Class="mb-3">Connexion à Krissvia</MudText>
+
+<MudTextField @bind-Value="_adresse" Label="Adresse du serveur" Placeholder="http://192.168.1.10:5000"
+              Variant="Variant.Outlined" Class="mb-3" InputType="InputType.Url"
+              HelperText="Sans « /api » à la fin. Sans http(s)://, http est pris pour une adresse du réseau local."
+              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Dns" />
+
+<MudTextField @bind-Value="_cle" Label="Clé d'API" Variant="Variant.Outlined" Class="mb-1"
+              InputType="@(_visible ? InputType.Text : InputType.Password)"
+              Adornment="Adornment.End"
+              AdornmentIcon="@(_visible ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+              OnAdornmentClick="@(() => _visible = !_visible)"
+              HelperText="La valeur de Api:Key (ou Api__Key) sur le serveur." />
+
+<div style="display:flex;gap:8px;margin-top:16px;">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+               StartIcon="@Icons.Material.Filled.Save" Disabled="@_occupe" OnClick="EnregistrerAsync">
+        Enregistrer
+    </MudButton>
+    <MudButton Variant="Variant.Outlined" FullWidth="true"
+               StartIcon="@Icons.Material.Filled.NetworkCheck" Disabled="@_occupe" OnClick="TesterAsync">
+        Tester
+    </MudButton>
+</div>
+
+@if (_occupe)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-3" />
+}
+
+@if (_resultat is not null)
+{
+    <MudAlert Severity="@(_succes ? Severity.Success : Severity.Error)" Dense="true" Class="mt-3">@_resultat</MudAlert>
+}
+
+<MudText Typo="Typo.caption" Class="mt-4" Style="color:var(--mud-palette-text-secondary);display:block;">
+    La clé est gardée dans le coffre sécurisé de l'appareil, jamais en clair. Les thermostats se créent et se règlent
+    depuis l'interface web ; ici, on les suit et on les commande.
+</MudText>
