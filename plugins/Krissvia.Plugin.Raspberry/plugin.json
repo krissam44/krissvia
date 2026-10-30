@@ -1,7 +1,7 @@
 {
   "id": "raspberry",
   "name": "Raspberry (santé)",
-  "description": "Santé de la machine qui fait tourner Krissvia : température et occupation du processeur, mémoire, disque, durée de fonctionnement ; sous-tension et bridage sur un Raspberry Pi.",
+  "description": "Santé de la machine qui fait tourner Krissvia : processeur, mémoire, swap, disque, taille de la base, état et mémoire des services systemd (pour voir une fuite) ; alertes de surchauffe, mémoire ou disque pleins, service arrêté ; sous-tension et bridage sur un Raspberry Pi.",
   "runtime": "python",
   "executable": "raspberry.py",
   "settings": {
@@ -13,7 +13,12 @@
         "properties": {
           "Nom": { "type": "string", "title": "Nom de la machine", "description": "Vide : son nom réseau (hostname)." },
           "IntervalSeconds": { "type": "integer", "title": "Relevé toutes les (s)", "default": 30, "minimum": 5, "maximum": 600 },
-          "Disque": { "type": "string", "title": "Disque surveillé", "description": "Un chemin sur le disque à surveiller ; vide : la racine « / ». Mettre celui de la base de Krissvia si elle est sur un autre disque." }
+          "Disque": { "type": "string", "title": "Disque surveillé", "description": "Un chemin sur le disque à surveiller ; vide : la racine « / ». Mettre celui de la base de Krissvia si elle est sur un autre disque." },
+          "Services": { "type": "string", "title": "Services surveillés", "default": "krissvia,mosquitto,zigbee2mqtt", "description": "Unités systemd, séparées par des virgules : état (alerte s'il s'arrête) et mémoire de chacun, tous ses processus compris. Un service absent de la machine est ignoré." },
+          "Base": { "type": "string", "title": "Base surveillée", "description": "Vide : celle de Krissvia (Database__Path), sinon /var/lib/krissvia/krissvia.db." },
+          "SeuilTemperature": { "type": "integer", "title": "Surchauffe à partir de (°C)", "default": 75, "minimum": 40, "maximum": 95, "description": "Un Raspberry Pi 4 bride vers 80 °C. Fin d'alerte 5 °C plus bas." },
+          "SeuilMemoire": { "type": "integer", "title": "Mémoire pleine à partir de (%)", "default": 90, "minimum": 50, "maximum": 100, "description": "Fin d'alerte 5 points plus bas." },
+          "SeuilDisque": { "type": "integer", "title": "Disque plein à partir de (%)", "default": 85, "minimum": 50, "maximum": 100, "description": "Fin d'alerte 2 points plus bas." }
         }
       }
     }
