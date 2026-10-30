@@ -76,6 +76,9 @@ public sealed record Thermostat
     public string? LibelleStatut { get; init; }
     public ProchaineBascule? ProchaineBascule { get; init; }
 
+    /// <summary>Le libellé du mode suivi, celui du serveur (« Confort −1 »).</summary>
+    public string? LibelleMode => Mode is null ? null : Modes.FirstOrDefault(m => m.Id == Mode)?.Label ?? Mode;
+
     /// <summary>Le mode à montrer sélectionné : aucun quand la consigne est ajustée à la main, comme sur le web.</summary>
     public string? ModeActif => ConsigneAjustee ? null : Mode;
 
