@@ -34,12 +34,16 @@ class KvAlarme extends KvWidget {
         .code { display: flex; justify-content: center; gap: 6px; min-height: 14px; margin: 2px 0; }
         .code span { width: 10px; height: 10px; border-radius: 50%; background: var(--kv-text, #222); }
         .code .vide { font-size: .72rem; color: var(--kv-text-secondary, #777); width: auto; height: auto; background: none; }
-        .pave { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-        .touche { padding: 7px 0; border-radius: 8px; font-size: 1rem; font-weight: 500; color: var(--kv-text, #222);
+        /* Le pavé est le seul élément qui cède quand la carte manque de hauteur : un message de refus, une erreur ou un
+           décompte en plus rétrécissent les touches (34 → 22 px) au lieu de pousser « Armer » hors de la carte. */
+        .carte > .pave { flex: 0 1 auto; min-height: calc(4 * 22px + 3 * 5px); }   /* jamais une rangée sous le bouton */
+        .pave { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: minmax(22px, 34px); gap: 5px; }
+        .etat .detail, .erreur { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+        .touche { padding: 0; min-height: 0; border-radius: 8px; font-size: 1rem; font-weight: 500; color: var(--kv-text, #222);
                   border: 1px solid color-mix(in srgb, var(--kv-text-secondary, #888) 30%, transparent); background: var(--kv-surface, transparent); }
         .touche:hover { background: color-mix(in srgb, var(--kv-text-secondary, #888) 12%, transparent); }
         .touche .ms { font-size: 1.1rem; }
-        .action { width: 100%; padding: 8px 0; border: 0; border-radius: 8px; font-weight: 700; font-size: .85rem; color: #fff;
+        .action { margin-top: auto; width: 100%; padding: 8px 0; border: 0; border-radius: 8px; font-weight: 700; font-size: .85rem; color: #fff;
                   display: flex; align-items: center; justify-content: center; gap: 6px; }
         .action[disabled], .touche[disabled] { opacity: .5; cursor: progress; }
         .erreur { text-align: center; }`;
@@ -72,33 +76,40 @@ class KvAlarme extends KvWidget {
             ? `<button class="action" data-commande="arm" style="background:${BLEU}"${occupe}>${icone("lock")}Armer</button>`
             : `<button class="action" data-commande="disarm" style="background:${ROUGE}"${occupe}>${icone("lock_open")}Désarmer</button>`;
 
+        // Le bouton vient en dernier : seul le pavé cède de la hauteur, le bouton reste au bas de la carte.
         return `<div class="carte">${entete}${this.#etat(v, aspect)}
             <div class="code" aria-label="${this.#code.length} chiffre(s) tapé(s)">${points}</div>
-            <div class="pave">${touches}</div>${action}
-            <div class="erreur">${esc(this.#erreur ?? "")}</div></div>`;
+            <div class="pave">${touches}</div>${action}</div>`;
     }
 
     #points() {
         return this.#code.length > 0 ? "<span></span>".repeat(this.#code.length) : `<span class="vide">Tapez votre code</span>`;
     }
 
-    /** La ligne d'état : décompte, capteur en cause et heure du déclenchement, ou dernier refus d'armement. */
+    /**
+     * La ligne d'état : décompte, capteur en cause et heure du déclenchement, ou dernier refus d'armement. Une erreur
+     * (code faux, armement refusé) PREND LA PLACE de la ligne de détail au lieu de s'y ajouter — elle répète souvent le
+     * dernier refus, et chaque ligne en plus se paie en hauteur de touches. Le grand décompte, lui, reste.
+     */
     #etat(v, aspect) {
         const heure = i => new Date(i).toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+        const detail = (html, style = "") => this.#erreur
+            ? `<div class="erreur" title="${esc(this.#erreur)}">${esc(this.#erreur)}</div>`
+            : `<div class="detail"${style}>${html}</div>`;
         switch (v.state) {
             case "exit_delay":
-                return `<div class="etat"><div class="grand" style="color:${aspect.couleur}">${v.countdown} s</div><div class="detail">Armement : sortez et refermez</div></div>`;
+                return `<div class="etat"><div class="grand" style="color:${aspect.couleur}">${v.countdown} s</div>${detail("Armement : sortez et refermez")}</div>`;
             case "entry_delay":
-                return `<div class="etat"><div class="grand" style="color:${aspect.couleur}">${v.countdown} s</div><div class="detail">${esc(v.sensor ?? "")} : tapez votre code</div></div>`;
+                return `<div class="etat"><div class="grand" style="color:${aspect.couleur}">${v.countdown} s</div>${detail(`${esc(v.sensor ?? "")} : tapez votre code`)}</div>`;
             case "triggered":
                 return `<div class="etat declenchee"><div class="grand" style="color:${aspect.couleur}">Intrusion</div>
-                    <div class="detail">${esc(v.sensor ?? "")}${v.triggered_at ? `, ${heure(v.triggered_at)}` : ""}${v.ringing ? " — sirène" : ""}</div></div>`;
+                    ${detail(`${esc(v.sensor ?? "")}${v.triggered_at ? `, ${heure(v.triggered_at)}` : ""}${v.ringing ? " — sirène" : ""}`)}</div>`;
             case "armed":
-                return `<div class="etat"><div class="detail">Maison sous surveillance</div></div>`;
+                return `<div class="etat">${detail("Maison sous surveillance")}</div>`;
             default:
                 return v.faults && v.faults !== "OK"
-                    ? `<div class="etat"><div class="detail" style="color:${ORANGE}">Dernier refus : ${esc(v.faults)}</div></div>`
-                    : `<div class="etat"><div class="detail">Prête à être armée</div></div>`;
+                    ? `<div class="etat">${detail(`Dernier refus : ${esc(v.faults)}`, ` style="color:${ORANGE}" title="${esc(v.faults)}"`)}</div>`
+                    : `<div class="etat">${detail("Prête à être armée")}</div>`;
         }
     }
 
@@ -116,16 +127,15 @@ class KvAlarme extends KvWidget {
         if (touche === "effacer") this.#code = "";
         else if (touche === "retour") this.#code = this.#code.slice(0, -1);
         else if (this.#code.length < 12) this.#code += touche;
-        this.#erreur = null;
         clearTimeout(this.#oubli);
-        this.#oubli = setTimeout(() => { this.#code = ""; this.planifier(); }, OUBLI_MS);
+        this.#oubli = setTimeout(() => { this.#code = ""; this.#erreur = null; this.planifier(); }, OUBLI_MS);
 
-        // Un chiffre ne redessine que les points : rien ne bouge sous le doigt pendant qu'on tape.
-        const code = this.#ombre?.querySelector(".code"), erreur = this.#ombre?.querySelector(".erreur");
-        if (code && erreur) {
+        // Un chiffre ne redessine que les points : rien ne bouge sous le doigt pendant qu'on tape. L'erreur reste donc
+        // affichée jusqu'à l'ordre suivant — l'effacer ici changerait la hauteur au-dessus du pavé.
+        const code = this.#ombre?.querySelector(".code");
+        if (code) {
             code.innerHTML = this.#points();
             code.setAttribute("aria-label", `${this.#code.length} chiffre(s) tapé(s)`);
-            erreur.textContent = "";
         } else {
             this.planifier();
         }
