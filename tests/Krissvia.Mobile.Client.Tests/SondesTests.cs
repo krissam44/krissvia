@@ -65,11 +65,23 @@ public class SondesTests
     {
         var api = new KrissviaApi(new HttpClient(new Serveur(HttpStatusCode.NotFound, "")), new KrissviaApiTests.Connexion("http://192.168.1.10:5000", "k"));
 
-        var (vue, erreur) = await api.SondesAsync();
+        var (vue, erreur, ancien) = await api.SondesAsync();
 
         Assert.Null(vue);
+        Assert.True(ancien);
         Assert.Contains("/api/sensors", erreur, StringComparison.Ordinal);
         Assert.Contains("à mettre à jour", erreur, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Une_cle_refusee_n_est_pas_un_serveur_ancien()
+    {
+        var api = new KrissviaApi(new HttpClient(new Serveur(HttpStatusCode.Unauthorized, "")), new KrissviaApiTests.Connexion("http://192.168.1.10:5000", "k"));
+
+        var (_, erreur, ancien) = await api.SondesAsync();
+
+        Assert.False(ancien);
+        Assert.StartsWith("Clé d'API refusée", erreur, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -77,9 +89,10 @@ public class SondesTests
     {
         var api = new KrissviaApi(new HttpClient(new Serveur(HttpStatusCode.OK, Reponse)), new KrissviaApiTests.Connexion("http://192.168.1.10:5000", "k"));
 
-        var (vue, erreur) = await api.SondesAsync();
+        var (vue, erreur, ancien) = await api.SondesAsync();
 
         Assert.Null(erreur);
+        Assert.False(ancien);
         Assert.Equal(3, vue!.Sondes.Count);
     }
 }

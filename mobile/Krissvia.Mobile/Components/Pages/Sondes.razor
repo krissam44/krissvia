@@ -10,7 +10,16 @@
     <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" aria-label="Actualiser" Disabled="@_charge" OnClick="ChargerAsync" />
 </div>
 
-@if (_erreur is not null)
+@if (_serveurAncien)
+{
+    @* La connexion est bonne : seul le serveur est en retard sur l'appli. Pas de bouton Connexion, qui ferait
+       chercher la panne dans l'adresse ou la clé. *@
+    <MudAlert Severity="Severity.Info" Dense="true" Class="my-2">
+        Cet écran demande une version plus récente de Krissvia sur le serveur (route /api/sensors). Les autres écrans
+        fonctionnent ; republiez le serveur pour celui-ci.
+    </MudAlert>
+}
+else if (_erreur is not null)
 {
     @* Les dernières valeurs restent affichées : on dit seulement qu'elles ne sont plus à jour, et pourquoi. *@
     <MudAlert Severity="@(_vue is null ? Severity.Error : Severity.Warning)" Dense="true" Class="my-2">
@@ -24,7 +33,7 @@
 
 @if (_vue is null)
 {
-    @if (_erreur is null)
+    @if (_erreur is null && !_serveurAncien)
     {
         <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2" />
     }
