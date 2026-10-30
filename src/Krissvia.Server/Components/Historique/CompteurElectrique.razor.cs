@@ -13,7 +13,6 @@ public partial class CompteurElectrique
 {
     private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-FR");
     private const string Jaune = "#ffb300", Vert = "#66bb6a", Bleu = "#42a5f5", Violet = "#ce93d8";
-    private static readonly TimeSpan Pas = TimeSpan.FromMinutes(5);
     private const int Jours = 30;
 
     [Parameter, EditorRequired] public Compteur Compteur { get; set; } = default!;
@@ -59,17 +58,16 @@ public partial class CompteurElectrique
         var zone = Horloge.LocalTimeZone;
         var maintenant = Horloge.GetUtcNow();
         var aujourdhui = EnergyDays.Jour(maintenant, zone);
-        var minuit = EnergyDays.Midnight(aujourdhui, zone);
 
         // Depuis minuit et les 30 derniers jours : le même calcul que GET /api/energy (LectureCompteur).
         var conso = await LectureCompteur.LireAsync(Compteur, Jours, Historique, Etats, Horloge);
         _depuisMinuit = conso.DepuisMinuit;
 
         // La puissance du jour, de minuit à maintenant, par cases de 5 min.
-        _tempsJour = [.. Enumerable.Range(0, (int)Math.Ceiling((maintenant - minuit) / Pas)).Select(i => minuit + i * Pas)];
+        _tempsJour = LectureCompteur.GrilleDuJour(Horloge);
         if (Compteur.Puissance is { } puissance)
         {
-            var cases = HistoryCurve.FromPoints(await Historique.ReadAsync(puissance.EntityId, minuit, maintenant), _tempsJour, Pas, maintenant);
+            var cases = await LectureCompteur.PuissanceDuJourAsync(Compteur, _tempsJour, Historique, Horloge);
             _jourVide = cases.All(c => c.Mean is null);
             _serieJour = [new SerieCourbe(puissance.Unit == "VA" ? "Puissance apparente" : "Puissance", [.. cases.Select(c => c.Mean)], Jaune,
                 StyleSerie.Ligne, [.. cases.Select(c => c.Min)], [.. cases.Select(c => c.Max)])];

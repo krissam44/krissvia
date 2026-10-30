@@ -9,14 +9,17 @@ Mêmes données que l'écran Thermostats (le flux partagé) : rien à relire en 
 **Prises** : interrupteurs et lumières par pièce (`GET /api/actuators`), basculés d'un appui sur la ligne. Ordre
 vérifié, pas d'état optimiste : la ligne attend la réponse, un ordre non confirmé le dit, puis l'écran se relit. Un
 radiateur de thermostat ne se commande pas d'ici, un équipement délesté se rallume après confirmation.
-**Alarme** : l'état de la centrale en grand (décompte de sortie ou d'entrée, capteur et heure d'un déclenchement), les
+**Alarme** : l'état de la centrale sur une ligne (décompte de sortie ou d'entrée, capteur et heure d'un déclenchement), les
 défauts qui empêcheraient d'armer — affichés AVANT de taper son code —, le blocage après trois codes faux, et un clavier
 qui arme ou désarme **par code** (`/api/alarm/arm|disarm`, le code dans le corps : la clé d'API ne suffit pas). Le code
 ne s'affiche jamais et s'efface à l'envoi ou après 30 s. Relu chaque seconde pendant un décompte, toutes les 3 s sinon.
 Aucune route ajoutée : l'écran marche avec le serveur actuel. Un code faux est un 403, à ne pas confondre avec une
-clé d'API refusée.
+clé d'API refusée. Sous un trait, la carte **Présence** (`GET /api/absence`, relue toutes les 10 s) : ce qui
+s'applique aux thermostats et qui en décide, le forçage Automatique / Présent / Absent (`PUT /api/absence/forced`,
+sans état optimiste), les appareils suivis et une absence programmée à venir.
 **Énergie** : une carte par compteur (`GET /api/energy`) — puissance et tension du moment, consommation depuis minuit,
-coût si le prix du kWh est renseigné sur le web, et les sept derniers jours en barres. Calcul du serveur, partagé avec
+coût si le prix du kWh est renseigné sur le web, la courbe de puissance du jour (minuit à minuit, moyenne et
+étendue min-max par 5 min, tracé calculé par `CourbeJour`), et les sept derniers jours en barres. Calcul du serveur, partagé avec
 l'écran Électricité (`LectureCompteur`). Les thermostats se créent et
 se règlent sur le web ; ici on les suit et on les commande.
 

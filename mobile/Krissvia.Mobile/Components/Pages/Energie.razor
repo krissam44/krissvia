@@ -62,6 +62,27 @@ else
                     }
                 </div>
 
+                @* La puissance du jour, de minuit à minuit : où en est la journée, et ses pointes. *@
+                @if (Tracer(c) is { Vide: false } courbe)
+                {
+                    <div class="kv-legende" style="margin-top:14px;">AUJOURD'HUI (@(c.UnitePuissance ?? "W"))</div>
+                    <svg class="kv-courbe" viewBox="0 0 @(G + L) @(H + 16)" role="img" aria-label="Puissance du jour">
+                        @foreach (var g in courbe.Graduations)
+                        {
+                            <line class="grille" x1="@G" x2="@(G + L)" y1="@N(g.Y + 4)" y2="@N(g.Y + 4)" />
+                            @Texte(G - 4, g.Y + 7, "end", g.Libelle)
+                        }
+                        @for (var h = 0; h <= 24; h += 6)
+                        {
+                            @Texte(G + h / 24.0 * L, H + 15, h == 0 ? "start" : h == 24 ? "end" : "middle", $"{h}h")
+                        }
+                        <g transform="translate(@G 4)">
+                            <path d="@courbe.Bande" fill="#ffb300" fill-opacity=".18" stroke="none" />
+                            <path d="@courbe.Ligne" fill="none" stroke="#ffb300" stroke-width="1.4" stroke-linejoin="round" />
+                        </g>
+                    </svg>
+                }
+
                 @* Les jours, du plus récent au plus ancien, en barres à l'échelle du plus fort. *@
                 <div class="kv-legende" style="margin-top:14px;margin-bottom:4px;">@Jours DERNIERS JOURS</div>
                 @foreach (var jour in c.Jours.Reverse())

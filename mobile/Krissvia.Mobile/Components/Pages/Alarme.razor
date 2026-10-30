@@ -32,25 +32,27 @@ else
     var e = _etat;
     var couleur = Couleur(e);
 
-    @* L'état, en grand : c'est la seule chose qu'on vient chercher. *@
+    @* L'état, sur une ligne : assez grand pour se lire d'un coup d'œil, assez court pour laisser la place à la présence. *@
     <MudCard Elevation="2" Class="mb-3" Style="@($"border-radius:12px;border:1px solid {couleur}66;background:{couleur}14;")">
-        <MudCardContent Class="pa-4" Style="text-align:center;">
-            <MudIcon Icon="@Icone(e)" Style="@($"font-size:3rem;color:{couleur};")" />
-            <div style="@($"font-size:1.5rem;font-weight:700;color:{couleur};")">@e.Libelle</div>
-            @if (e.EnDecompte)
-            {
-                <div style="@($"font-size:3rem;font-weight:800;line-height:1.1;color:{couleur};")">@e.Decompte s</div>
-            }
+        <MudCardContent Class="py-2 px-3">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <MudIcon Icon="@Icone(e)" Style="@($"font-size:2rem;color:{couleur};")" />
+                <div style="@($"flex:1;min-width:0;font-size:1.25rem;font-weight:700;color:{couleur};")">@e.Libelle</div>
+                @if (e.EnDecompte)
+                {
+                    <div style="@($"font-size:1.6rem;font-weight:800;color:{couleur};")">@e.Decompte s</div>
+                }
+            </div>
             @if (e.Etat == "triggered")
             {
-                <div class="kv-legende" style="font-size:.85rem;">
+                <div class="kv-legende" style="font-size:.8rem;">
                     @(e.Capteur ?? "Capteur inconnu")@(e.DeclencheeA is { } quand ? $" · {quand.ToLocalTime():dd/MM HH:mm}" : "")
                     @(e.Sonne ? " · sirène en marche" : "")
                 </div>
             }
             @if (!e.Activee)
             {
-                <div class="kv-legende" style="font-size:.85rem;">L'alarme est désactivée dans ses réglages (interface web).</div>
+                <div class="kv-legende" style="font-size:.8rem;">L'alarme est désactivée dans ses réglages (interface web).</div>
             }
         </MudCardContent>
     </MudCard>
@@ -95,7 +97,7 @@ else
         }
     </div>
 
-    <MudButton Variant="Variant.Filled" FullWidth="true" Size="Size.Large" Class="mt-3"
+    <MudButton Variant="Variant.Filled" FullWidth="true" Size="Size.Medium" Class="mt-3"
                Color="@(e.Desarmee ? Color.Error : Color.Success)"
                StartIcon="@(e.Desarmee ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
                Disabled="@(ClavierInactif || _code.Length < 4)" OnClick="EnvoyerAsync">
@@ -107,3 +109,8 @@ else
         <MudAlert Severity="@(_resultat.Ok ? Severity.Success : Severity.Error)" Dense="true" Class="mt-3">@_resultat.Message</MudAlert>
     }
 }
+
+@* La présence, sous un trait : armer en partant et voir la maison se vider vont ensemble. Affichée même si l'alarme
+   ne répond pas : elle a sa propre route. *@
+<hr class="kv-separateur" />
+<CartePresence />

@@ -162,6 +162,43 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
         }
     }
 
+    /// <summary>La présence détectée et l'absence qui s'applique aux thermostats (<c>GET /api/absence</c>).</summary>
+    public async Task<(EtatPresence? Etat, string? Erreur)> PresenceAsync(CancellationToken ct = default)
+    {
+        var (json, erreur, _) = await LireAsync("/api/absence", ct);
+        if (erreur is not null) return (null, erreur);
+        try
+        {
+            return EtatPresence.Lire(json!.Value) is { } etat ? (etat, null) : (null, "Réponse vide du serveur.");
+        }
+        catch (JsonException ex)
+        {
+            return (null, MessageLisible(ex));
+        }
+    }
+
+    /// <summary>
+    /// Forcer présent ou absent, ou rendre la main à la période et à la détection (<c>PUT /api/absence/forced</c>,
+    /// <c>{"away": true | false | null}</c>). Le forçage l'emporte sur tout : les thermostats suivent aussitôt.
+    /// </summary>
+    public async Task<ResultatOrdre> ForcerAbsenceAsync(Forcage forcage, CancellationToken ct = default)
+    {
+        if (connexion.BaseUrl.Length == 0) return ResultatOrdre.Echec("Serveur non configuré.");
+        try
+        {
+            const string route = "/api/absence/forced";
+            using var requete = Requete(HttpMethod.Put, route);
+            bool? away = forcage switch { Forcage.Absent => true, Forcage.Present => false, _ => null };
+            requete.Content = JsonContent.Create(new { away });
+            using var reponse = await http.SendAsync(requete, ct);
+            return await RefusAsync(reponse, route, ct) is ({ } refus, _) ? ResultatOrdre.Echec(refus) : ResultatOrdre.Reussi;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            return ResultatOrdre.Echec(MessageLisible(ex));
+        }
+    }
+
     private static string Majuscule(string texte) => texte.Length == 0 ? texte : char.ToUpperInvariant(texte[0]) + texte[1..];
 
     /// <summary>Teste l'adresse et la clé : null si tout va bien, sinon le motif.</summary>

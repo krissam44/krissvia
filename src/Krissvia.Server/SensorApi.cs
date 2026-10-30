@@ -23,22 +23,25 @@ internal static class SensorApi
             Results.Json(ActuatorOverviewView.From(sources.Build(await registre.ListAsync(ct), await registre.ListDevicesAsync(ct))),
                 ActuatorOverviewView.Json));
 
-        // ?days=1..30 (7 par défaut) : la consommation jour par jour, aujourd'hui compris.
+        // ?days=1..30 (7 par défaut) : la consommation jour par jour, aujourd'hui compris, et la courbe de puissance du jour.
         api.MapGet("/energy", async (int? days, IEntityRegistry registre, IHistoryRepository historique, IEntityStateReader etats,
             ElectricityPrice prix, TimeProvider horloge, CancellationToken ct) =>
         {
             var jours = Math.Clamp(days ?? 7, 1, 30);
             var kwh = await prix.GetAsync(ct);
             var compteurs = Components.Historique.Compteur.Trouver(await registre.ListAsync(ct), await registre.ListDevicesAsync(ct));
+            var grille = Components.Historique.LectureCompteur.GrilleDuJour(horloge);
             var vues = new List<EnergyMeterView>();
             foreach (var c in compteurs)
             {
                 var conso = await Components.Historique.LectureCompteur.LireAsync(c, jours, historique, etats, horloge, ct);
+                var courbe = await Components.Historique.LectureCompteur.PuissanceDuJourAsync(c, grille, historique, horloge, ct);
                 vues.Add(new EnergyMeterView(c.Nom, c.Index.EntityId,
                     c.Puissance is { } p ? Components.Historique.LectureCompteur.Nombre(etats, p.EntityId) : null, c.Puissance?.Unit,
                     c.Tension is { } t ? Components.Historique.LectureCompteur.Nombre(etats, t.EntityId) : null,
                     conso.DepuisMinuit, conso.DepuisMinuit * kwh,
-                    [.. conso.Jours.Select(j => new EnergyDayView(j.Day, j.Kwh, j.Kwh * kwh, j.PeakPower))]));
+                    [.. conso.Jours.Select(j => new EnergyDayView(j.Day, j.Kwh, j.Kwh * kwh, j.PeakPower))],
+                    [.. courbe.Select(p => new EnergyPowerPointView(p.At, p.Mean, p.Min, p.Max))]));
             }
             return Results.Json(new EnergyOverviewView(kwh, vues), EnergyOverviewView.Json);
         });

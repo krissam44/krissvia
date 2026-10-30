@@ -27,11 +27,16 @@ function couleurAmbiante(t) {
     return t < 14 ? "#42a5f5" : t < 18 ? "#66bb6a" : t < 22 ? "#ffa726" : "#ef5350";
 }
 
+/** Une température en grand, suivie de son « ° » ; rien à suffixer quand la valeur manque. */
+const degres = t => typeof t === "number" ? `${nombre(t)}<span class="deg">°</span>` : nombre(t);
+
 const ms = (nom, style = "") => `<span class="ms" aria-hidden="true"${style ? ` style="${style}"` : ""}>${nom}</span>`;
 
 /**
- * Carte de thermostat, redessinée d'après celle de DomoMud : en-tête (flamme, statut, planning, réglages), ambiante →
- * consigne avec −/+, barre TPI ou d'inertie, rangée de modes. Tout ce qu'elle montre est calculé par le cœur (statut,
+ * Carte de thermostat, redessinée d'après celle de DomoMud : en-tête (flamme, statut, planning), ambiante → consigne
+ * avec −/+, barre TPI ou d'inertie, rangée de modes. L'engrenage des réglages n'apparaît que si la carte reçoit
+ * `settings.show_configuration` : l'écran Thermostats le passe, le tableau de bord non (une carte de salon n'est pas
+ * l'endroit où l'on reconfigure un thermostat). Tout ce qu'elle montre est calculé par le cœur (statut,
  * part de chauffe) : la carte ne recalcule rien, elle colore. Le pas part en ordre relatif (adjust_target) : deux
  * clics rapides font deux pas, quoi qu'affiche la carte.
  */
@@ -50,20 +55,22 @@ class KvThermostat extends KvWidget {
         .icone-btn .ms { font-size: 1.25rem; }
         .icone-btn:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
         .icone-btn[disabled] { opacity: .5; cursor: progress; }
-        .corps { padding: 0 14px 6px; flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
-        .temperatures { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
+        .corps { padding: 12px 14px 4px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        /* Les deux valeurs sur la même ligne : alignées en haut, les annexes de l'ambiante descendent sans pousser la consigne. */
+        .temperatures { display: flex; align-items: flex-start; justify-content: space-between; gap: 5px; }
         .bloc { text-align: center; min-width: 64px; }
         .valeur { font-size: 2.1rem; font-weight: 700; line-height: 1; }
+        .valeur .deg { font-size: .55em; font-weight: 600; vertical-align: top; margin-left: 1px; }
         .legende { font-size: .7rem; color: var(--kv-text-secondary, #777); margin-top: 2px; }
         .annexe { font-size: .68rem; margin-top: 1px; }
         .annexe .ms { font-size: .8rem; }
-        .fleche { font-size: 1.1rem; color: var(--kv-text-secondary, #999); opacity: .6; flex-shrink: 0; }
-        .consigne { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end; }
-        .pas { width: 30px; height: 30px; border-radius: 50%; border: 0; flex-shrink: 0; margin-bottom: 18px; display: inline-flex; align-items: center;
+        .fleche { font-size: 1.1rem; color: var(--kv-text-secondary, #999); opacity: .6; flex-shrink: 0; margin-top: 8px; }
+        .consigne { display: flex; align-items: flex-start; gap: 6px; flex: 1; justify-content: flex-end; }
+        .pas { width: 30px; height: 30px; border-radius: 50%; border: 0; flex-shrink: 0; margin-top: 3px; display: inline-flex; align-items: center;
                justify-content: center; background: color-mix(in srgb, var(--kv-text-secondary, #888) 15%, transparent); color: var(--kv-text-secondary, #777); }
         .pas .ms { font-size: 1.2rem; }
         .pas[disabled] { opacity: .5; cursor: progress; }
-        .barre { margin-top: 6px; }
+        .barre { margin-top: auto; padding-top: 6px; }
         .barre .lignes { display: flex; justify-content: space-between; font-size: .65rem; color: var(--kv-text-secondary, #777); margin-bottom: 2px; }
         .barre .lignes .ms { font-size: .75rem; }
         .jauge { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--kv-text-secondary, #888) 20%, transparent); overflow: hidden; }
@@ -97,13 +104,12 @@ class KvThermostat extends KvWidget {
         const teinte = inertie ? INERTIE : chauffe ? CHAUFFE : null;
         const cadre = teinte ? `box-shadow: inset 0 0 0 1px ${teinte}55, inset 0 -24px 40px -28px ${teinte}55;` : "";
 
-        const rad = entite?.extra?.radiators;
-        const sousTitre = [entite?.room, typeof rad === "number" ? `${rad} rad.` : null].filter(Boolean).join(" · ");
+        const sousTitre = entite?.room ?? "";
         const statut = STATUTS[v.status] ?? "#78909c";
         const flamme = inertie ? ms("mode_cool", `color:${INERTIE};filter:drop-shadow(0 0 6px ${INERTIE}88)`)
             : ms("local_fire_department", chauffe ? `color:${CHAUFFE};filter:drop-shadow(0 0 6px ${CHAUFFE}88)` : "color:var(--kv-text-secondary, #777);opacity:.6");
         const planning = !!v.schedule_active;
-        const configuration = entite?.extra?.configuration;
+        const configuration = this._settings.show_configuration ? entite?.extra?.configuration : null;
 
         const entete = `
             <div class="entete">
@@ -151,16 +157,16 @@ class KvThermostat extends KvWidget {
             <div class="corps">
                 <div class="temperatures">
                     <div class="bloc">
-                        <div class="valeur" style="color:${couleurAmbiante(v.temperature)}">${nombre(v.temperature)}</div>
-                        <div class="legende">°C ambiance</div>
+                        <div class="valeur" style="color:${couleurAmbiante(v.temperature)}">${degres(v.temperature)}</div>
+                        <div class="legende">ambiance</div>
                         ${exterieure}${humidite}${fenetre}${absent}
                     </div>
                     <span class="fleche">${ms("arrow_right_alt")}</span>
                     <div class="consigne">
                         ${off ? "" : pas(-1, "remove", "Baisser la consigne")}
                         <div class="bloc">
-                            <div class="valeur" style="color:${mode.couleur}">${nombre(v.target)}</div>
-                            <div class="legende">°C consigne</div>
+                            <div class="valeur" style="color:${mode.couleur}">${degres(v.target)}</div>
+                            <div class="legende">consigne</div>
                         </div>
                         ${off ? "" : pas(1, "add", "Monter la consigne")}
                     </div>

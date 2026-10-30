@@ -16,6 +16,10 @@ public class EnergyOverviewViewTests
             [
                 new EnergyDayView(new DateOnly(2026, 10, 29), null, null, null),
                 new EnergyDayView(new DateOnly(2026, 10, 30), 6.4, 1.6, 3900),
+            ],
+            [
+                new EnergyPowerPointView(new DateTimeOffset(2026, 10, 30, 0, 0, 0, TimeSpan.FromHours(1)), 110, 90, 180),
+                new EnergyPowerPointView(new DateTimeOffset(2026, 10, 30, 0, 5, 0, TimeSpan.FromHours(1)), null, null, null),
             ]),
         ]);
 
@@ -34,5 +38,9 @@ public class EnergyOverviewViewTests
         Assert.Equal(6.4, linky.Jours[1].Kwh);
         Assert.Equal(1.6, linky.Jours[1].Cout);
         Assert.Equal(3900, linky.Jours[1].Pointe);
+        Assert.Equal(new DateTimeOffset(2026, 10, 30, 0, 0, 0, TimeSpan.FromHours(1)), linky.Courbe[0].A);
+        Assert.Equal((110.0, 90.0, 180.0), (linky.Courbe[0].Moyenne!.Value, linky.Courbe[0].Min!.Value, linky.Courbe[0].Max!.Value));
+        // Une case sans mesure reste sans valeur : la courbe se coupe au lieu de tomber à zéro.
+        Assert.Null(linky.Courbe[1].Moyenne);
     }
 }
