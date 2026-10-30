@@ -1,6 +1,5 @@
 @inherits LayoutComponentBase
 @implements IDisposable
-@inject NavigationManager Nav
 
 <MudThemeProvider IsDarkMode="_sombre" />
 <MudPopoverProvider />
@@ -9,17 +8,41 @@
 
 <MudLayout>
     <MudAppBar Elevation="1" Dense="true">
-        <MudText Typo="Typo.h6" Style="font-weight:300;letter-spacing:1px;">Krissvia</MudText>
+        @if (Connexion.Lieux.Count > 1)
+        {
+            @* Plusieurs installations : le nom du lieu affiché est le titre, et le menu pour passer à l'autre. *@
+            <MudMenu AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" aria-label="Changer de lieu">
+                <ActivatorContent>
+                    <div style="display:flex;align-items:center;gap:2px;cursor:pointer;">
+                        <MudText Typo="Typo.h6" Style="font-weight:300;letter-spacing:1px;">@Connexion.Actif?.Nom</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" />
+                    </div>
+                </ActivatorContent>
+                <ChildContent>
+                    @foreach (var lieu in Connexion.Lieux)
+                    {
+                        var l = lieu;
+                        <MudMenuItem Icon="@(l.Id == Connexion.Actif?.Id ? Icons.Material.Filled.Check : null)" OnClick="@(() => ChoisirAsync(l.Id))">@l.Nom</MudMenuItem>
+                    }
+                </ChildContent>
+            </MudMenu>
+        }
+        else
+        {
+            <MudText Typo="Typo.h6" Style="font-weight:300;letter-spacing:1px;">@(Connexion.Actif?.Nom is { } nom && nom != "Krissvia" ? $"Krissvia · {nom}" : "Krissvia")</MudText>
+        }
         <MudSpacer />
         <MudIconButton Icon="@(_sombre ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
                        Color="Color.Inherit" OnClick="@(() => _sombre = !_sombre)" aria-label="Thème" />
         <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit"
-                       OnClick="@(() => Nav.NavigateTo("/reglages"))" aria-label="Connexion" />
+                       OnClick="@(() => Nav.NavigateTo("/reglages"))" aria-label="Lieux" />
     </MudAppBar>
 
     @* padding-bottom : la place de la barre de navigation fixe. *@
     <MudMainContent Style="padding-bottom:76px;">
-        <div class="pa-3">
+        @* Une clé par lieu : changer de lieu recrée l'écran, qui relit tout chez le nouveau au lieu de garder ce qu'il
+           avait chargé chez l'ancien. Pas l'écran des lieux, qui doit garder son message pendant qu'on en enregistre un. *@
+        <div class="pa-3" @key="@(EstActif("/reglages") ? "reglages" : Connexion.Actif?.Id)">
             @Body
         </div>
     </MudMainContent>
@@ -35,31 +58,3 @@
         </button>
     }
 </nav>
-
-@code {
-    private bool _sombre = true;
-
-    private sealed record Onglet(string Route, string Libelle, string Icone);
-
-    private static readonly Onglet[] Onglets =
-    [
-        new("/", "Thermostats", Icons.Material.Filled.ThermostatAuto),
-        new("/radiateurs", "Radiateurs", Icons.Material.Filled.LocalFireDepartment),
-        new("/sondes", "Sondes", Icons.Material.Filled.DeviceThermostat),
-        new("/prises", "Prises", Icons.Material.Filled.Power),
-        new("/alarme", "Alarme", Icons.Material.Filled.Security),
-        new("/energie", "Énergie", Icons.Material.Filled.ElectricBolt),
-    ];
-
-    protected override void OnInitialized() => Nav.LocationChanged += Rafraichir;
-
-    private void Rafraichir(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => InvokeAsync(StateHasChanged);
-
-    private bool EstActif(string route)
-    {
-        var courant = "/" + Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].TrimStart('/');
-        return route == "/" ? courant == "/" : courant.StartsWith(route, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public void Dispose() => Nav.LocationChanged -= Rafraichir;
-}

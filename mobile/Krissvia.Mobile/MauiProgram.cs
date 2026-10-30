@@ -17,7 +17,8 @@ public static class MauiProgram
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddMudServices();
 
-        // Un seul serveur, un seul flux : tout est singleton, et le flux survit aux changements d'écran.
+        // Un lieu affiché à la fois, un seul flux : tout est singleton, et le flux survit aux changements d'écran. Le flux
+        // et le client relisent la connexion à chaque appel : changer de lieu, c'est seulement relancer le flux.
         builder.Services.AddSingleton<ConnexionSettings>();
         builder.Services.AddSingleton<IConnexion>(s => s.GetRequiredService<ConnexionSettings>());
         builder.Services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromSeconds(15) });

@@ -1,43 +1,96 @@
 @page "/reglages"
 
-<PageTitle>Connexion</PageTitle>
+<PageTitle>Lieux</PageTitle>
 
-<MudText Typo="Typo.h6" Class="mb-3">Connexion à Krissvia</MudText>
-
-<MudTextField @bind-Value="_adresse" Label="Adresse du serveur" Placeholder="http://192.168.1.10:5000"
-              Variant="Variant.Outlined" Class="mb-3" InputType="InputType.Url"
-              HelperText="Sans « /api » à la fin. Sans http(s)://, http est pris pour une adresse du réseau local."
-              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Dns" />
-
-<MudTextField @bind-Value="_cle" Label="Clé d'API" Variant="Variant.Outlined" Class="mb-1"
-              InputType="@(_visible ? InputType.Text : InputType.Password)"
-              Adornment="Adornment.End"
-              AdornmentIcon="@(_visible ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
-              OnAdornmentClick="@(() => _visible = !_visible)"
-              HelperText="La valeur de Api:Key (ou Api__Key) sur le serveur." />
-
-<div style="display:flex;gap:8px;margin-top:16px;">
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-               StartIcon="@Icons.Material.Filled.Save" Disabled="@_occupe" OnClick="EnregistrerAsync">
-        Enregistrer
-    </MudButton>
-    <MudButton Variant="Variant.Outlined" FullWidth="true"
-               StartIcon="@Icons.Material.Filled.NetworkCheck" Disabled="@_occupe" OnClick="TesterAsync">
-        Tester
-    </MudButton>
-</div>
-
-@if (_occupe)
+@if (_edition is null)
 {
-    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-3" />
-}
+    <div style="display:flex;align-items:center;gap:8px;" class="mb-2">
+        <MudText Typo="Typo.h6" Style="font-weight:400;">Lieux</MudText>
+        <MudSpacer />
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" OnClick="Ajouter">Ajouter</MudButton>
+    </div>
 
-@if (_resultat is not null)
+    <MudText Typo="Typo.caption" Class="mb-3" Style="color:var(--mud-palette-text-secondary);display:block;">
+        Une installation Krissvia par lieu, chacune avec son adresse et sa clé d'API. Un appui sur un lieu l'affiche.
+    </MudText>
+
+    @foreach (var lieu in Connexion.Lieux)
+    {
+        var l = lieu;
+        var actif = Connexion.Actif?.Id == l.Id;
+        <MudCard Elevation="@(actif ? 3 : 1)" Class="mb-2" @key="l.Id"
+                 Style="@($"border-radius:12px;{(actif ? "border:1px solid var(--mud-palette-primary);" : "")}")">
+            <MudCardContent Class="py-2 px-3">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="flex:1;min-width:0;cursor:pointer;display:flex;align-items:center;gap:10px;" @onclick="@(() => ChoisirAsync(l))">
+                        <MudIcon Icon="@(actif ? Icons.Material.Filled.RadioButtonChecked : Icons.Material.Filled.RadioButtonUnchecked)"
+                                 Color="@(actif ? Color.Primary : Color.Default)" />
+                        <div style="min-width:0;">
+                            <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@l.Nom</div>
+                            <div class="kv-legende" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@l.BaseUrl</div>
+                        </div>
+                    </div>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Modifier" OnClick="@(() => ModifierAsync(l))" />
+                    @if (_aSupprimer == l.Id)
+                    {
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Error" OnClick="@(() => SupprimerAsync(l))">Supprimer ?</MudButton>
+                    }
+                    else
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" aria-label="Supprimer" OnClick="@(() => _aSupprimer = l.Id)" />
+                    }
+                </div>
+            </MudCardContent>
+        </MudCard>
+    }
+}
+else
 {
-    <MudAlert Severity="@(_succes ? Severity.Success : Severity.Error)" Dense="true" Class="mt-3">@_resultat</MudAlert>
-}
+    <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:400;">@(_edition.Id is null ? "Nouveau lieu" : "Modifier le lieu")</MudText>
 
-<MudText Typo="Typo.caption" Class="mt-4" Style="color:var(--mud-palette-text-secondary);display:block;">
-    La clé est gardée dans le coffre sécurisé de l'appareil, jamais en clair. Les thermostats se créent et se règlent
-    depuis l'interface web ; ici, on les suit et on les commande.
-</MudText>
+    <MudTextField @bind-Value="_edition.Nom" Label="Nom" Placeholder="Appartement, Maison…"
+                  Variant="Variant.Outlined" Class="mb-3"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Home" />
+
+    <MudTextField @bind-Value="_edition.Adresse" Label="Adresse du serveur" Placeholder="http://192.168.1.10:12795"
+                  Variant="Variant.Outlined" Class="mb-3" InputType="InputType.Url"
+                  HelperText="Sans « /api » à la fin. Sans http(s)://, http est pris pour une adresse du réseau local."
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Dns" />
+
+    <MudTextField @bind-Value="_edition.Cle" Label="Clé d'API" Variant="Variant.Outlined" Class="mb-1"
+                  InputType="@(_visible ? InputType.Text : InputType.Password)"
+                  Adornment="Adornment.End"
+                  AdornmentIcon="@(_visible ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                  OnAdornmentClick="@(() => _visible = !_visible)"
+                  HelperText="La valeur de Api:Key (ou Api__Key) sur ce serveur." />
+
+    <div style="display:flex;gap:8px;margin-top:16px;">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                   StartIcon="@Icons.Material.Filled.Save" Disabled="@_occupe" OnClick="EnregistrerAsync">
+            Enregistrer
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" FullWidth="true"
+                   StartIcon="@Icons.Material.Filled.NetworkCheck" Disabled="@_occupe" OnClick="TesterAsync">
+            Tester
+        </MudButton>
+    </div>
+    @if (Connexion.Lieux.Count > 0)
+    {
+        <MudButton Variant="Variant.Text" FullWidth="true" Class="mt-2" Disabled="@_occupe" OnClick="Annuler">Annuler</MudButton>
+    }
+
+    @if (_occupe)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-3" />
+    }
+
+    @if (_resultat is not null)
+    {
+        <MudAlert Severity="@(_succes ? Severity.Success : Severity.Error)" Dense="true" Class="mt-3">@_resultat</MudAlert>
+    }
+
+    <MudText Typo="Typo.caption" Class="mt-4" Style="color:var(--mud-palette-text-secondary);display:block;">
+        La clé est gardée dans le coffre sécurisé de l'appareil, jamais en clair. Les thermostats se créent et se règlent
+        depuis l'interface web ; ici, on les suit et on les commande.
+    </MudText>
+}
