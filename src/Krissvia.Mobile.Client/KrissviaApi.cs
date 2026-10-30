@@ -106,6 +106,21 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
     public Task<ResultatOrdre> AllumerAsync(string entityId, bool allumer, CancellationToken ct = default) =>
         OrdreAsync(entityId, allumer ? StandardCommands.TurnOn : StandardCommands.TurnOff, null, ct);
 
+    /// <summary>Les compteurs : chiffres du moment, consommation depuis minuit et des <paramref name="jours"/> derniers jours.</summary>
+    public async Task<(VueEnergie? Vue, string? Erreur, bool ServeurAncien)> EnergieAsync(int jours = 7, CancellationToken ct = default)
+    {
+        var (json, erreur, absente) = await LireAsync($"/api/energy?days={jours}", ct);
+        if (erreur is not null) return (null, erreur, absente);
+        try
+        {
+            return VueEnergie.Lire(json!.Value) is { } vue ? (vue, null, false) : (null, "Réponse vide du serveur.", false);
+        }
+        catch (JsonException ex)
+        {
+            return (null, MessageLisible(ex), false);
+        }
+    }
+
     /// <summary>L'état de l'alarme, les défauts du moment et le blocage du clavier.</summary>
     public async Task<(EtatAlarme? Etat, string? Erreur)> AlarmeAsync(CancellationToken ct = default)
     {

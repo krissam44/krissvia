@@ -14,7 +14,10 @@ défauts qui empêcheraient d'armer — affichés AVANT de taper son code —, l
 qui arme ou désarme **par code** (`/api/alarm/arm|disarm`, le code dans le corps : la clé d'API ne suffit pas). Le code
 ne s'affiche jamais et s'efface à l'envoi ou après 30 s. Relu chaque seconde pendant un décompte, toutes les 3 s sinon.
 Aucune route ajoutée : l'écran marche avec le serveur actuel. Un code faux est un 403, à ne pas confondre avec une
-clé d'API refusée. Les thermostats se créent et
+clé d'API refusée.
+**Énergie** : une carte par compteur (`GET /api/energy`) — puissance et tension du moment, consommation depuis minuit,
+coût si le prix du kWh est renseigné sur le web, et les sept derniers jours en barres. Calcul du serveur, partagé avec
+l'écran Électricité (`LectureCompteur`). Les thermostats se créent et
 se règlent sur le web ; ici on les suit et on les commande.
 
 | Dossier | Rôle |
