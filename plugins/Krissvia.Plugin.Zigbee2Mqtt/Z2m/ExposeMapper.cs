@@ -29,6 +29,9 @@ internal static class ExposeMapper
         ["co2"] = new(DeviceClasses.CarbonDioxide, Units.PartsPerMillion),
         ["power"] = new(DeviceClasses.Power, Units.Watt),
         ["energy"] = new(DeviceClasses.Energy, Units.KilowattHour, StateClass.TotalIncreasing),
+        // L'index des modules SONOFF (BASIC-ZB1GSP) : à côté, energy_today / _month / _yesterday ne sont que des tranches
+        // de cet index, que le cœur recalcule lui-même ; les reprendre ferait trois compteurs pour un seul circuit.
+        ["total_energy"] = new(DeviceClasses.Energy, Units.KilowattHour, StateClass.TotalIncreasing),
         ["voltage"] = new(DeviceClasses.Voltage, Units.Volt),
         ["current"] = new(DeviceClasses.Current, Units.Ampere),
         ["battery"] = new(DeviceClasses.Battery, Units.Percent),

@@ -97,7 +97,7 @@ MudBlazor, déjà dans Krissvia). Le manifeste s'écrit en attributs :
 - `slots` : les entités attendues, chacune avec un rôle. Un widget simple n'a qu'un slot ; une carte « prise
   avec mesure » en a deux (le switch, sa puissance). Un slot vise une entité (`"type": "entity"`) filtrée par
   `kinds`, `device_classes`, `usages` — ou un objet de module (`"type": "thermostat"`, et plus tard d'autres).
-  L'usage est choisi par l'utilisateur dans l'écran Entités (`radiateur`, `eclairage`, `prise`, `compteur` pour un interrupteur) ; une
+  L'usage est choisi par l'utilisateur dans l'écran Entités (`radiateur`, `eclairage`, `prise`, `compteur`, `disjoncteur` pour un interrupteur) ; une
   entité `light` a d'elle-même l'usage `eclairage`.
 - `size` : taille par défaut d'une carte. `cols` en 24ᵉ de la largeur d'un grand écran (1 à 24 : 6 = un quart,
   quatre cartes par ligne ; 3 = un huitième), `rows` en lignes, de 1 à 4 par demi-ligne (`2.5` convient, `2.25` non).
@@ -303,7 +303,7 @@ laisse rien ; replier une section hors édition s'enregistre aussitôt.
   lumières, capteurs, énergie), chaque entité avec son meilleur widget ; les slots secondaires prennent les entités
   du même appareil (l'humidité d'une sonde) ; les radiateurs pilotés par un thermostat ne sont pas proposés. Rien
   n'est écrit avant « Enregistrer » — DomoMud générait ses sections tout seul au premier affichage.
-- Widgets standards : `valeur`, `temperature`, `interrupteur`, `radiateur`, `eclairage`, `prise` et `compteur` (le même bouton, avec la flamme, l'ampoule, la fiche ou le compteur de leur usage ; base commune `bascule.js`), `ouverture`, `puissance`, `thermostat`, `meteo` (entité `weather` du plugin Météo : conditions et prévision sur 7 jours, à la manière de la carte de DomoMud),
+- Widgets standards : `valeur`, `temperature`, `interrupteur`, `radiateur`, `eclairage`, `prise`, `compteur` et `disjoncteur` (le même bouton, avec la flamme, l'ampoule, la fiche, le compteur ou le disjoncteur de leur usage ; base commune `bascule.js` ; le disjoncteur demande confirmation avant de couper et montre la puissance et le courant de son appareil), `ouverture`, `puissance`, `thermostat`, `meteo` (entité `weather` du plugin Météo : conditions et prévision sur 7 jours, à la manière de la carte de DomoMud),
   `thermostat-cadran` (24/10/2026 : un cadran à la manière de Gladys — consigne sur un arc qu'on fait glisser, l'ordre
   partant au lâcher en valeur exacte, ou − / + ; dans la roue la consigne et la flamme, à sa droite l'ambiante et l'humidité ;
   consigne, flamme et − / + dessinés dans le SVG pour suivre sa taille ; sous 360 px de large, les modes en icônes seules ; « Confort jusqu'à 22:30 » d'après `next_change`

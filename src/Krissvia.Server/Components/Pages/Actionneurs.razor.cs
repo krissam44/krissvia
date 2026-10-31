@@ -116,6 +116,7 @@ public partial class Actionneurs : IDisposable
         : EntityUsages.Of(a.Entity) == EntityUsages.Lighting ? (a.On == true ? Icons.Material.Filled.Lightbulb : Icons.Material.Outlined.Lightbulb)
         : EntityUsages.Of(a.Entity) == EntityUsages.Plug ? (a.On == true ? Icons.Material.Filled.Power : Icons.Material.Outlined.Power)
         : EntityUsages.Of(a.Entity) == EntityUsages.Meter ? Icons.Material.Filled.ElectricMeter
+        : EntityUsages.Of(a.Entity) == EntityUsages.Breaker ? Icons.Material.Filled.ElectricalServices
         : a.On == true ? Icons.Material.Filled.ToggleOn : Icons.Material.Filled.ToggleOff;
 
     private static string Infobulle(Actuator a) =>
