@@ -34,6 +34,12 @@ contrôle (`/sys/fs/cgroup/system.slice/<service>.service/memory.stat`) :
 - c'est la mémoire **anonyme** (`anon`, le tas) qui est relevée, pas `memory.current` : celle-ci compte aussi le cache
   disque, qui monte pendant des jours sans être une fuite et se rend dès que la mémoire manque.
 
+Raspberry Pi OS **désactive le contrôleur mémoire** des groupes de contrôle : `memory` manque dans
+`/sys/fs/cgroup/cgroup.controllers`, et `memory.stat` n'existe pas. Le plugin additionne alors le `RssAnon` (le tas)
+de chacun des processus listés dans `cgroup.procs`, qui existe toujours : la même grandeur à peu de chose près, sans
+rien changer au démarrage du Pi. Activer le contrôleur (`cgroup_enable=memory` dans `/boot/firmware/cmdline.txt`,
+puis redémarrer) rend la lecture exacte, mais n'est pas nécessaire.
+
 Le cœur historise toute entité numérique (`docs/HISTORIQUE.md`) : 30 jours de points, puis des moyennes horaires sans
 limite. Une fuite se lit sur la courbe de « Mémoire krissvia » (écran Entités, icône 📈, période 7 j ou 30 j) : une
 marche d'escalier par jour, là où un service sain dessine un plateau.

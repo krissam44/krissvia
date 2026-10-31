@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 
 import krissvia
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 log = logging.getLogger("raspberry")
 
 # Bits de get_throttled (microprogramme du Raspberry Pi) : « en ce moment » et « depuis le démarrage ».
@@ -170,9 +170,16 @@ def memoire_service(racine: str, nom: str) -> float | None:
     Mémoire ANONYME du service en Mo (ligne ``anon`` de ``memory.stat``) : le tas de tous ses processus — les plugins
     pour Krissvia, ``node`` pour Zigbee2MQTT. Pas ``memory.current``, qui compte aussi le cache disque : il monte
     pendant des jours sans être une fuite, et se rend dès que la mémoire manque.
+
+    Raspberry Pi OS désactive le contrôleur mémoire des cgroups (``memory`` absent de ``cgroup.controllers``) : plus
+    de ``memory.stat``. On additionne alors le ``RssAnon`` de chacun des processus du groupe — ``cgroup.procs``, lui,
+    existe toujours. La même grandeur à peu de chose près : le tas, sans le cache ni les bibliothèques partagées.
     """
-    brut = lire_texte(racine, f"{CGROUP_SERVICES}/{nom}.service/memory.stat")
-    for ligne in (brut or "").splitlines():
+    groupe = f"{CGROUP_SERVICES}/{nom}.service"
+    brut = lire_texte(racine, f"{groupe}/memory.stat")
+    if brut is None:
+        return rss_anonyme(racine, lire_texte(racine, f"{groupe}/cgroup.procs"))
+    for ligne in brut.splitlines():
         cle, _, valeur = ligne.partition(" ")
         if cle == "anon":
             try:
@@ -180,6 +187,21 @@ def memoire_service(racine: str, nom: str) -> float | None:
             except ValueError:
                 return None
     return None
+
+
+def rss_anonyme(racine: str, procs: str | None) -> float | None:
+    """Somme des ``RssAnon`` (Mo) de ces processus ; None pour un groupe vide ou absent (service arrêté)."""
+    total, compte = 0, 0
+    for pid in (procs or "").split():
+        for ligne in (lire_texte(racine, f"/proc/{pid}/status") or "").splitlines():   # absent : mort entre-temps
+            if ligne.startswith("RssAnon:"):
+                try:
+                    total += int(ligne.split()[1]) * 1024                               # « RssAnon:  12345 kB »
+                    compte += 1
+                except (IndexError, ValueError):
+                    pass
+                break
+    return round(total / MO, 1) if compte else None
 
 
 def systemctl_show(noms: list[str]) -> str | None:

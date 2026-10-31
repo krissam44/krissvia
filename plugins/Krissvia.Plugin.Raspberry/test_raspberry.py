@@ -158,6 +158,17 @@ class ComplementsTests(unittest.TestCase):
         self.assertEqual(150.0, raspberry.memoire_service(m.racine, "krissvia"))
         self.assertIsNone(raspberry.memoire_service(m.racine, "mosquitto"))
 
+    def test_sans_controleur_memoire_on_additionne_le_tas_des_processus(self):
+        # Raspberry Pi OS : « memory » absent de cgroup.controllers, donc pas de memory.stat — seulement la liste.
+        m = FausseMachine()
+        m.ecrire("sys/fs/cgroup/system.slice/krissvia.service/cgroup.procs", "812\n1033\n4242\n")   # 4242 : mort
+        m.ecrire("proc/812/status", "Name:\tdotnet\nVmRSS:\t  204800 kB\nRssAnon:\t  143360 kB\nRssFile:\t   61440 kB\n")
+        m.ecrire("proc/1033/status", "Name:\tpython3\nRssAnon:\t   10240 kB\n")
+        m.ecrire("sys/fs/cgroup/system.slice/mosquitto.service/cgroup.procs", "")                # arrêté
+
+        self.assertEqual(150.0, raspberry.memoire_service(m.racine, "krissvia"))   # 140 + 10 Mo, sans RssFile
+        self.assertIsNone(raspberry.memoire_service(m.racine, "mosquitto"))
+
     def test_services_entites_et_valeurs(self):
         m = FausseMachine()
         cgroup(m, "krissvia", 157286400)              # mosquitto est en échec : plus de groupe, plus de mémoire
