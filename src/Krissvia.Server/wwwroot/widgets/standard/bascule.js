@@ -1,4 +1,4 @@
-import { KvWidget, esc, depuis, absence, icone } from "./commun.js";
+import { KvWidget, esc, depuis, absence, icone, ConfirmationEnCarte } from "./commun.js";
 
 /**
  * Base des cartes tout-ou-rien qu'on commande (interrupteur, radiateur, éclairage) : seul leur aspect change.
@@ -6,11 +6,17 @@ import { KvWidget, esc, depuis, absence, icone } from "./commun.js";
  * (WIDGETS.md §5). Pendant l'attente, il est grisé ; un refus s'affiche sous le bouton.
  */
 export class KvBascule extends KvWidget {
-    /** Ce qui distingue chaque carte : icône allumée/éteinte, couleur, libellés. */
+    /** Ce qui distingue chaque carte : icône allumée/éteinte, couleur, libellés de l'état et du bouton. */
     static aspect = {
         allume: "toggle_on", eteint: "toggle_off", couleur: "#ffa726", texte: "#fff",
-        etatAllume: "Allumé", etatEteint: "Éteint",
+        etatAllume: "Allumé", etatEteint: "Éteint", allumer: "Allumer", eteindre: "Éteindre",
     };
+
+    /**
+     * Vrai : éteindre demande un second clic (« Couper ? »), comme les gestes lourds des cartes de plugin. Pour ce
+     * qui prive tout un circuit d'un coup — un disjoncteur —, pas pour une lampe.
+     */
+    static confirmerExtinction = false;
 
     static css = `
         .tete { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -22,6 +28,10 @@ export class KvBascule extends KvWidget {
 
     #attente = false;
     #erreur = null;
+    #confirmation = new ConfirmationEnCarte(() => this.planifier());
+
+    /** Un complément à la ligne d'état (la puissance d'un disjoncteur) ; vide par défaut. */
+    complement() { return ""; }
 
     allume() {
         const v = this._states.interrupteur?.value;
@@ -35,7 +45,8 @@ export class KvBascule extends KvWidget {
     }
 
     rendu() {
-        const a = this.constructor.aspect;
+        // Les cartes ne redéfinissent que ce qui les distingue : le reste (libellés du bouton) vient de la base.
+        const a = { ...KvBascule.aspect, ...this.constructor.aspect };
         const entite = this._entities.interrupteur;
         const etat = this._states.interrupteur;
         const manque = absence(etat, entite);
@@ -45,10 +56,10 @@ export class KvBascule extends KvWidget {
             : icone(a.eteint);
         return `<div class="carte">
             <div class="tete">${symbole}<div class="titre" title="${esc(entite?.name)}">${esc(entite?.name ?? "—")}</div></div>
-            ${manque ?? `<div class="detail">${allume ? a.etatAllume : a.etatEteint} · ${esc(depuis(etat.measured_at))}</div>`}
+            ${manque ?? `<div class="detail">${allume ? a.etatAllume : a.etatEteint} · ${esc(depuis(etat.measured_at))}${this.complement()}</div>`}
             ${this.#erreur ? `<div class="erreur">${esc(this.#erreur)}</div>` : ""}
             <button class="bouton" ${allume ? `style="background:${a.couleur};color:${a.texte}"` : ""} ${manque || this.#attente ? "disabled" : ""}>
-                ${this.#attente ? "…" : allume ? "Éteindre" : "Allumer"}
+                ${this.#attente ? "…" : !allume ? a.allumer : this.#confirmation.attendue ? `${a.eteindre} ?` : a.eteindre}
             </button>
         </div>`;
     }
@@ -60,6 +71,7 @@ export class KvBascule extends KvWidget {
     async basculer() {
         if (!this._kv) return;
         const allumer = !this.allume();
+        if (!allumer && this.constructor.confirmerExtinction && !this.#confirmation.demander("eteindre")) return;
         this.#attente = true;
         this.#erreur = null;
         this.planifier();

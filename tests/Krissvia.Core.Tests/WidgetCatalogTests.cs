@@ -231,6 +231,7 @@ public sealed class WidgetCatalogTests : IDisposable
     [InlineData(EntityKind.Switch, EntityUsages.Lighting, "eclairage")]
     [InlineData(EntityKind.Switch, EntityUsages.Plug, "prise")]
     [InlineData(EntityKind.Switch, EntityUsages.Meter, "compteur")]
+    [InlineData(EntityKind.Switch, EntityUsages.Breaker, "disjoncteur")]
     [InlineData(EntityKind.Light, null, "eclairage")]   // une lumière éclaire sans qu'on ait à le dire
     public void Chaque_interrupteur_a_par_defaut_la_carte_de_son_usage(EntityKind famille, string? usage, string attendu)
     {

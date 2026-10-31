@@ -20,6 +20,9 @@ public static class EntityUsages
     /// <summary>Le relais d'un compteur d'énergie (Shelly EM, Pro 3EM…).</summary>
     public const string Meter = "compteur";
 
+    /// <summary>Un disjoncteur commandé (réarmable à distance) : le couper prive tout un circuit.</summary>
+    public const string Breaker = "disjoncteur";
+
     public static bool IsRadiator(RegisteredEntity e) => e.Kind == EntityKind.Switch && e.Usage == Radiator;
 
     /// <summary>L'usage d'une entité : celui choisi par l'utilisateur, sinon celui de sa famille (une lumière éclaire).</summary>

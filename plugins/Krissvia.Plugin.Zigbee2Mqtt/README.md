@@ -40,7 +40,7 @@ et pour publier.
 | `switch` (chaque voie : `state`, `state_l1`…) | `switch` | booléen ; ordres `turn_on`, `turn_off`, `toggle` |
 | `light` | `light` | `{"on", "brightness": 0..100}` ; `set_brightness` en % (Zigbee2MQTT compte de 0 à 254) |
 | `cover` | `cover` | `{"state", "position"}` ; `open`, `close`, `stop`, `set_position` |
-| `temperature`, `local_temperature`, `humidity`, `pressure`, `illuminance`, `co2`, `power`, `energy`, `voltage`, `current`, `battery` | `sensor` | nombre, dans l'unité du contrat (mV → V, mA → A, Wh → kWh, kW → W) |
+| `temperature`, `local_temperature`, `humidity`, `pressure`, `illuminance`, `co2`, `power`, `energy`, `total_energy`, `voltage`, `current`, `battery` | `sensor` | nombre, dans l'unité du contrat (mV → V, mA → A, Wh → kWh, kW → W) ; `energy` et `total_energy` sont des index (`total_increasing`) |
 | `contact`, `occupancy`, `presence`, `water_leak`, `smoke`, `tamper`, `vibration`, `battery_low` | `binary_sensor` | true = état actif : **ouvert**, présence, fuite… |
 | `action` | `event` | « single », « double »… |
 
@@ -50,6 +50,19 @@ mesure. On ajoute une propriété à la liste quand un besoin réel apparaît.
 
 Le coordinateur et les appareils désactivés ne sont pas déclarés. Une tête thermostatique (`climate`) ne
 donne que sa sonde : la régulation est au cœur.
+
+## Module rail DIN SONOFF BASIC-ZB1GSP (disjoncteur commandé)
+
+Préparé le 31/10/2026 d'après ses exposes documentés (`DisjoncteurSonoffTests`), **sans module réel** : à
+vérifier avec son `bridge/devices` à réception. Il donne un `switch`, `power`, `current`, `voltage` et
+`total_energy` (son index en kWh, donc une ligne de l'écran Électricité). Choisir l'usage **Disjoncteur** dans
+l'écran Entités : carte « Enclencher / Couper », second clic pour couper, puissance et courant affichés.
+
+Restent dans Zigbee2MQTT pour l'instant : `energy_today` / `_month` / `_yesterday` (des tranches de l'index, que le
+cœur recalcule), l'énergie réinjectée (`output_…`), et surtout les **seuils de coupure** (`ac_current_max_overload`
+0,1 à 32 A, `ac_voltage_max_overload`, `ac_power_max_overload` et leurs `…_enable`) : des réglages, que le contrat ne
+sait pas encore porter. Zigbee2MQTT ne documente aucun état « déclenché » : une coupure sur surcharge se voit
+comme un relais qui passe à OFF sans ordre. À trancher avec le module en main.
 
 ## Règles qui comptent
 

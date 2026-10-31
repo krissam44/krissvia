@@ -79,6 +79,10 @@ public partial class Prises : IDisposable
                     $"« {a.Nom} » a été coupé par le délesteur. Le rallumer peut faire disjoncter. Le rallumer quand même ?",
                     yesText: "Rallumer", cancelText: "Annuler") != true)
                 return;
+            // Couper un disjoncteur prive tout un circuit : confirmé, comme le second clic de sa carte sur le web.
+            if (!allumer && a.Usage == "disjoncteur" && await Dialogues.ShowMessageBoxAsync("Couper le disjoncteur",
+                    $"Couper « {a.Nom} » coupe tout le circuit qu'il protège.", yesText: "Couper", cancelText: "Annuler") != true)
+                return;
 
             var resultat = await Api.AllumerAsync(a.EntityId, allumer);
             if (!resultat.Ok) Snackbar.Add($"{a.Nom} : {resultat.Motif}", Severity.Error);
@@ -115,6 +119,7 @@ public partial class Prises : IDisposable
         : a.Usage == "eclairage" ? (a.Allume == true ? Icons.Material.Filled.Lightbulb : Icons.Material.Outlined.Lightbulb)
         : a.Usage == "prise" ? (a.Allume == true ? Icons.Material.Filled.Power : Icons.Material.Outlined.Power)
         : a.Usage == "compteur" ? Icons.Material.Filled.ElectricMeter
+        : a.Usage == "disjoncteur" ? Icons.Material.Filled.ElectricalServices
         : a.Allume == true ? Icons.Material.Filled.ToggleOn : Icons.Material.Filled.ToggleOff;
 
     public void Dispose()

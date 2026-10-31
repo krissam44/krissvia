@@ -1,0 +1,15 @@
+{
+  "contract": 2,
+  "id": "disjoncteur",
+  "name": "Disjoncteur",
+  "description": "Enclenche et coupe un disjoncteur commandé (second clic pour couper), orange quand il est enclenché, avec la puissance et le courant de son appareil s'il les mesure ; l'état affiché est celui que l'appareil confirme.",
+  "version": "1.0.0",
+  "element": "kv-disjoncteur",
+  "script": "disjoncteur.js",
+  "slots": [
+    { "name": "interrupteur", "kinds": ["switch"], "usages": ["disjoncteur"], "required": true },
+    { "name": "puissance", "kinds": ["sensor"], "device_classes": ["power"], "required": false },
+    { "name": "courant", "kinds": ["sensor"], "device_classes": ["current"], "required": false }
+  ],
+  "size": { "cols": 2, "rows": 1 }
+}

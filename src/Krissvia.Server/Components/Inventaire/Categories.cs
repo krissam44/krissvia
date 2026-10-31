@@ -18,6 +18,7 @@ internal static class Categories
     public static readonly Categorie Lumiere = new("lumiere", "Lumière", Icons.Material.Filled.Lightbulb, "#ffd60a");
     public static readonly Categorie Prise = new("prise", "Prise", Icons.Material.Filled.Power, "#29b6f6");
     public static readonly Categorie Compteur = new("compteur", "Compteur", Icons.Material.Filled.ElectricMeter, "#ffb300");
+    public static readonly Categorie Disjoncteur = new("disjoncteur", "Disjoncteur", Icons.Material.Filled.ElectricalServices, "#ff7043");
     public static readonly Categorie Ouverture = new("ouverture", "Ouverture", Icons.Material.Filled.DoorFront, "#42a5f5");
     public static readonly Categorie Mouvement = new("mouvement", "Mouvement", Icons.Material.Filled.DirectionsRun, "#ab47bc");
     public static readonly Categorie Puissance = new("puissance", "Puissance / énergie", Icons.Material.Filled.Bolt, "#ffb300");
@@ -34,7 +35,7 @@ internal static class Categories
 
 
     /// <summary>L'ordre des pastilles de filtre.</summary>
-    public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Prise, Compteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Presence, Reseau, Meteo, Probleme, Machine, Autre];
+    public static readonly Categorie[] Toutes = [Thermostat, Radiateur, Temperature, Humidite, Interrupteur, Prise, Compteur, Disjoncteur, Lumiere, Ouverture, Mouvement, Puissance, Batterie, Evenement, Presence, Reseau, Meteo, Probleme, Machine, Autre];
 
     public static Categorie De(RegisteredEntity e) => e.Kind switch
     {
@@ -42,6 +43,7 @@ internal static class Categories
         EntityKind.Switch when e.Usage == EntityUsages.Lighting => Lumiere,
         EntityKind.Switch when e.Usage == EntityUsages.Plug => Prise,
         EntityKind.Switch when e.Usage == EntityUsages.Meter => Compteur,
+        EntityKind.Switch when e.Usage == EntityUsages.Breaker => Disjoncteur,
         EntityKind.Switch => Interrupteur,
         EntityKind.Light => Lumiere,
         EntityKind.Event => Evenement,
