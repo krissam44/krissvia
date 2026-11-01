@@ -43,6 +43,24 @@ public sealed class SqliteEntityStateRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task L_instant_du_changement_survit_a_un_redemarrage()
+    {
+        // Sinon un redémarrage remettrait tous les « allumé depuis 2 h » à l'heure du dernier message.
+        var t0 = new DateTimeOffset(2026, 11, 1, 8, 0, 0, TimeSpan.Zero);
+        var avant = await OuvrirAsync();
+        avant.Update("switch.radiateur", JsonSerializer.SerializeToElement(true), t0);
+        avant.Update("switch.radiateur", JsonSerializer.SerializeToElement(true), t0.AddMinutes(20));
+        await avant.FlushAsync();
+
+        var apres = await OuvrirAsync();
+        Assert.Equal(t0, apres.Get("switch.radiateur")!.ChangedSince);
+
+        // Republiée après le redémarrage, la même valeur garde son instant.
+        apres.Update("switch.radiateur", JsonSerializer.SerializeToElement(true), t0.AddMinutes(40));
+        Assert.Equal(t0, apres.Get("switch.radiateur")!.ChangedSince);
+    }
+
+    [Fact]
     public async Task Une_nouvelle_valeur_remplace_l_ancienne()
     {
         var magasin = await OuvrirAsync();

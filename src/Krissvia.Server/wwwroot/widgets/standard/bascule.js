@@ -56,7 +56,7 @@ export class KvBascule extends KvWidget {
             : icone(a.eteint);
         return `<div class="carte">
             <div class="tete">${symbole}<div class="titre" title="${esc(entite?.name)}">${esc(entite?.name ?? "—")}</div></div>
-            ${manque ?? `<div class="detail">${allume ? a.etatAllume : a.etatEteint} · ${esc(depuis(etat.measured_at))}${this.complement()}</div>`}
+            ${manque ?? `<div class="detail">${allume ? a.etatAllume : a.etatEteint} · ${esc(depuis(etat.changed_at ?? etat.measured_at))}${this.complement()}</div>`}
             ${this.#erreur ? `<div class="erreur">${esc(this.#erreur)}</div>` : ""}
             <button class="bouton" ${allume ? `style="background:${a.couleur};color:${a.texte}"` : ""} ${manque || this.#attente ? "disabled" : ""}>
                 ${this.#attente ? "…" : !allume ? a.allumer : this.#confirmation.attendue ? `${a.eteindre} ?` : a.eteindre}

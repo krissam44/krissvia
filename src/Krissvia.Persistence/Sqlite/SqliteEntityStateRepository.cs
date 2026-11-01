@@ -10,11 +10,12 @@ public sealed class SqliteEntityStateRepository(SqliteDatabase db) : IEntityStat
     {
         await using var connexion = await db.OpenAsync(ct);
         var lignes = await connexion.QueryAsync<Ligne>(new CommandDefinition(
-            "SELECT entity_id AS EntityId, value_json AS ValueJson, measured_at_ticks AS Ticks FROM entity_states;",
+            "SELECT entity_id AS EntityId, value_json AS ValueJson, measured_at_ticks AS Ticks, changed_at_ticks AS ChangedTicks FROM entity_states;",
             cancellationToken: ct));
 
         return lignes
-            .Select(l => new PersistedEntityState(l.EntityId, l.ValueJson, new DateTimeOffset(l.Ticks, TimeSpan.Zero)))
+            .Select(l => new PersistedEntityState(l.EntityId, l.ValueJson, new DateTimeOffset(l.Ticks, TimeSpan.Zero),
+                l.ChangedTicks is { } c ? new DateTimeOffset(c, TimeSpan.Zero) : null))
             .ToList();
     }
 
@@ -26,10 +27,11 @@ public sealed class SqliteEntityStateRepository(SqliteDatabase db) : IEntityStat
         await using var transaction = await connexion.BeginTransactionAsync(ct);
         await connexion.ExecuteAsync(new CommandDefinition(
             """
-            INSERT INTO entity_states (entity_id, value_json, measured_at_ticks) VALUES (@EntityId, @ValueJson, @Ticks)
-            ON CONFLICT(entity_id) DO UPDATE SET value_json = excluded.value_json, measured_at_ticks = excluded.measured_at_ticks;
+            INSERT INTO entity_states (entity_id, value_json, measured_at_ticks, changed_at_ticks) VALUES (@EntityId, @ValueJson, @Ticks, @ChangedTicks)
+            ON CONFLICT(entity_id) DO UPDATE SET value_json = excluded.value_json, measured_at_ticks = excluded.measured_at_ticks,
+                changed_at_ticks = excluded.changed_at_ticks;
             """,
-            states.Select(s => new { s.EntityId, s.ValueJson, Ticks = s.MeasuredAt.UtcTicks }),
+            states.Select(s => new { s.EntityId, s.ValueJson, Ticks = s.MeasuredAt.UtcTicks, ChangedTicks = s.ChangedAt?.UtcTicks }),
             transaction,
             cancellationToken: ct));
         await transaction.CommitAsync(ct);
@@ -41,5 +43,6 @@ public sealed class SqliteEntityStateRepository(SqliteDatabase db) : IEntityStat
         public string EntityId { get; init; } = "";
         public string ValueJson { get; init; } = "";
         public long Ticks { get; init; }
+        public long? ChangedTicks { get; init; }
     }
 }

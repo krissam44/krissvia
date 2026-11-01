@@ -13,7 +13,7 @@ class KvOuverture extends KvWidget {
         return `<div class="carte">
             <div class="titre" title="${esc(entite?.name)}">${esc(entite?.name ?? "—")}</div>
             ${manque ?? `<div class="grand ${actif ? (grave ? "alerte" : "actif") : ""}">${esc(libelleBooleen(entite, actif))}</div>`}
-            <div class="detail bas">${esc(depuis(etat?.measured_at))}</div>
+            <div class="detail bas">${esc(depuis(etat?.changed_at ?? etat?.measured_at))}</div>
         </div>`;
     }
 }

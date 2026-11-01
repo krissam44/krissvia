@@ -9,8 +9,15 @@ namespace Krissvia.Core.States;
 /// redémarrage : une mesure ancienne doit rester ancienne, sinon tout contrôle de fraîcheur devient aveugle.
 /// </param>
 /// <param name="Available">Faux si l'entité est indisponible (plugin mort, appareil injoignable).</param>
-public sealed record EntityStateSnapshot(JsonElement Value, DateTimeOffset MeasuredAt, bool Available = true)
+/// <param name="ChangedAt">
+/// Instant où la valeur a pris son état actuel ; null : inconnu, voir <see cref="ChangedSince"/>. Un radar de présence
+/// republie « occupé » toutes les secondes : <see cref="MeasuredAt"/> dit qu'il parle encore, ceci depuis quand.
+/// </param>
+public sealed record EntityStateSnapshot(JsonElement Value, DateTimeOffset MeasuredAt, bool Available = true, DateTimeOffset? ChangedAt = null)
 {
+    /// <summary>Depuis quand la valeur est celle-ci ; à défaut d'en savoir plus, l'instant de la mesure.</summary>
+    public DateTimeOffset ChangedSince => ChangedAt ?? MeasuredAt;
+
     /// <summary>Valeur numérique, si l'entité est disponible et porte un nombre.</summary>
     public bool TryGetNumber(out double value)
     {

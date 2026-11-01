@@ -108,8 +108,7 @@ alerte. La carte garde le dernier relevé, avec l'état « Éteinte ou injoignab
 ## Carte « Imprimante »
 
 Livrée par le plugin (`widgets/imprimante`, WIDGETS.md §13), choisie d'office pour l'entité Imprimante : une jauge en
-arc par consommable (vert, orange sous 25 %, rouge sous le seuil), l'état, l'heure du dernier relevé, le consommable le
-plus bas, les alertes, et **Vérifier** qui relève tout de suite (commande `refresh`). La carte n'affiche rien de neuf
+arc par consommable (vert, orange sous 25 %, rouge sous le seuil), l'état, l'heure du dernier relevé, les alertes, et **Vérifier** qui relève tout de suite (commande `refresh`). La carte n'affiche rien de neuf
 parce qu'elle a cliqué : le relevé arrive par l'état de l'entité.
 
 ## Réglages (page Services)

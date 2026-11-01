@@ -9,7 +9,7 @@ namespace Krissvia.Persistence.Sqlite;
 /// </summary>
 public sealed class SqliteDatabase(string connectionString)
 {
-    private const int VersionSchema = 7;
+    private const int VersionSchema = 8;
 
     /// <remarks>
     /// <c>synchronous = FULL</c>, pas NORMAL, et sans réglage pour le changer : NORMAL n'est sûr en WAL que si chaque
@@ -45,6 +45,7 @@ public sealed class SqliteDatabase(string connectionString)
         if (version < 5) await connexion.ExecuteAsync(SchemaV5, transaction: transaction);
         if (version < 6) await connexion.ExecuteAsync(SchemaV6, transaction: transaction);
         if (version < 7) await connexion.ExecuteAsync(SchemaV7, transaction: transaction);
+        if (version < 8) await connexion.ExecuteAsync(SchemaV8, transaction: transaction);
         await connexion.ExecuteAsync($"PRAGMA user_version = {VersionSchema};", transaction: transaction);
         await transaction.CommitAsync(ct);
     }
@@ -150,6 +151,14 @@ public sealed class SqliteDatabase(string connectionString)
     private const string SchemaV7 = """
         ALTER TABLE devices ADD COLUMN proposed_name TEXT;
         ALTER TABLE entities ADD COLUMN proposed_name TEXT;
+        """;
+
+    /// <summary>
+    /// v8 : l'instant où la valeur a pris son état actuel (« allumé depuis 2 h »), distinct de celui du dernier message.
+    /// Vide pour l'existant : l'instant de la mesure en tient lieu.
+    /// </summary>
+    private const string SchemaV8 = """
+        ALTER TABLE entity_states ADD COLUMN changed_at_ticks INTEGER;
         """;
 
     private const string SchemaV4 = """

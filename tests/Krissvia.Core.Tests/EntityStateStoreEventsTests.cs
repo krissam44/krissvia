@@ -57,6 +57,24 @@ public class EntityStateStoreEventsTests
     }
 
     [Fact]
+    public void Une_valeur_repetee_garde_l_instant_de_son_changement()
+    {
+        // Un radar republie « occupé » sans cesse : la mesure est fraîche, mais il est occupé depuis la première.
+        var t0 = new DateTimeOffset(2026, 11, 1, 8, 0, 0, TimeSpan.Zero);
+        _etats.Update("binary_sensor.radar", JsonSerializer.SerializeToElement(false), t0);
+        _etats.Update("binary_sensor.radar", JsonSerializer.SerializeToElement(true), t0.AddMinutes(1));
+        _etats.Update("binary_sensor.radar", JsonSerializer.SerializeToElement(true), t0.AddMinutes(30));
+
+        var etat = _etats.Get("binary_sensor.radar")!;
+        Assert.Equal(t0.AddMinutes(30), etat.MeasuredAt);
+        Assert.Equal(t0.AddMinutes(1), etat.ChangedSince);
+        Assert.Equal(t0.AddMinutes(1), Changements[^1].Current.ChangedSince);
+
+        _etats.Update("binary_sensor.radar", JsonSerializer.SerializeToElement(false), t0.AddMinutes(31));
+        Assert.Equal(t0.AddMinutes(31), _etats.Get("binary_sensor.radar")!.ChangedSince);
+    }
+
+    [Fact]
     public void La_perte_de_disponibilite_est_publiee()
     {
         _etats.Update("sensor.sonde", JsonSerializer.SerializeToElement(19.5));
