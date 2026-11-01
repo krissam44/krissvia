@@ -40,11 +40,24 @@ export function arreter() {
     hote.cartes.clear();
 }
 
+// File des appels à appliquer() : un seul à la fois.
+let file = Promise.resolve();
+
 /**
  * Les cartes à afficher : [{ id, widget, entities: { slot: entity_id }, settings, title, principal }]. Rappelé après
  * chaque rendu. `title` : nom propre à la carte, donné à l'entité du slot `principal` à la place du sien.
+ *
+ * Les appels passent l'un après l'autre. Blazor n'attend pas la fin d'un OnAfterRenderAsync pour rendre de nouveau :
+ * deux appels qui montaient la même carte en même temps y laissaient DEUX éléments, et seul le second recevait les
+ * états — la carte visible restait figée (un radiateur affiché allumé jusqu'au F5).
  */
-export async function appliquer(cartes) {
+export function appliquer(cartes) {
+    const tour = file.then(() => appliquerMaintenant(cartes));
+    file = tour.catch(() => {});
+    return tour;
+}
+
+async function appliquerMaintenant(cartes) {
     const vues = new Set();
     for (const carte of cartes) {
         vues.add(carte.id);
