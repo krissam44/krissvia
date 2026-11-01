@@ -5,7 +5,7 @@ using Krissvia.Core.Events;
 namespace Krissvia.Core.States;
 
 /// <summary>État d'une entité tel que persisté : la valeur brute et l'instant de sa mesure.</summary>
-public sealed record PersistedEntityState(string EntityId, string ValueJson, DateTimeOffset MeasuredAt);
+public sealed record PersistedEntityState(string EntityId, string ValueJson, DateTimeOffset MeasuredAt, DateTimeOffset? ChangedAt = null);
 
 /// <summary>
 /// Port de persistance du magasin d'états, implémenté par Krissvia.Persistence. La disponibilité n'est pas
@@ -80,10 +80,15 @@ public sealed class EntityStateStore(
         var maintenant = clock.GetUtcNow();
         var instant = measuredAt is { } m && m <= maintenant + FutureTolerance ? m : maintenant;
 
-        var etat = new EntityStateSnapshot(value.Clone(), instant.ToUniversalTime(), Available: true);
+        var etat = new EntityStateSnapshot(value.Clone(), instant.ToUniversalTime(), Available: true, ChangedAt: instant.ToUniversalTime());
         EntityStateSnapshot? precedent = null;
         // La fabrique peut tourner plusieurs fois en cas de concurrence : la dernière capture est la bonne.
-        _etats.AddOrUpdate(entityId, _ => { precedent = null; return etat; }, (_, ancien) => { precedent = ancien; return etat; });
+        // La même valeur republiée garde l'instant de son changement : c'est lui que « depuis 2 h » raconte.
+        etat = _etats.AddOrUpdate(entityId, _ => { precedent = null; return etat; }, (_, ancien) =>
+        {
+            precedent = ancien;
+            return JsonElement.DeepEquals(ancien.Value, etat.Value) ? etat with { ChangedAt = ancien.ChangedSince } : etat;
+        });
         _aEcrire[entityId] = 0;
 
         events?.Publish(new EntityStateChanged(entityId, precedent, etat));
@@ -115,7 +120,7 @@ public sealed class EntityStateStore(
         {
             if (!TryParse(persiste.ValueJson, out var valeur)) continue;
 
-            _etats.TryAdd(persiste.EntityId, new EntityStateSnapshot(valeur, persiste.MeasuredAt, Available: false));
+            _etats.TryAdd(persiste.EntityId, new EntityStateSnapshot(valeur, persiste.MeasuredAt, Available: false, persiste.ChangedAt));
         }
     }
 
@@ -131,7 +136,7 @@ public sealed class EntityStateStore(
             if (!_aEcrire.TryRemove(cle, out _)) continue;
             if (!_etats.TryGetValue(cle, out var etat)) continue;
 
-            lot.Add(new PersistedEntityState(cle, etat.Value.GetRawText(), etat.MeasuredAt));
+            lot.Add(new PersistedEntityState(cle, etat.Value.GetRawText(), etat.MeasuredAt, etat.ChangedAt));
             retires.Add(cle);
         }
 

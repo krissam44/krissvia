@@ -179,7 +179,7 @@ Le tableau de bord crée l'élément, puis lui affecte des **propriétés** (pas
 | Propriété | Contenu |
 |---|---|
 | `entities` | Par slot : `{ entity_id, name, kind, device_class, unit, commands, room, usage }`. Absent si le slot facultatif n'est pas lié. Si la carte a un nom propre (« Nom sur la carte »), il remplace `name` dans l'entité du slot principal : le widget n'a rien à faire. |
-| `states` | Par slot : `{ value, available, measured_at }`, ou `null` si jamais reçu. Remplacé à chaque changement d'état. |
+| `states` | Par slot : `{ value, available, measured_at, changed_at }`, ou `null` si jamais reçu. Remplacé à chaque changement d'état. `measured_at` date le dernier message, `changed_at` l'instant où la valeur a pris son état actuel : un radar qui republie « occupé » chaque seconde a un `measured_at` toujours frais, et c'est `changed_at` qui dit « depuis 2 h ». |
 | `settings` | Les options de la carte, validées contre le schéma du manifeste. |
 | `kv` | L'hôte : voir §5. |
 

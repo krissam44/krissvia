@@ -36,7 +36,7 @@ function heure(iso) {
 
 /**
  * Carte « Imprimante », livrée par le plugin Imprimantes IPP (WIDGETS.md §13), d'après celle de Gladys : une jauge par
- * consommable, puis l'état, le dernier relevé et le consommable le plus bas, les alertes, et « Vérifier ». La carte
+ * consommable, puis l'état et le dernier relevé, les alertes, et « Vérifier ». La carte
  * n'invente rien après le clic : le nouveau relevé arrive par l'état de l'entité. Éteinte, l'imprimante garde son
  * dernier relevé à l'écran, avec l'état « Éteinte ou injoignable ».
  */
@@ -95,8 +95,6 @@ class KvImprimante extends KvWidget {
 
         const allumee = etat.available;
         const couleurEtat = !allumee ? GRIS : v.state === "stopped" ? ROUGE : v.state === "processing" ? BLEU : v.problem ? ORANGE : VERT;
-        const bas = v.lowest;
-        const couleurBas = bas ? teinte(marqueurs.find(m => m.name === bas.name) ?? bas) : GRIS;
         const ligne = (couleur, libelle, valeur) =>
             `<div class="ligne"><span class="pastille" style="background:${couleur}"></span><span>${libelle}</span><span class="val">${valeur}</span></div>`;
         const alertes = allumee && Array.isArray(v.alerts) && v.alerts.length
@@ -106,7 +104,6 @@ class KvImprimante extends KvWidget {
             <div class="lignes">
                 ${ligne(couleurEtat, "État", esc(allumee ? v.state_label ?? "—" : "Éteinte ou injoignable"))}
                 ${ligne("#546e7a", "Dernier relevé", heure(v.last_read))}
-                ${bas ? ligne(couleurBas, "Niveau le plus bas", `${esc(bas.name)} · ${Math.round(bas.level)} %`) : ""}
             </div>
             ${alertes}
             <div class="actions bas"><button data-verifier${this.#attente ? " disabled" : ""}>${icone("sync")}Vérifier</button></div>

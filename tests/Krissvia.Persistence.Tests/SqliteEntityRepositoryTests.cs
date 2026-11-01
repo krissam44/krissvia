@@ -190,8 +190,9 @@ public sealed class SqliteEntityRepositoryTests : IDisposable
         Assert.Equal("ma-prise", (await (await OuvrirRegistreAsync()).GetAsync("switch.prise_salon"))!.Widget);
     }
 
-    /// <summary>Les colonnes du schéma v7, retirées pour rejouer une base plus ancienne.</summary>
-    private const string SansNomPropose = "ALTER TABLE devices DROP COLUMN proposed_name; ALTER TABLE entities DROP COLUMN proposed_name;";
+    /// <summary>Les colonnes des schémas v7 et v8, retirées pour rejouer une base plus ancienne.</summary>
+    private const string SansNomPropose = "ALTER TABLE devices DROP COLUMN proposed_name; ALTER TABLE entities DROP COLUMN proposed_name; " +
+                                          "ALTER TABLE entity_states DROP COLUMN changed_at_ticks;";
 
     [Fact]
     public async Task Le_nom_affiche_suit_le_nom_propose_apres_redemarrage_tant_qu_il_n_a_pas_ete_change()

@@ -13,10 +13,11 @@ using Krissvia.Core.States;
 namespace Krissvia.Server;
 
 /// <summary>État d'une entité tel que l'API le montre. Absent (null) : jamais reçu, ce qui n'est pas zéro.</summary>
-internal sealed record EntityStateView(JsonElement Value, bool Available, DateTimeOffset MeasuredAt)
+/// <param name="ChangedAt">Depuis quand la valeur est celle-ci (« allumé depuis 2 h ») ; <c>measured_at</c> date le dernier message.</param>
+internal sealed record EntityStateView(JsonElement Value, bool Available, DateTimeOffset MeasuredAt, DateTimeOffset ChangedAt)
 {
     public static EntityStateView? From(EntityStateSnapshot? etat) =>
-        etat is null ? null : new(etat.Value, etat.Available, etat.MeasuredAt);
+        etat is null ? null : new(etat.Value, etat.Available, etat.MeasuredAt, etat.ChangedSince);
 }
 
 /// <summary>Une entité telle que l'API, le flux en direct et les widgets la voient (WIDGETS.md §4).</summary>

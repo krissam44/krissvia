@@ -63,7 +63,10 @@ public sealed class RoomAverageEntities(IEntityRegistry registry, IEntityStateRe
             foreach (var g in pieces)
             {
                 var fiables = g.Where(s => s.Health == SensorHealth.Ok && s.Temperature is not null).ToList();
-                var quand = fiables.Count == 0 ? null : fiables.Max(s => s.MeasuredAt);
+                // L'instant moyen des sondes retenues, et non le plus récent : dans une pièce à quatre sondes, il y en a
+                // presque toujours une qui vient de parler, et la moyenne affichait « à l'instant » en permanence.
+                var quand = fiables.Count == 0 ? null
+                    : (DateTimeOffset?)new DateTimeOffset((long)fiables.Average(s => (double)s.MeasuredAt!.Value.UtcTicks), TimeSpan.Zero);
                 Publier(entites.GetValueOrDefault(DeviceId(g.Key) + ":temperature"),
                     fiables.Count == 0 ? null : Math.Round(fiables.Average(s => s.Temperature!.Value), 1), quand);
 

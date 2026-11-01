@@ -53,7 +53,7 @@ public class RoomAverageEntitiesTests
     }
 
     [Fact]
-    public async Task La_moyenne_d_une_piece_devient_une_sonde_avec_l_instant_de_sa_mesure_la_plus_recente()
+    public async Task La_moyenne_d_une_piece_devient_une_sonde_avec_l_instant_moyen_de_ses_mesures()
     {
         var b = new Banc();
         b.Etats.Fixer(b.Id("s1:t"), 19.0, T0.AddMinutes(-5));
@@ -64,8 +64,9 @@ public class RoomAverageEntitiesTests
 
         var temperature = b.Registre.Loaded.Single(e => e.UniqueId == RoomAverageEntities.DeviceId("Salon") + ":temperature");
         Assert.Equal(("sensor.moyenne_salon_temperature", DeviceClasses.Temperature), (temperature.EntityId, temperature.DeviceClass));
-        Assert.Contains((temperature.EntityId, 19.5, T0.AddMinutes(-2)), b.Ecrivain.Ecrits);
-        Assert.Contains(("sensor.moyenne_salon_humidite", 58.0, T0.AddMinutes(-2)), b.Ecrivain.Ecrits);
+        // Pas l'instant le plus récent (− 2 min) : avec plusieurs sondes, il y en a toujours une qui vient de parler.
+        Assert.Contains((temperature.EntityId, 19.5, T0.AddMinutes(-3.5)), b.Ecrivain.Ecrits);
+        Assert.Contains(("sensor.moyenne_salon_humidite", 58.0, T0.AddMinutes(-3.5)), b.Ecrivain.Ecrits);
     }
 
     [Fact]
