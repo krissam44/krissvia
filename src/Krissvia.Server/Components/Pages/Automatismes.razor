@@ -62,8 +62,12 @@
                 }
                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mt-2">
                     <MudSwitch T="bool" Value="a.Enabled" ValueChanged="actif => ActiverAsync(a, actif)" Color="Color.Primary" Label="Actif" />
-                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.PlayArrow" Disabled="@_enCours.Contains(a.Id)"
-                               OnClick="() => ExecuterAsync(a)">Exécuter</MudButton>
+                    <MudStack Row="true" Spacing="0">
+                        <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.History"
+                                   OnClick="() => AutomatismeHistoriqueDialog.OuvrirAsync(Dialogues, a.Id, Nom(a))">Historique</MudButton>
+                        <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.PlayArrow" Disabled="@_enCours.Contains(a.Id)"
+                                   OnClick="() => ExecuterAsync(a)">Exécuter</MudButton>
+                    </MudStack>
                 </MudStack>
             </MudPaper>
         </MudItem>

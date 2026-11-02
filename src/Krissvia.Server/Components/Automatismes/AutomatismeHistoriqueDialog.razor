@@ -1,0 +1,62 @@
+@* Les exécutions d'un automatisme sur 7, 30 ou 90 jours, relues en base : c'est ici qu'on vérifie qu'un éclairage
+   s'est allumé chaque soir, une ligne par exécution, groupées par jour. *@
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">@Nom</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="d-flex flex-wrap align-center gap-2 mb-3">
+            @foreach (var jours in Periodes)
+            {
+                <MudButton Size="Size.Small" Variant="@(_jours == jours ? Variant.Filled : Variant.Outlined)"
+                           Color="@(_jours == jours ? Color.Primary : Color.Default)" OnClick="() => ChoisirAsync(jours)">@jours j</MudButton>
+            }
+            <MudSpacer />
+            @if (!_chargement && _executions.Count > 0)
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">@Resume</MudText>
+            }
+        </div>
+
+        @if (_chargement)
+        {
+            <div class="d-flex justify-center pa-10"><MudProgressCircular Indeterminate="true" Color="Color.Primary" /></div>
+        }
+        else if (_executions.Count == 0)
+        {
+            <div class="pa-8 mud-text-secondary" style="text-align:center">
+                <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Style="font-size:2rem" />
+                <div>Aucune exécution sur les @_jours derniers jours.</div>
+            </div>
+        }
+        else
+        {
+            <MudSimpleTable Dense="true" Elevation="0" Style="max-height: 60vh; overflow-y: auto">
+                <tbody>
+                    @foreach (var jour in _executions.GroupBy(r => Local(r.At).Date))
+                    {
+                        <tr class="kv-jour"><td colspan="3">@jour.Key.ToString("dddd d MMMM", Fr)</td></tr>
+                        @foreach (var r in jour)
+                        {
+                            <tr>
+                                <td style="white-space: nowrap">@Local(r.At).ToString("HH:mm:ss")</td>
+                                <td>@r.Cause@if (r.Detail is { } d) { <br /><span class="mud-text-secondary">@d</span> }</td>
+                                <td style="white-space: nowrap"><MudChip T="string" Size="Size.Small" Color="@LibellesAutomatisme.Couleur(r.Outcome)">@LibellesAutomatisme.Issue(r.Outcome)</MudChip></td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialogue.Close()">Fermer</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .kv-jour td { font-weight: 600; background: var(--mud-palette-background-gray); }
+</style>

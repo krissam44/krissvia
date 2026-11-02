@@ -9,7 +9,7 @@ namespace Krissvia.Persistence.Sqlite;
 /// </summary>
 public sealed class SqliteDatabase(string connectionString)
 {
-    private const int VersionSchema = 8;
+    private const int VersionSchema = 9;
 
     /// <remarks>
     /// <c>synchronous = FULL</c>, pas NORMAL, et sans réglage pour le changer : NORMAL n'est sûr en WAL que si chaque
@@ -46,6 +46,7 @@ public sealed class SqliteDatabase(string connectionString)
         if (version < 6) await connexion.ExecuteAsync(SchemaV6, transaction: transaction);
         if (version < 7) await connexion.ExecuteAsync(SchemaV7, transaction: transaction);
         if (version < 8) await connexion.ExecuteAsync(SchemaV8, transaction: transaction);
+        if (version < 9) await connexion.ExecuteAsync(SchemaV9, transaction: transaction);
         await connexion.ExecuteAsync($"PRAGMA user_version = {VersionSchema};", transaction: transaction);
         await transaction.CommitAsync(ct);
     }
@@ -159,6 +160,22 @@ public sealed class SqliteDatabase(string connectionString)
     /// </summary>
     private const string SchemaV8 = """
         ALTER TABLE entity_states ADD COLUMN changed_at_ticks INTEGER;
+        """;
+
+    /// <summary>v9 : journal durable des exécutions (automatismes), purgé au-delà de quelques mois.</summary>
+    private const string SchemaV9 = """
+        CREATE TABLE IF NOT EXISTS run_journal (
+            id           INTEGER PRIMARY KEY,
+            source       TEXT NOT NULL,
+            subject_id   TEXT NOT NULL,
+            subject_name TEXT NOT NULL,
+            at_ms        INTEGER NOT NULL,
+            cause        TEXT NOT NULL,
+            outcome      TEXT NOT NULL,
+            detail       TEXT
+        );
+        CREATE INDEX IF NOT EXISTS ix_run_journal_sujet ON run_journal (source, subject_id, at_ms);
+        CREATE INDEX IF NOT EXISTS ix_run_journal_instant ON run_journal (source, at_ms);
         """;
 
     private const string SchemaV4 = """

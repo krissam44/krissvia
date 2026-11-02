@@ -165,6 +165,13 @@ internal static class PublicApi
 
         groupe.MapGet("/journal", (AutomationEngine moteur) => Json(moteur.Journal));
 
+        // Journal durable (90 jours) : tous les automatismes, ou un seul ; ?days=30 par défaut.
+        groupe.MapGet("/history", async (int? days, AutomationHistory historique, CancellationToken ct) =>
+            Json(await historique.ReadAsync(null, Periode(days), ct: ct)));
+
+        groupe.MapGet("/{id}/history", async (string id, int? days, AutomationHistory historique, CancellationToken ct) =>
+            Json(await historique.ReadAsync(id, Periode(days), ct: ct)));
+
         groupe.MapGet("/{id}", (string id, AutomationService service, AutomationEngine moteur) =>
             service.Get(id) is { } a ? Json(new { settings = a, last_run = moteur.LastRun(id) }) : AutomatismeInconnu(id));
 
@@ -199,6 +206,10 @@ internal static class PublicApi
         groupe.MapPost("/{id}/run", async (string id, AutomationService service, AutomationEngine moteur, CancellationToken ct) =>
             service.Get(id) is { } a ? Json(await moteur.RunNowAsync(a, ct)) : AutomatismeInconnu(id));
     }
+
+    /// <summary>La période demandée en jours : 30 par défaut, bornée à la durée de conservation.</summary>
+    private static TimeSpan Periode(int? jours) =>
+        TimeSpan.FromDays(Math.Clamp(jours ?? 30, 1, (int)AutomationHistory.Retention.TotalDays));
 
     private static IResult AutomatismeInconnu(string id) =>
         Results.Json(new { error = $"automatisme « {id} » inconnu" }, ThermostatService.Json, statusCode: StatusCodes.Status404NotFound);
