@@ -34,6 +34,7 @@ public partial class AutomatismeDialog
     private List<RegisteredEntity> _toutOuRien = [];
     private List<RegisteredEntity> _pilotables = [];
     private List<RegisteredEntity> _mesures = [];
+    private List<RegisteredEntity> _meteos = [];
 
     private bool Creation => Id is null;
 
@@ -73,6 +74,7 @@ public partial class AutomatismeDialog
         _toutOuRien = actives.Where(e => e.Kind is EntityKind.BinarySensor or EntityKind.Switch or EntityKind.Light).ToList();
         _pilotables = actives.Where(e => e.Kind is EntityKind.Switch or EntityKind.Light).ToList();
         _mesures = actives.Where(e => e.Kind == EntityKind.Sensor && !string.IsNullOrEmpty(e.Unit)).ToList();
+        _meteos = actives.Where(e => e.DeviceClass == DeviceClasses.Weather).ToList();
 
         if (Creation)
         {
@@ -224,6 +226,8 @@ public partial class AutomatismeDialog
         public TimeSpan? Heure { get; set; } = new(7, 0, 0);
         public Dictionary<DayOfWeek, bool> Jours { get; } = LibellesAutomatisme.Jours.ToDictionary(j => j, _ => false);
         public StateTransition Transition { get; set; } = StateTransition.Activated;
+        public SunEvent Soleil { get; set; } = SunEvent.Sunset;
+        public int Decalage { get; set; }
         public List<ConditionSaisie> Conditions { get; } = [];
         public List<ActionSaisie> Actions { get; } = [new()];
 
@@ -233,6 +237,7 @@ public partial class AutomatismeDialog
             {
                 Id = a.Id, Nom = a.Name, Actif = a.Enabled, Declencheur = a.Trigger.Type, EntiteDeclencheur = a.Trigger.EntityId ?? "",
                 Action = a.Trigger.Action, Heure = a.Trigger.Time, Transition = a.Trigger.Transition,
+                Soleil = a.Trigger.Sun, Decalage = a.Trigger.OffsetMinutes,
             };
             foreach (var j in a.Trigger.Days) m.Jours[j] = true;
             m.Conditions.AddRange(a.Conditions.Select(ConditionSaisie.Depuis));
@@ -252,8 +257,10 @@ public partial class AutomatismeDialog
                 EntityId = Declencheur == TriggerType.Time ? null : Vide(EntiteDeclencheur),
                 Action = Declencheur == TriggerType.Button ? Vide(Action) : null,
                 Time = Declencheur == TriggerType.Time ? Heure ?? TimeSpan.Zero : default,
-                Days = Declencheur == TriggerType.Time ? [.. Jours.Where(kv => kv.Value).Select(kv => kv.Key)] : [],
+                Days = Declencheur is TriggerType.Time or TriggerType.Sun ? [.. Jours.Where(kv => kv.Value).Select(kv => kv.Key)] : [],
                 Transition = Transition,
+                Sun = Soleil,
+                OffsetMinutes = Declencheur == TriggerType.Sun ? Decalage : 0,
             },
             Conditions = [.. Conditions.Select(c => c.Vers())],
             Actions = [.. Actions.Select(a => a.Vers())],

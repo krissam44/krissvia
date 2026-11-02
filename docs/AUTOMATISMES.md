@@ -13,9 +13,14 @@ faire reste Node-RED, par l'API REST.
 |---|---|---|
 | `button` | une entité `event` publie une action (« single », « double »…) ; action vide = toutes | Un appui de plus de 2 min (plugin qui rejoue ses états à la reconnexion) et un simple changement de disponibilité ne comptent pas. Deux « single » de suite sont deux appuis. |
 | `time` | à l'heure locale choisie, sur les jours cochés (aucun = tous) | Une seule fois par minute ; **pas de rattrapage** si le serveur était arrêté à l'heure dite. |
+| `sun` | au lever (`sunrise`) ou au coucher (`sunset`) du soleil d'une entité météo, décalé de `offset_minutes` (négatif : avant, ± 4 h au plus), sur les jours cochés | Les heures sont celles que publie le plugin Météo pour le lieu. Une météo qui n'a pas pu se mettre à jour sert encore deux jours (elles ne bougent que de quelques minutes) ; au-delà, rien ne part. Un décalage qui sort de la journée (coucher + 4 h après minuit) ne part pas. Une fois par minute, **pas de rattrapage**, comme `time`. |
 | `state_change` | un tout-ou-rien (`binary_sensor`, `switch`, `light`) devient actif, repasse au repos, ou les deux | Sur **front** seulement : un état précédent inconnu (premier état après un redémarrage) ne déclenche pas, sinon chaque redémarrage rallumerait les lumières ; un radar qui réaffirme sa détection non plus. |
 
 « Actif » : `true` (allumé, ouvert, détecté), ou `{"on": true}` pour une lumière.
+
+Exemple : un éclairage extérieur allumé 10 min avant le coucher du soleil et éteint à minuit, puis le matin d'une heure
+avant le lever à 30 min après. Trois automatismes : `sun`/`sunset`/`-10` → allumer ; `time` 00:00 → éteindre ;
+`sun`/`sunrise`/`-60` → allumer, puis éteindre avec une attente de 90 min.
 
 ## 2. Conditions
 
@@ -46,7 +51,7 @@ de s'exécuter (`delay_seconds`, 24 h au plus) : « allumer, puis éteindre 5 mi
 ## 4. Vérifications à l'enregistrement
 
 Chaque référence est vérifiée au registre **avec sa famille** : un déclencheur bouton vise un `event`, un changement d'état
-un tout-ou-rien, une action un `switch` ou une `light`, une condition de seuil un `sensor` ; un thermostat doit exister.
+un tout-ou-rien, un déclencheur soleil une entité météo (`device_class: weather`), une action un `switch` ou une `light`, une condition de seuil un `sensor` ; un thermostat doit exister.
 Un équipement renommé ne laisse donc pas un automatisme agir dans le vide en se croyant en règle.
 
 ## 5. Écrans et API

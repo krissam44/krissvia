@@ -130,6 +130,12 @@ public sealed partial class AutomationService(IConfigurationStore store, IEntity
             case TriggerType.StateChange:
                 await EntiteAsync(a.Trigger.EntityId!, "déclencheur", ct, ToutOuRien);
                 break;
+            case TriggerType.Sun:
+                var meteo = await registry.GetAsync(a.Trigger.EntityId!, ct)
+                            ?? throw new AutomationValidationException($"déclencheur : l'entité « {a.Trigger.EntityId} » n'existe pas.");
+                if (meteo.DeviceClass != DeviceClasses.Weather)
+                    throw new AutomationValidationException($"déclencheur : « {meteo.DisplayName} » n'est pas une météo (lever et coucher du soleil).");
+                break;
         }
 
         foreach (var c in a.Conditions)

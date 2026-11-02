@@ -96,6 +96,74 @@ public class AutomationTests
         Assert.True(AutomationRules.TimeMatches(t with { Days = [DayOfWeek.Wednesday] }, T0.DateTime));
     }
 
+    /// <summary>L'objet publié par le plugin Météo : heures locales du lieu, comme Open-Meteo les donne.</summary>
+    private static FakeStateReader Meteo(string lever, string coucher)
+    {
+        var etats = new FakeStateReader();
+        etats.Set("sensor.meteo", JsonSerializer.SerializeToElement(new { temperature = 10.8, sunrise = lever, sunset = coucher }), T0);
+        return etats;
+    }
+
+    private static AutomationTrigger Soleil(SunEvent moment, int decalage) =>
+        new() { Type = TriggerType.Sun, EntityId = "sensor.meteo", Sun = moment, OffsetMinutes = decalage };
+
+    [Fact]
+    public void Le_soleil_part_a_sa_minute_decalee_avant_comme_apres()
+    {
+        var etats = Meteo("2026-10-21T08:12", "2026-10-21T18:40");
+        var jour = T0.DateTime.Date;
+
+        var coucher = Soleil(SunEvent.Sunset, -10);
+        Assert.Equal(jour.AddHours(18).AddMinutes(30), AutomationRules.SunTriggerTime(coucher, etats, T0.DateTime));
+        Assert.True(AutomationRules.SunMatches(coucher, etats, jour.AddHours(18).AddMinutes(30)));
+        Assert.True(AutomationRules.SunMatches(coucher, etats, jour.AddHours(18).AddMinutes(30).AddSeconds(59)));
+        Assert.False(AutomationRules.SunMatches(coucher, etats, jour.AddHours(18).AddMinutes(31)));
+        Assert.False(AutomationRules.SunMatches(coucher, etats, jour.AddHours(18).AddMinutes(40)));
+
+        var lever = Soleil(SunEvent.Sunrise, 30);
+        Assert.True(AutomationRules.SunMatches(lever, etats, jour.AddHours(8).AddMinutes(42)));
+        Assert.False(AutomationRules.SunMatches(lever with { Days = [DayOfWeek.Monday] }, etats, jour.AddHours(8).AddMinutes(42)));
+        Assert.True(AutomationRules.SunMatches(lever with { Days = [DayOfWeek.Wednesday] }, etats, jour.AddHours(8).AddMinutes(42)));
+    }
+
+    [Fact]
+    public void Une_meteo_d_hier_sert_encore_mais_pas_une_meteo_perimee()
+    {
+        // Open-Meteo injoignable ce matin : les heures d'hier ne diffèrent que d'une ou deux minutes.
+        var hier = Meteo("2026-10-20T08:10", "2026-10-20T18:42");
+        Assert.Equal(T0.DateTime.Date.AddHours(7).AddMinutes(10),
+            AutomationRules.SunTriggerTime(Soleil(SunEvent.Sunrise, -60), hier, T0.DateTime));
+
+        var perimee = Meteo("2026-10-18T08:07", "2026-10-18T18:47");
+        Assert.Null(AutomationRules.SunTriggerTime(Soleil(SunEvent.Sunrise, -60), perimee, T0.DateTime));
+
+        var illisible = Meteo("bientôt", "");
+        Assert.Null(AutomationRules.SunTriggerTime(Soleil(SunEvent.Sunset, 0), illisible, T0.DateTime));
+        Assert.Null(AutomationRules.SunTriggerTime(Soleil(SunEvent.Sunset, 0), new FakeStateReader(), T0.DateTime));
+    }
+
+    [Fact]
+    public void Un_decalage_qui_sort_de_la_journee_ne_part_pas_a_une_autre_date()
+    {
+        // 22:10 + 4 h = 02:10 le LENDEMAIN : rien aujourd'hui, et pas « 02:10 aujourd'hui » non plus.
+        var etats = Meteo("2026-10-21T08:12", "2026-10-21T22:10");
+        Assert.Null(AutomationRules.SunTriggerTime(Soleil(SunEvent.Sunset, 240), etats, T0.DateTime));
+        Assert.False(AutomationRules.SunMatches(Soleil(SunEvent.Sunset, 240), etats, T0.DateTime.Date.AddHours(2).AddMinutes(10)));
+    }
+
+    [Fact]
+    public void Un_decalage_de_plus_de_quatre_heures_est_refuse()
+    {
+        var a = new Automation
+        {
+            Id = "x", Trigger = Soleil(SunEvent.Sunset, -241),
+            Actions = [new AutomationAction { Type = ActionType.TurnOn, EntityId = "switch.lampe" }],
+        };
+
+        Assert.Throws<ArgumentException>(a.Validate);
+        (a with { Trigger = Soleil(SunEvent.Sunset, -240) }).Validate();
+    }
+
     // ── Conditions ───────────────────────────────────────────────────────────
 
     private static ConditionContext Contexte(FakeStateReader? etats = null, bool absente = false, ThermostatMode? mode = null) =>
@@ -198,6 +266,7 @@ public class AutomationTests
                 Appareil("Lampe", EntityKind.Switch, commandes: [StandardCommands.TurnOn, StandardCommands.TurnOff]),
                 Appareil("Prise", EntityKind.Switch, commandes: [StandardCommands.TurnOn, StandardCommands.TurnOff, StandardCommands.Toggle]),
                 Appareil("Sonde", EntityKind.Sensor, DeviceClasses.Temperature),
+                Appareil("Meteo", EntityKind.Sensor, DeviceClasses.Weather),
             ]).GetAwaiter().GetResult();
         }
 
@@ -346,6 +415,39 @@ public class AutomationTests
         await b.Moteur.WhenIdleAsync();
 
         Assert.Single(b.Ordres);
+    }
+
+    [Fact]
+    public async Task Le_coucher_du_soleil_allume_une_fois_a_sa_minute_et_le_journal_dit_l_heure()
+    {
+        var b = new Banc();
+        var a = await b.AjouterAsync();
+        var meteo = b.Registre.Loaded.Single(e => e.DeviceClass == DeviceClasses.Weather).EntityId;
+        await b.Service.SaveAsync(a with { Trigger = Soleil(SunEvent.Sunset, -10) with { EntityId = meteo } });
+        b.Etats.Set(meteo, JsonSerializer.SerializeToElement(new { sunrise = "2026-10-21T08:12", sunset = "2026-10-21T22:41" }), T0);
+
+        b.Moteur.Tick();                                   // 22:30 : une minute trop tôt
+        await b.Moteur.WhenIdleAsync();
+        Assert.Empty(b.Ordres);
+
+        b.Horloge.Advance(TimeSpan.FromMinutes(1));        // 22:31 = 22:41 − 10 min
+        b.Moteur.Tick();
+        b.Horloge.Advance(TimeSpan.FromSeconds(20));
+        b.Moteur.Tick();
+        await b.Moteur.WhenIdleAsync();
+
+        Assert.Equal([("switch.lampe", StandardCommands.TurnOn, "automatisme:essai")], b.Ordres);
+        Assert.Equal("coucher du soleil − 10 min (22:31)", b.Moteur.LastRun("essai")!.Cause);
+    }
+
+    [Fact]
+    public async Task Un_declencheur_soleil_doit_viser_une_meteo()
+    {
+        var b = new Banc();
+        var a = await b.AjouterAsync();
+
+        await Assert.ThrowsAsync<AutomationValidationException>(() =>
+            b.Service.SaveAsync(a with { Trigger = Soleil(SunEvent.Sunset, 0) with { EntityId = "sensor.sonde" } }));
     }
 
     [Fact]

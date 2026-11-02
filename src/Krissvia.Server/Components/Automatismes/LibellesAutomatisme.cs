@@ -19,6 +19,7 @@ internal static class LibellesAutomatisme
     {
         TriggerType.Button => "Appui sur un bouton",
         TriggerType.Time => "Horaire",
+        TriggerType.Sun => "Lever ou coucher du soleil",
         _ => "Changement d'état",
     };
 
@@ -67,9 +68,13 @@ internal static class LibellesAutomatisme
     public static string Declencheur(AutomationTrigger t, Func<string?, string> nom) => t.Type switch
     {
         TriggerType.Button => string.IsNullOrWhiteSpace(t.Action) ? $"appui sur {nom(t.EntityId)}" : $"appui « {t.Action} » sur {nom(t.EntityId)}",
-        TriggerType.Time => $"à {t.Time:hh\\:mm}, {(t.Days.Count is 0 or 7 ? "tous les jours" : string.Join(" ", Jours.Where(t.Days.Contains).Select(Jour)))}",
+        TriggerType.Time => $"à {t.Time:hh\\:mm}, {JoursDe(t)}",
+        TriggerType.Sun => $"au {AutomationRules.DescribeSun(t)} ({nom(t.EntityId)}), {JoursDe(t)}",
         _ => $"{nom(t.EntityId)} {Transition(t.Transition)}",
     };
+
+    private static string JoursDe(AutomationTrigger t) =>
+        t.Days.Count is 0 or 7 ? "tous les jours" : string.Join(" ", Jours.Where(t.Days.Contains).Select(Jour));
 
     public static string Condition(AutomationCondition c, Func<string?, string> nom, Func<string?, string> thermostat)
     {
