@@ -73,6 +73,36 @@
                                     <MudText Typo="Typo.caption" Class="mud-text-secondary">Aucun jour coché : tous les jours. Pas de rattrapage si le serveur était arrêté.</MudText>
                                 </MudItem>
                                 break;
+                            case TriggerType.Sun:
+                                <MudItem xs="12">
+                                    <MudSelect Dense="true" T="string" @bind-Value="_m.EntiteDeclencheur" Label="Lieu météo" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.WbTwilight" HelperText="Ses heures de lever et de coucher, publiées par le plugin Météo">
+                                        @foreach (var e in Options(_meteos, _m.EntiteDeclencheur))
+                                        {
+                                            <MudSelectItem Value="e.EntityId">@e.DisplayName</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <MudSelect Dense="true" T="SunEvent" @bind-Value="_m.Soleil" Label="Moment" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                        <MudSelectItem Value="SunEvent.Sunrise">Lever du soleil</MudSelectItem>
+                                        <MudSelectItem Value="SunEvent.Sunset">Coucher du soleil</MudSelectItem>
+                                    </MudSelect>
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <MudNumericField T="int" @bind-Value="_m.Decalage" Label="Décalage (min)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                     Min="-Automation.MaxSunOffsetMinutes" Max="Automation.MaxSunOffsetMinutes" HelperText="Négatif : avant ; − 10 = dix minutes avant" />
+                                </MudItem>
+                                <MudItem xs="12" Class="d-flex align-center flex-wrap">
+                                    @foreach (var j in LibellesAutomatisme.Jours)
+                                    {
+                                        <div @key="j"><MudCheckBox T="bool" @bind-Value="_m.Jours[j]" Label="@LibellesAutomatisme.Jour(j)" Dense="true" /></div>
+                                    }
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Aucun jour coché : tous les jours. Pas de rattrapage si le serveur était arrêté. Si la météo n'a pas pu se mettre à jour, les heures de la veille servent.</MudText>
+                                </MudItem>
+                                break;
                             default:
                                 <MudItem xs="12" sm="7">
                                     <MudSelect Dense="true" T="string" @bind-Value="_m.EntiteDeclencheur" Label="Équipement" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense"

@@ -92,11 +92,12 @@ public sealed class AutomationEngine(
     {
         var local = clock.GetLocalNow().DateTime;
         var minute = local.ToString("yyyy-MM-dd HH:mm");
-        foreach (var a in _automatismes.Where(a => a.Enabled && AutomationRules.TimeMatches(a.Trigger, local)))
+        foreach (var a in _automatismes.Where(a => a.Enabled
+                     && (AutomationRules.TimeMatches(a.Trigger, local) || AutomationRules.SunMatches(a.Trigger, states, local))))
         {
             if (_derniereMinute.TryGetValue(a.Id, out var deja) && deja == minute) continue;
             _derniereMinute[a.Id] = minute;
-            Lancer(a, $"horaire {a.Trigger.Time:hh\\:mm}");
+            Lancer(a, a.Trigger.Type == TriggerType.Sun ? CauseSoleil(a.Trigger, local) : $"horaire {a.Trigger.Time:hh\\:mm}");
         }
     }
 
@@ -229,4 +230,8 @@ public sealed class AutomationEngine(
     private static string Cause(AutomationTrigger t, EntityStateChanged e) => t.Type == TriggerType.Button
         ? $"appui « {e.Current.Value} » sur {e.EntityId}"
         : $"{e.EntityId} {(AutomationRules.Active(e.Current) == true ? "actif" : "au repos")}";
+
+    /// <summary>« coucher du soleil − 10 min (17:43) » : le décalage et l'heure qu'il a donnée ce jour-là.</summary>
+    private string CauseSoleil(AutomationTrigger t, DateTime local) =>
+        $"{AutomationRules.DescribeSun(t)} ({AutomationRules.SunTriggerTime(t, states, local):HH\\:mm})";
 }

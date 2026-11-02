@@ -17,6 +17,16 @@ public enum TriggerType
 
     /// <summary>Front d'une entité tout-ou-rien : radar qui détecte, porte qui s'ouvre, lampe qui s'allume.</summary>
     StateChange,
+
+    /// <summary>Lever ou coucher du soleil d'un lieu météo, décalé de quelques minutes (« 10 min avant le coucher »).</summary>
+    Sun,
+}
+
+/// <summary>Le moment du soleil écouté par un déclencheur <see cref="TriggerType.Sun"/>.</summary>
+public enum SunEvent
+{
+    Sunrise,
+    Sunset,
 }
 
 /// <summary>Le front écouté par un déclencheur <see cref="TriggerType.StateChange"/>.</summary>
@@ -35,7 +45,7 @@ public sealed record AutomationTrigger
 {
     public TriggerType Type { get; init; } = TriggerType.Button;
 
-    /// <summary>Bouton : l'entité <c>event</c> ; changement d'état : l'entité tout-ou-rien.</summary>
+    /// <summary>Bouton : l'entité <c>event</c> ; changement d'état : l'entité tout-ou-rien ; soleil : l'entité météo.</summary>
     public string? EntityId { get; init; }
 
     /// <summary>Bouton : l'action attendue (« single », « double »…) ; vide : n'importe laquelle.</summary>
@@ -44,7 +54,13 @@ public sealed record AutomationTrigger
     /// <summary>Horaire : l'heure locale (heures et minutes).</summary>
     public TimeSpan Time { get; init; }
 
-    /// <summary>Horaire : les jours ; vide = tous, pour qu'un automatisme créé sans y penser parte quand même.</summary>
+    /// <summary>Soleil : lever ou coucher.</summary>
+    public SunEvent Sun { get; init; } = SunEvent.Sunset;
+
+    /// <summary>Soleil : décalage en minutes, négatif avant (− 10 : dix minutes avant le coucher).</summary>
+    public int OffsetMinutes { get; init; }
+
+    /// <summary>Horaire et soleil : les jours ; vide = tous, pour qu'un automatisme créé sans y penser parte quand même.</summary>
     public IReadOnlyList<DayOfWeek> Days { get; init; } = [];
 
     public StateTransition Transition { get; init; } = StateTransition.Activated;
@@ -126,14 +142,19 @@ public sealed record Automation
     /// <summary>Plus long délai accepté avant une action : une journée.</summary>
     public const int MaxDelaySeconds = 86_400;
 
+    /// <summary>Plus grand décalage d'un déclencheur soleil : quatre heures, pour rester dans la journée.</summary>
+    public const int MaxSunOffsetMinutes = 240;
+
     /// <summary>Lève une exception lisible pour un automatisme incomplet. Les références sont vérifiées par le service.</summary>
     public void Validate()
     {
         if (Actions.Count == 0) throw new ArgumentException("aucune action.");
         switch (Trigger.Type)
         {
-            case TriggerType.Button or TriggerType.StateChange when string.IsNullOrWhiteSpace(Trigger.EntityId):
+            case TriggerType.Button or TriggerType.StateChange or TriggerType.Sun when string.IsNullOrWhiteSpace(Trigger.EntityId):
                 throw new ArgumentException("déclencheur sans entité.");
+            case TriggerType.Sun when Math.Abs(Trigger.OffsetMinutes) > MaxSunOffsetMinutes:
+                throw new ArgumentException($"décalage du soleil : au plus {MaxSunOffsetMinutes / 60} h avant ou après.");
             case TriggerType.Time when Trigger.Time < TimeSpan.Zero || Trigger.Time >= TimeSpan.FromDays(1):
                 throw new ArgumentException("heure du déclencheur hors de la journée.");
         }
@@ -218,6 +239,54 @@ public static class AutomationRules
         t.Type == TriggerType.Time
         && heureLocale.Hour == t.Time.Hours && heureLocale.Minute == t.Time.Minutes
         && (t.Days.Count == 0 || t.Days.Contains(heureLocale.DayOfWeek));
+
+    /// <summary>
+    /// Âge maximal des heures du soleil publiées par la météo. Elles ne bougent que de quelques minutes d'un jour à
+    /// l'autre : une météo restée injoignable hier sert encore, plutôt que de laisser l'éclairage extérieur éteint.
+    /// </summary>
+    public static readonly TimeSpan MaxSunDataAge = TimeSpan.FromDays(2);
+
+    /// <summary>
+    /// L'heure locale du jour où part un déclencheur soleil, d'après l'entité météo ; null si elle ne dit rien
+    /// d'exploitable (jamais reçue, sans lever ni coucher, trop ancienne), ou si le décalage sort de la journée.
+    /// </summary>
+    /// <remarks>
+    /// La météo donne l'heure locale du lieu (« 2026-11-02T17:53 »). C'est l'heure dans la journée qui compte : le jour
+    /// lui-même ne sert qu'à écarter une donnée trop ancienne.
+    /// </remarks>
+    public static DateTime? SunTriggerTime(AutomationTrigger t, IEntityStateReader states, DateTime heureLocale)
+    {
+        if (t.Type != TriggerType.Sun || t.EntityId is not { } id || states.Get(id) is not { } s) return null;
+        if (s.Value.ValueKind != JsonValueKind.Object
+            || !s.Value.TryGetProperty(t.Sun == SunEvent.Sunrise ? "sunrise" : "sunset", out var champ)
+            || champ.ValueKind != JsonValueKind.String
+            || !DateTime.TryParse(champ.GetString(), System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var soleil))
+            return null;
+        if (heureLocale.Date - soleil.Date > MaxSunDataAge || soleil.Date > heureLocale.Date) return null;
+
+        var depart = heureLocale.Date + soleil.TimeOfDay + TimeSpan.FromMinutes(t.OffsetMinutes);
+        return depart.Date == heureLocale.Date ? new DateTime(depart.Year, depart.Month, depart.Day, depart.Hour, depart.Minute, 0) : null;
+    }
+
+    /// <summary>Un déclencheur soleil tombe-t-il sur cette minute locale ? Pas de rattrapage, comme l'horaire.</summary>
+    public static bool SunMatches(AutomationTrigger t, IEntityStateReader states, DateTime heureLocale) =>
+        t.Type == TriggerType.Sun
+        && (t.Days.Count == 0 || t.Days.Contains(heureLocale.DayOfWeek))
+        && SunTriggerTime(t, states, heureLocale) is { } depart
+        && depart.Hour == heureLocale.Hour && depart.Minute == heureLocale.Minute;
+
+    /// <summary>« coucher du soleil − 10 min », « lever du soleil », « lever du soleil + 30 min ».</summary>
+    public static string DescribeSun(AutomationTrigger t)
+    {
+        var moment = t.Sun == SunEvent.Sunrise ? "lever du soleil" : "coucher du soleil";
+        return t.OffsetMinutes switch
+        {
+            0 => moment,
+            < 0 => $"{moment} − {-t.OffsetMinutes} min",
+            _ => $"{moment} + {t.OffsetMinutes} min",
+        };
+    }
 
     /// <summary>Actif (allumé, ouvert, détecté), éteint, ou inconnu (absent, indisponible, pas un tout-ou-rien).</summary>
     public static bool? Active(EntityStateSnapshot? s)
