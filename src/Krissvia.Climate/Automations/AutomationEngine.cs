@@ -79,6 +79,18 @@ public sealed class AutomationEngine(
 
     public void Configure(IReadOnlyList<Automation> automatismes) => _automatismes = automatismes.ToList();
 
+    /// <summary>
+    /// Remet au journal en mémoire les exécutions relues en base (les plus récentes d'abord), au démarrage : sans quoi
+    /// chaque carte dirait « jamais exécuté » après un redémarrage. Ne lève pas <see cref="Ran"/> : ce n'est pas une exécution.
+    /// </summary>
+    public void Restore(IEnumerable<AutomationRun> recentes)
+    {
+        lock (_verrouJournal)
+        {
+            foreach (var r in recentes.Take(JournalSize - _journal.Count)) _journal.AddLast(r);
+        }
+    }
+
     /// <summary>Un changement d'état : lance les automatismes actifs qu'il déclenche.</summary>
     public void OnStateChanged(EntityStateChanged e)
     {

@@ -114,6 +114,8 @@ builder.Services.AddSingleton<DeviceScheduleService>();
 // Automatismes : déclencheur (bouton, horaire, changement d'état), conditions, actions.
 builder.Services.AddSingleton<Krissvia.Climate.Automations.AutomationEngine>();
 builder.Services.AddSingleton<Krissvia.Climate.Automations.AutomationService>();
+builder.Services.AddSingleton<Krissvia.Core.Journal.IRunJournalRepository, SqliteRunJournalRepository>();
+builder.Services.AddSingleton<Krissvia.Climate.Automations.AutomationHistory>();
 
 // Alarme : machine à états de DomoMud, capteurs d'ouverture et détecteurs, sirènes, codes des claviers logiciels.
 builder.Services.AddSingleton<Krissvia.Climate.Alarm.AlarmService>();

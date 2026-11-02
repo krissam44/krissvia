@@ -56,6 +56,12 @@ Un équipement renommé ne laisse donc pas un automatisme agir dans le vide en s
 
 ## 5. Écrans et API
 
+- **Journal durable** (02/11/2026) : chaque exécution est aussi écrite en base (table `run_journal`, schéma v9) et
+  gardée **90 jours**, purgée une fois par jour. Le bouton **Historique** d'une carte la relit sur 7, 30 ou 90 jours,
+  groupée par jour, avec le décompte réussies / sans suite / en échec. Au démarrage, les 50 plus récentes reviennent
+  au journal en mémoire : une carte garde sa dernière exécution après un redémarrage. L'écriture se fait hors du fil de
+  l'exécution ; un échec d'écriture est journalisé et ne bloque aucune action.
+
 - `/automatismes` : une carte par automatisme (« Quand… Si… Alors… »), sa dernière exécution, l'interrupteur Actif, le
   bouton **Exécuter** (conditions évaluées comme pour un vrai déclenchement), et le journal des 20 dernières exécutions.
 - Le formulaire est une **fenêtre** (« Nouveau », ou la roue d'une carte ; 23/10/2026), à trois onglets comme dans
@@ -64,7 +70,8 @@ Un équipement renommé ne laisse donc pas un automatisme agir dans le vide en s
   ramène sur l'onglet concerné. Pour un bouton, l'aide affiche la dernière action reçue : appuyer une fois donne le mot
   à recopier. (L'ancienne page `/automatismes/{id}` n'existe plus.)
 - API : `GET /api/automations`, `GET|PUT|DELETE /api/automations/{id}`, `POST /api/automations/{id}/run`,
-  `GET /api/automations/journal`. Format : celui de la base (snake_case, énumérations en texte).
+  `GET /api/automations/journal` (en mémoire), `GET /api/automations/history?days=30` et
+  `GET /api/automations/{id}/history?days=30` (journal durable). Format : celui de la base (snake_case, énumérations en texte).
 
 ```json
 {
@@ -81,4 +88,4 @@ Un équipement renommé ne laisse donc pas un automatisme agir dans le vide en s
 ## 6. Pas encore
 
 Déclencheurs sur seuil (température qui passe sous 18 °C), sur présence ou sur couleur Tempo ; actions « activer/couper
-une programmation » ; bibliothèque d'automatismes prêts à l'emploi. Le journal des exécutions vit en mémoire (50 dernières).
+une programmation » ; bibliothèque d'automatismes prêts à l'emploi.

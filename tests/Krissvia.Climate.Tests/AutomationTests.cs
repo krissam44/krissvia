@@ -6,6 +6,7 @@ using Krissvia.Climate.Thermostats;
 using Krissvia.Contracts;
 using Krissvia.Core.Configuration;
 using Krissvia.Core.Events;
+using Krissvia.Core.Journal;
 using Krissvia.Core.Notifications;
 using Krissvia.Core.Registry;
 using Krissvia.Core.States;
@@ -398,6 +399,77 @@ public class AutomationTests
         b.Horloge.Advance(TimeSpan.FromMinutes(1));
         await b.AppuyerAsync();
         Assert.Equal(AutomationEngine.MaxRunsPerMinute + 1, b.Ordres.Count);
+    }
+
+    /// <summary>Le journal durable, sans base : seule la traduction run ↔ ligne est en jeu ici (la base a ses propres tests).</summary>
+    private sealed class JournalEnMemoire : IRunJournalRepository
+    {
+        public List<RunJournalEntry> Lignes { get; } = [];
+
+        public Task AppendAsync(RunJournalEntry entry, CancellationToken ct = default)
+        {
+            Lignes.Add(entry);
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<RunJournalEntry>> ReadAsync(string source, string? subjectId, DateTimeOffset since, int limit, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<RunJournalEntry>>([.. Lignes.Where(l => l.Source == source && (subjectId is null || l.SubjectId == subjectId) && l.At >= since)
+                .OrderByDescending(l => l.At).Take(limit)]);
+
+        public Task<int> PurgeAsync(DateTimeOffset before, CancellationToken ct = default) => Task.FromResult(Lignes.RemoveAll(l => l.At < before));
+    }
+
+    [Fact]
+    public async Task Une_execution_notee_se_relit_avec_son_issue_et_sa_cause()
+    {
+        var b = new Banc();
+        var journal = new JournalEnMemoire();
+        var historique = new AutomationHistory(journal, b.Horloge);
+        b.Moteur.Ran += r => historique.RecordAsync(r).GetAwaiter().GetResult();
+        await b.AjouterAsync();
+
+        await b.AppuyerAsync();
+
+        var r = Assert.Single(await historique.ReadAsync("essai", TimeSpan.FromDays(7)));
+        Assert.Equal(("essai", "Essai", RunOutcome.Done, "appui « single » sur event.bouton"), (r.AutomationId, r.Name, r.Outcome, r.Cause));
+        Assert.Equal(AutomationHistory.Source, journal.Lignes[0].Source);
+    }
+
+    [Fact]
+    public async Task Une_issue_illisible_se_relit_comme_un_echec_jamais_comme_un_succes()
+    {
+        var journal = new JournalEnMemoire();
+        await journal.AppendAsync(new RunJournalEntry(AutomationHistory.Source, "essai", "Essai", T0, "à la main", "PartiellementFait", null));
+
+        var r = Assert.Single(await new AutomationHistory(journal, new FakeTimeProvider(T0)).ReadAsync(null, TimeSpan.FromDays(1)));
+        Assert.Equal(RunOutcome.Failed, r.Outcome);
+    }
+
+    [Fact]
+    public async Task La_purge_garde_quatre_vingt_dix_jours()
+    {
+        var journal = new JournalEnMemoire();
+        foreach (var jours in new[] { 91, 89 })
+            await journal.AppendAsync(new RunJournalEntry(AutomationHistory.Source, "essai", "Essai", T0.AddDays(-jours), "à la main", "Done", null));
+
+        Assert.Equal(1, await new AutomationHistory(journal, new FakeTimeProvider(T0)).PurgeAsync());
+        Assert.Equal(T0.AddDays(-89), Assert.Single(journal.Lignes).At);
+    }
+
+    [Fact]
+    public void Au_demarrage_les_executions_relues_reviennent_a_l_ecran_sans_passer_pour_des_executions()
+    {
+        var b = new Banc();
+        var levees = 0;
+        b.Moteur.Ran += _ => levees++;
+        var hier = new AutomationRun("essai", "Essai", T0.AddDays(-1), "coucher du soleil − 10 min (17:45)", RunOutcome.Done, null);
+        var avant = hier with { At = T0.AddDays(-2) };
+
+        b.Moteur.Restore([hier, avant]);
+
+        Assert.Equal(hier, b.Moteur.LastRun("essai"));
+        Assert.Equal([hier, avant], b.Moteur.Journal);
+        Assert.Equal(0, levees);
     }
 
     [Fact]
