@@ -25,10 +25,28 @@ export const STYLE = `
 export class KvWidget extends HTMLElement {
     #racine = this.attachShadow({ mode: "open" });
     #prevu = false;
+    #appui = false;
+    #differe = false;
     _entities = {};
     _states = {};
     _settings = {};
     _kv = null;
+
+    constructor() {
+        super();
+        // Le rendu remplace tout le contenu : un bouton remplacé entre l'appui et le relâchement ne reçoit jamais son
+        // clic. Un disjoncteur qui publie sa puissance toutes les secondes rendait ainsi « Couper ? » inopérant
+        // (03/11/2026). Pendant un appui, le rendu attend donc le relâchement — et passe après le clic.
+        this.addEventListener("pointerdown", () => { this.#appui = true; });
+        const relacher = () => {
+            if (!this.#appui) return;
+            this.#appui = false;
+            if (!this.#differe) return;
+            this.#differe = false;
+            setTimeout(() => this.planifier());
+        };
+        for (const evenement of ["pointerup", "pointercancel", "pointerleave"]) this.addEventListener(evenement, relacher);
+    }
 
     set entities(v) { this._entities = v ?? {}; this.planifier(); }
     set states(v) { this._states = v ?? {}; this.planifier(); }
@@ -40,6 +58,7 @@ export class KvWidget extends HTMLElement {
         this.#prevu = true;
         queueMicrotask(() => {
             this.#prevu = false;
+            if (this.#appui) { this.#differe = true; return; }
             this.#racine.innerHTML = `<style>${STYLE}${this.constructor.css ?? ""}</style>${this.rendu()}`;
             this.apresRendu?.(this.#racine);
             this.#historique();
