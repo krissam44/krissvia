@@ -1,5 +1,5 @@
 @* Les exécutions d'un automatisme sur 7, 30 ou 90 jours, relues en base : c'est ici qu'on vérifie qu'un éclairage
-   s'est allumé chaque soir, une ligne par exécution, groupées par jour. *@
+   s'est allumé chaque soir, une ligne par exécution, groupées par jour, avec l'heure de chaque action quand il y en a plusieurs. *@
 <MudDialog>
     <TitleContent>
         <div class="d-flex align-center gap-2">
@@ -43,7 +43,24 @@
                         {
                             <tr>
                                 <td style="white-space: nowrap">@Local(r.At).ToString("HH:mm:ss")</td>
-                                <td>@r.Cause@if (r.Detail is { } d) { <br /><span class="mud-text-secondary">@d</span> }</td>
+                                <td>
+                                    @r.Cause
+                                    @if (r.Steps is { Count: > 1 } etapes)
+                                    {
+                                        @* Plusieurs actions : chacune à l'heure où elle est partie, son échec à côté. *@
+                                        @foreach (var e in etapes)
+                                        {
+                                            <div class="kv-etape">
+                                                <span>@Local(e.At).ToString("HH:mm:ss")</span> @e.Label
+                                                @if (e.Error is { } erreur) { <span class="mud-error-text"> — @erreur</span> }
+                                            </div>
+                                        }
+                                    }
+                                    else if (r.Detail is { } d)
+                                    {
+                                        <br /><span class="mud-text-secondary">@d</span>
+                                    }
+                                </td>
                                 <td style="white-space: nowrap"><MudChip T="string" Size="Size.Small" Color="@LibellesAutomatisme.Couleur(r.Outcome)">@LibellesAutomatisme.Issue(r.Outcome)</MudChip></td>
                             </tr>
                         }
@@ -59,4 +76,6 @@
 
 <style>
     .kv-jour td { font-weight: 600; background: var(--mud-palette-background-gray); }
+    .kv-etape { font-size: .8rem; color: var(--mud-palette-text-secondary); }
+    .kv-etape > span:first-child { font-variant-numeric: tabular-nums; margin-right: 6px; }
 </style>

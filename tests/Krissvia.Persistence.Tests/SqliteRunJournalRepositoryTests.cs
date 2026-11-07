@@ -45,6 +45,19 @@ public sealed class SqliteRunJournalRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task Les_etapes_se_relisent_avec_leur_heure_et_leur_echec()
+    {
+        var etapes = new RunJournalStep[] { new(T0, "allumer Eclairage Parking"), new(T0.AddMinutes(30), "éteindre Eclairage Parking", "injoignable") };
+        var depot = await OuvrirAsync();
+        await depot.AppendAsync(E("matin", 0) with { Steps = etapes });
+        await depot.AppendAsync(E("soir", 0));
+
+        var apres = await OuvrirAsync();
+        Assert.Equal(etapes, Assert.Single(await apres.ReadAsync("automation", "matin", T0.AddDays(-1), 10)).Steps!);
+        Assert.Null(Assert.Single(await apres.ReadAsync("automation", "soir", T0.AddDays(-1), 10)).Steps);
+    }
+
+    [Fact]
     public async Task La_periode_et_la_limite_bornent_la_lecture()
     {
         var depot = await OuvrirAsync();

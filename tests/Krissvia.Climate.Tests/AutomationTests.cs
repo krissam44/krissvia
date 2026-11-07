@@ -355,6 +355,45 @@ public class AutomationTests
     }
 
     [Fact]
+    public async Task Chaque_action_est_notee_a_l_heure_ou_elle_est_partie_et_se_relit_ainsi()
+    {
+        var b = new Banc();
+        var historique = new AutomationHistory(new JournalEnMemoire(), b.Horloge);
+        b.Moteur.Ran += r => historique.RecordAsync(r).GetAwaiter().GetResult();
+        await b.AjouterAsync(
+            new AutomationAction { Type = ActionType.TurnOn, EntityId = "switch.lampe" },
+            new AutomationAction { Type = ActionType.TurnOff, EntityId = "switch.lampe", DelaySeconds = 1800 });
+        var lampe = (await b.Registre.GetAsync("switch.lampe"))!.DisplayName;
+
+        var debut = b.Horloge.GetUtcNow();
+        b.Moteur.OnStateChanged(Appui("single", T0));
+        await AttendreAsync(() => b.Ordres.Count == 1);
+        b.Horloge.Advance(TimeSpan.FromMinutes(30));
+        await b.Moteur.WhenIdleAsync();
+
+        var r = Assert.Single(await historique.ReadAsync("essai", TimeSpan.FromDays(7)));
+        Assert.Equal(debut, r.At);
+        Assert.Equal([new RunStep(debut, $"allumer {lampe}"), new RunStep(debut.AddMinutes(30), $"éteindre {lampe}")], r.Steps!);
+    }
+
+    [Fact]
+    public async Task L_etape_en_echec_porte_sa_raison()
+    {
+        var b = new Banc();
+        await b.AjouterAsync(
+            new AutomationAction { Type = ActionType.Notify, Title = "Parking", Message = "allumé" },
+            new AutomationAction { Type = ActionType.TurnOn, EntityId = "switch.lampe" });
+
+        await b.AppuyerAsync();
+
+        var r = b.Moteur.LastRun("essai")!;
+        Assert.Equal(RunOutcome.Failed, r.Outcome);
+        Assert.Equal("notifier « Parking »", r.Steps![0].Label);
+        Assert.Equal(r.Detail, r.Steps[0].Error);
+        Assert.Null(r.Steps[1].Error);
+    }
+
+    [Fact]
     public async Task Une_notification_qui_echoue_n_empeche_pas_les_actions_suivantes()
     {
         var b = new Banc();   // ntfy jamais configuré : l'envoi est refusé

@@ -25,8 +25,15 @@ public enum RunOutcome
     Throttled,
 }
 
-/// <summary>Une exécution, pour le journal de l'écran Automatismes.</summary>
-public sealed record AutomationRun(string AutomationId, string Name, DateTimeOffset At, string Cause, RunOutcome Outcome, string? Detail);
+/// <summary>
+/// Une exécution, pour le journal de l'écran Automatismes. <paramref name="At"/> est l'heure du déclenchement ;
+/// <paramref name="Steps"/> donne celle où chaque action est réellement partie (un « éteindre 30 min après »).
+/// </summary>
+public sealed record AutomationRun(string AutomationId, string Name, DateTimeOffset At, string Cause, RunOutcome Outcome, string? Detail,
+    IReadOnlyList<RunStep>? Steps = null);
+
+/// <summary>Une action d'une exécution : quand elle est partie, ce qu'elle faisait, et sa raison d'échec le cas échéant.</summary>
+public sealed record RunStep(DateTimeOffset At, string Label, string? Error = null);
 
 /// <summary>
 /// Le moteur des automatismes : reconnaît les déclencheurs, évalue les conditions, exécute les actions dans l'ordre.
@@ -160,15 +167,17 @@ public sealed class AutomationEngine(
             }
             else
             {
-                var erreurs = new List<string>();
+                var etapes = new List<RunStep>();
                 foreach (var action in a.Actions)
                 {
                     if (action.DelaySeconds > 0) await Task.Delay(TimeSpan.FromSeconds(action.DelaySeconds), clock, ct);
-                    if (await AgirAsync(a, action, ct) is { } erreur) erreurs.Add(erreur);
+                    var depart = clock.GetUtcNow();
+                    etapes.Add(new RunStep(depart, await LibelleAsync(action, ct), await AgirAsync(a, action, ct)));
                 }
 
+                var erreurs = etapes.Where(e => e.Error is not null).Select(e => e.Error!).ToList();
                 run = new AutomationRun(a.Id, Nom(a), debut, cause, erreurs.Count == 0 ? RunOutcome.Done : RunOutcome.Failed,
-                    erreurs.Count == 0 ? null : string.Join(" ; ", erreurs));
+                    erreurs.Count == 0 ? null : string.Join(" ; ", erreurs), etapes);
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -209,6 +218,22 @@ public sealed class AutomationEngine(
             default:
                 return $"action inconnue {action.Type}";
         }
+    }
+
+    /// <summary>« allumer Eclairage Parking », « Salon → Éco » : le nom au moment de l'exécution, comme celui de l'automatisme.</summary>
+    private async Task<string> LibelleAsync(AutomationAction action, CancellationToken ct)
+    {
+        async Task<string> Entite() => (await registry.GetAsync(action.EntityId ?? "", ct))?.DisplayName ?? action.EntityId ?? "?";
+        return action.Type switch
+        {
+            ActionType.TurnOn => $"allumer {await Entite()}",
+            ActionType.TurnOff => $"éteindre {await Entite()}",
+            ActionType.Toggle => $"basculer {await Entite()}",
+            ActionType.ThermostatMode =>
+                $"{thermostats.Get(action.ThermostatId ?? "")?.Name ?? action.ThermostatId} → {ThermostatLabels.Mode(action.Mode)}",
+            ActionType.Notify => $"notifier « {(action.Title is { Length: > 0 } t ? t : action.Message)} »",
+            _ => action.Type.ToString(),
+        };
     }
 
     /// <summary>

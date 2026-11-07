@@ -61,6 +61,11 @@ Un équipement renommé ne laisse donc pas un automatisme agir dans le vide en s
   groupée par jour, avec le décompte réussies / sans suite / en échec. Au démarrage, les 50 plus récentes reviennent
   au journal en mémoire : une carte garde sa dernière exécution après un redémarrage. L'écriture se fait hors du fil de
   l'exécution ; un échec d'écriture est journalisé et ne bloque aucune action.
+- **Étapes** (07/11/2026, schéma v10) : une exécution porte aussi ses actions (`steps` : `at`, `label`, `error`), chacune
+  à l'heure où elle est **réellement partie**. L'heure de la ligne reste celle du déclenchement ; « allumer, puis
+  éteindre 30 min après » montre donc 07:50 et 08:20 sous la cause. L'exécution n'est notée qu'une fois toutes ses
+  actions passées : « exécuté » sur la ligne de 07:50 vaut aussi pour l'extinction de 08:20. Le libellé garde le nom de
+  l'équipement au moment de l'exécution, comme celui de l'automatisme.
 
 - `/automatismes` : une carte par automatisme (« Quand… Si… Alors… »), sa dernière exécution, l'interrupteur Actif, le
   bouton **Exécuter** (conditions évaluées comme pour un vrai déclenchement), et le journal des 20 dernières exécutions.
