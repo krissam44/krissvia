@@ -9,7 +9,7 @@ namespace Krissvia.Persistence.Sqlite;
 /// </summary>
 public sealed class SqliteDatabase(string connectionString)
 {
-    private const int VersionSchema = 9;
+    private const int VersionSchema = 10;
 
     /// <remarks>
     /// <c>synchronous = FULL</c>, pas NORMAL, et sans réglage pour le changer : NORMAL n'est sûr en WAL que si chaque
@@ -47,6 +47,7 @@ public sealed class SqliteDatabase(string connectionString)
         if (version < 7) await connexion.ExecuteAsync(SchemaV7, transaction: transaction);
         if (version < 8) await connexion.ExecuteAsync(SchemaV8, transaction: transaction);
         if (version < 9) await connexion.ExecuteAsync(SchemaV9, transaction: transaction);
+        if (version < 10) await connexion.ExecuteAsync(SchemaV10, transaction: transaction);
         await connexion.ExecuteAsync($"PRAGMA user_version = {VersionSchema};", transaction: transaction);
         await transaction.CommitAsync(ct);
     }
@@ -176,6 +177,11 @@ public sealed class SqliteDatabase(string connectionString)
         );
         CREATE INDEX IF NOT EXISTS ix_run_journal_sujet ON run_journal (source, subject_id, at_ms);
         CREATE INDEX IF NOT EXISTS ix_run_journal_instant ON run_journal (source, at_ms);
+        """;
+
+    /// <summary>v10 : les étapes d'une exécution (JSON), chacune à l'heure où elle est partie.</summary>
+    private const string SchemaV10 = """
+        ALTER TABLE run_journal ADD COLUMN steps_json TEXT;
         """;
 
     private const string SchemaV4 = """

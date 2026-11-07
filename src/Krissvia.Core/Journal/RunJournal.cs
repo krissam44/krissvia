@@ -8,8 +8,13 @@ namespace Krissvia.Core.Journal;
 /// <param name="SubjectName">Son nom au moment de l'exécution : il reste lisible même si on le renomme ou le supprime.</param>
 /// <param name="Cause">Ce qui l'a déclenché (« coucher du soleil − 10 min (17:43) »).</param>
 /// <param name="Outcome">L'issue, en texte (le nom de l'énumération du moteur).</param>
+/// <param name="Steps">Les étapes, à l'heure où chacune est partie : « allumer, puis éteindre 30 min après » en donne deux.</param>
 public sealed record RunJournalEntry(
-    string Source, string SubjectId, string SubjectName, DateTimeOffset At, string Cause, string Outcome, string? Detail);
+    string Source, string SubjectId, string SubjectName, DateTimeOffset At, string Cause, string Outcome, string? Detail,
+    IReadOnlyList<RunJournalStep>? Steps = null);
+
+/// <summary>Une étape d'une exécution : quand elle est partie, ce qu'elle faisait, et pourquoi elle a échoué le cas échéant.</summary>
+public sealed record RunJournalStep(DateTimeOffset At, string Label, string? Error = null);
 
 /// <summary>
 /// Journal durable des exécutions (table <c>run_journal</c>). Le journal en mémoire des moteurs disparaît au

@@ -14,7 +14,8 @@ public sealed class AutomationHistory(IRunJournalRepository repository, TimeProv
     public static readonly TimeSpan Retention = TimeSpan.FromDays(90);
 
     public Task RecordAsync(AutomationRun r, CancellationToken ct = default) =>
-        repository.AppendAsync(new RunJournalEntry(Source, r.AutomationId, r.Name, r.At, r.Cause, r.Outcome.ToString(), r.Detail), ct);
+        repository.AppendAsync(new RunJournalEntry(Source, r.AutomationId, r.Name, r.At, r.Cause, r.Outcome.ToString(), r.Detail,
+            r.Steps?.Select(e => new RunJournalStep(e.At, e.Label, e.Error)).ToList()), ct);
 
     /// <summary>
     /// Les exécutions des <paramref name="period"/> passés, de la plus récente à la plus ancienne ;
@@ -27,7 +28,8 @@ public sealed class AutomationHistory(IRunJournalRepository repository, TimeProv
         [
             .. lignes.Select(l => new AutomationRun(l.SubjectId, l.SubjectName, l.At, l.Cause,
                 // Une issue inconnue (version plus récente relue par une plus ancienne) se lit comme un échec : jamais un succès.
-                Enum.TryParse<RunOutcome>(l.Outcome, out var issue) ? issue : RunOutcome.Failed, l.Detail)),
+                Enum.TryParse<RunOutcome>(l.Outcome, out var issue) ? issue : RunOutcome.Failed, l.Detail,
+                l.Steps?.Select(e => new RunStep(e.At, e.Label, e.Error)).ToList())),
         ];
     }
 
