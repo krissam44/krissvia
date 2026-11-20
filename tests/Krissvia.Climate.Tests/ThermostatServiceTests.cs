@@ -145,6 +145,26 @@ public class ThermostatServiceTests
         Assert.Empty(b.Magasin.Documents);
     }
 
+    [Fact]
+    public async Task Chaque_capteur_d_ouverture_est_verifie_et_l_ancien_format_reste_lu()
+    {
+        var b = new Banc();
+
+        // Un switch glissé parmi les capteurs d'ouverture est refusé, même en deuxième position.
+        var ex = await Assert.ThrowsAsync<ThermostatValidationException>(() =>
+            b.Service.SaveAsync(Salon() with { OpeningEntityIds = [Fenetre, Radiateur] }));
+        Assert.Contains("capteur d'ouverture", ex.Message);
+
+        // Un thermostat enregistré avant la liste (« opening_entity_id » seul) garde son capteur.
+        await b.Service.SaveAsync(Salon());
+        var cle = (ThermostatService.Collection, "salon");
+        b.Magasin.Documents[cle] = b.Magasin.Documents[cle].Insert(1, $"\"opening_entity_id\":\"{Fenetre}\",");
+        var relu = b.Redemarrer();
+        await relu.LoadAsync();
+
+        Assert.Equal([Fenetre], relu.Get("salon")!.Openings);
+    }
+
     [Theory]
     [InlineData("Salon")]
     [InlineData("salon principal")]

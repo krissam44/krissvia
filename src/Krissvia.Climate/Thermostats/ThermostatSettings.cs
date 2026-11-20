@@ -134,8 +134,22 @@ public sealed record ThermostatSettings
     /// <summary>Mode pendant l'absence. Hors-gel par défaut ; Off n'empêche pas la remontée avant le retour.</summary>
     public ThermostatMode AwayMode { get; init; } = ThermostatMode.FrostProtection;
 
-    /// <summary>Capteur d'ouverture (binary_sensor, true = ouvert). Facultatif.</summary>
+    /// <summary>
+    /// Ancien capteur d'ouverture unique, encore lu pour les thermostats enregistrés avant
+    /// <see cref="OpeningEntityIds"/> ; l'écran de configuration le reporte dans la liste à l'enregistrement.
+    /// </summary>
     public string? OpeningEntityId { get; init; }
+
+    /// <summary>
+    /// Capteurs d'ouverture (binary_sensor, true = ouvert), facultatifs : une baie à deux vantaux coulissants en a
+    /// deux, une pièce à trois baies six. La fenêtre est ouverte dès qu'UN capteur l'est, refermée quand TOUS le sont.
+    /// </summary>
+    public IReadOnlyList<string> OpeningEntityIds { get; init; } = [];
+
+    /// <summary>Tous les capteurs d'ouverture : la liste, plus l'ancien capteur unique s'il y en a un.</summary>
+    [JsonIgnore]
+    public IReadOnlyList<string> Openings =>
+        [.. OpeningEntityIds.Append(OpeningEntityId).OfType<string>().Where(id => id.Length > 0).Distinct(StringComparer.Ordinal)];
 
     public double ComfortTemperature { get; init; } = 20.0;
     public double EcoTemperature { get; init; } = 16.5;

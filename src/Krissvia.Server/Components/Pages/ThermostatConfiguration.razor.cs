@@ -174,7 +174,7 @@ public partial class ThermostatConfiguration
         public string Sonde { get; set; } = "";
         public IReadOnlyCollection<string> Radiateurs { get; set; } = [];
         public string SondeExterieure { get; set; } = Aucune;
-        public string Ouverture { get; set; } = Aucune;
+        public IReadOnlyCollection<string> Ouvertures { get; set; } = [];
         public string Prevision { get; set; } = Aucune;
         public bool Anticipation { get; set; } = Defaut.ForecastAnticipation;
         public bool Prechauffage { get; set; } = Defaut.PreheatEnabled;
@@ -204,7 +204,7 @@ public partial class ThermostatConfiguration
             Sonde = t.TemperatureEntityId,
             Radiateurs = t.SwitchEntityIds.ToHashSet(),
             SondeExterieure = t.OutdoorTemperatureEntityId ?? Aucune,
-            Ouverture = t.OpeningEntityId ?? Aucune,
+            Ouvertures = t.Openings.ToHashSet(),
             Prevision = t.ForecastEntityId ?? Aucune,
             Anticipation = t.ForecastAnticipation,
             Prechauffage = t.PreheatEnabled,
@@ -236,7 +236,9 @@ public partial class ThermostatConfiguration
             TemperatureEntityId = Sonde,
             SwitchEntityIds = Radiateurs.ToList(),
             OutdoorTemperatureEntityId = string.IsNullOrEmpty(SondeExterieure) ? null : SondeExterieure,
-            OpeningEntityId = string.IsNullOrEmpty(Ouverture) ? null : Ouverture,
+            // L'ancien capteur unique passe dans la liste : un seul endroit à lire désormais.
+            OpeningEntityId = null,
+            OpeningEntityIds = Ouvertures.ToList(),
             ForecastEntityId = string.IsNullOrEmpty(Prevision) ? null : Prevision,
             ForecastAnticipation = Anticipation,
             PreheatEnabled = Prechauffage,

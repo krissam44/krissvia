@@ -241,9 +241,12 @@ public sealed class ThermostatEngine(
         }
 
         // ── 1. Fenêtre ouverte ───────────────────────────────────────────────
-        if (t.OpeningEntityId is { } ouverture)
+        if (t.Openings is { Count: > 0 } ouvertures)
         {
-            SuivreOuverture(t, rt, states.Get(ouverture) is { } so && so.TryGetBool(out var ouvert) && ouvert, maintenant);
+            // Un seul vantail ouvert suffit. Un capteur muet ou indisponible ne compte pas comme ouvert : il ne doit pas
+            // couper le chauffage à lui seul, et les autres capteurs de la pièce continuent de veiller.
+            var ouvert = ouvertures.Any(id => states.Get(id) is { } so && so.TryGetBool(out var o) && o);
+            SuivreOuverture(t, rt, ouvert, maintenant);
             // Couper passe par l'inhibiteur ; Éco et hors-gel lèvent le motif (réglage changé fenêtre ouverte) et régulent.
             await AppliquerMotifAsync(t, InhibitionReasons.FenetreOuverte, rt.FenetreSuspendue && t.OpeningAction == WindowAction.Cut, ct);
             if (rt.FenetreSuspendue) rt.Integrale = 0;   // la pièce s'est vidée de sa chaleur : on repart de zéro
