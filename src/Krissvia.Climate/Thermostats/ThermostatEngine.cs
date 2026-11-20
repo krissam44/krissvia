@@ -221,8 +221,15 @@ public sealed class ThermostatEngine(
             ? Preheat.ReturnTarget(t, ambiante, heureLocale, TimeZoneInfo.ConvertTime(retour, clock.LocalTimeZone).DateTime, PenteFenetre)
             : null;
 
+        // Fenêtre ouverte réglée en Éco ou hors-gel : on régule dans ce mode au lieu de couper (voir étape 1).
+        var fenetreRepli = false;
+
         ThermostatSnapshot Instantane(ThermostatStatus statut) => new(
-            t.Id, statut, mode, cible, interieur, exterieur, rt.Puissance, rt.RelaisConnu == true, rt.Integrale,
+            t.Id,
+            // Le repli régule normalement ; l'écran doit quand même dire pourquoi la consigne a baissé.
+            fenetreRepli && statut is not (ThermostatStatus.SensorLost or ThermostatStatus.UnknownSwitch or ThermostatStatus.Inhibited)
+                ? ThermostatStatus.WindowOpen : statut,
+            mode, cible, interieur, exterieur, rt.Puissance, rt.RelaisConnu == true, rt.Integrale,
             inhibitor.GetReasons(t.Id), inconnus, prevue, _pentes.GetValueOrDefault(t.Id), absent);
 
         void Arreter()
@@ -237,8 +244,19 @@ public sealed class ThermostatEngine(
         if (t.OpeningEntityId is { } ouverture)
         {
             SuivreOuverture(t, rt, states.Get(ouverture) is { } so && so.TryGetBool(out var ouvert) && ouvert, maintenant);
-            await AppliquerMotifAsync(t, InhibitionReasons.FenetreOuverte, rt.FenetreSuspendue, ct);
+            // Couper passe par l'inhibiteur ; Éco et hors-gel lèvent le motif (réglage changé fenêtre ouverte) et régulent.
+            await AppliquerMotifAsync(t, InhibitionReasons.FenetreOuverte, rt.FenetreSuspendue && t.OpeningAction == WindowAction.Cut, ct);
             if (rt.FenetreSuspendue) rt.Integrale = 0;   // la pièce s'est vidée de sa chaleur : on repart de zéro
+
+            if (rt.FenetreSuspendue && t.OpeningAction != WindowAction.Cut)
+            {
+                fenetreRepli = true;
+                var repli = t.OpeningAction == WindowAction.Eco ? ThermostatMode.Eco : ThermostatMode.FrostProtection;
+                // Le plus froid des deux : une fenêtre ouverte ne réchauffe jamais (absence en hors-gel, mode Off).
+                mode = (ThermostatMode)Math.Min((int)mode, (int)repli);
+                cible = t.TargetFor(mode);
+                remontee = null;
+            }
         }
 
         // ── 2. Sonde perdue (failsafe) ───────────────────────────────────────
@@ -283,7 +301,7 @@ public sealed class ThermostatEngine(
 
         // ── 5 bis. Préchauffage : la consigne de l'arrivée, ou celle du prochain créneau, assez tôt pour l'atteindre à
         // l'heure. Pas de créneau pendant l'absence : le planning ne s'applique pas à une maison vide.
-        var prechauffe = remontee ?? (absent ? null : Preheat.Target(t, tint, heureLocale, cible, PenteFenetre));
+        var prechauffe = remontee ?? (absent || fenetreRepli ? null : Preheat.Target(t, tint, heureLocale, cible, PenteFenetre));
         if (prechauffe is { } cibleFuture) cible = cibleFuture;
 
         // ── 6. Inertie : double seuil, pour absorber l'inertie du radiateur ──

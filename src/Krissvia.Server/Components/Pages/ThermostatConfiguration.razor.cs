@@ -186,6 +186,7 @@ public partial class ThermostatConfiguration
         public int FailsafeMinutes { get; set; } = Defaut.FailsafeMinutes;
         public int OuvertureMinutes { get; set; } = Defaut.OpeningDelayMinutes;
         public int FermetureMinutes { get; set; } = Defaut.ClosingDelayMinutes;
+        public WindowAction ActionOuverture { get; set; } = Defaut.OpeningAction;
         public double Kp { get; set; } = TpiParDefaut.Kp;
         public double Ki { get; set; } = TpiParDefaut.Ki;
         public double Kint { get; set; } = TpiParDefaut.Kint;
@@ -215,6 +216,7 @@ public partial class ThermostatConfiguration
             FailsafeMinutes = t.FailsafeMinutes,
             OuvertureMinutes = t.OpeningDelayMinutes,
             FermetureMinutes = t.ClosingDelayMinutes,
+            ActionOuverture = t.OpeningAction,
             Kp = t.Tpi.Kp,
             Ki = t.Tpi.Ki,
             Kint = t.Tpi.Kint,
@@ -246,6 +248,7 @@ public partial class ThermostatConfiguration
             FailsafeMinutes = FailsafeMinutes,
             OpeningDelayMinutes = OuvertureMinutes,
             ClosingDelayMinutes = FermetureMinutes,
+            OpeningAction = ActionOuverture,
             Tpi = (existant?.Tpi ?? TpiParDefaut) with
             {
                 Kp = Kp,

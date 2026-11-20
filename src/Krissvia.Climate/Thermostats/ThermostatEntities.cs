@@ -155,7 +155,8 @@ public sealed class ThermostatEntities(
             ["cycle_seconds"] = t.Tpi.CycleSeconds,
             ["coasting_high"] = t.Tpi.CoastingHigh,
             ["coasting_low"] = t.Tpi.CoastingLow,
-            ["window_open"] = s.InhibitionReasons.Contains(InhibitionReasons.FenetreOuverte),
+            // Coupé par l'inhibiteur, ou en repli Éco / hors-gel (statut WindowOpen sans motif d'inhibition).
+            ["window_open"] = s.InhibitionReasons.Contains(InhibitionReasons.FenetreOuverte) || s.Status == ThermostatStatus.WindowOpen,
             ["status"] = JsonSerializer.SerializeToNode(s.Status, ThermostatService.Json),
             ["status_label"] = ThermostatLabels.Status(s.Status),
             // En mode d'absence (le thermostat suit l'absence de la maison et elle est vide).

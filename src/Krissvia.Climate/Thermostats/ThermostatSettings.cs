@@ -47,6 +47,19 @@ public sealed record WeeklySchedule
     public void Validate() => WeeklySlots.Validate(Days);
 }
 
+/// <summary>Ce que fait un thermostat quand sa fenêtre est ouverte.</summary>
+public enum WindowAction
+{
+    /// <summary>Radiateurs coupés (inhibition : coupure immédiate, vérifiée, retentée).</summary>
+    Cut = 0,
+
+    /// <summary>Régule en Éco : la pièce ne descend pas plus bas, sans chauffer la rue.</summary>
+    Eco = 1,
+
+    /// <summary>Régule en hors-gel : protège une pièce dont on aurait oublié la fenêtre ouverte tout un hiver.</summary>
+    FrostProtection = 2,
+}
+
 /// <summary>Paramètres de la régulation TPI (valeurs par défaut de DomoMud).</summary>
 public sealed record TpiSettings
 {
@@ -154,6 +167,9 @@ public sealed record ThermostatSettings
 
     /// <summary>Fenêtre refermée depuis ce délai : chauffage repris.</summary>
     public int ClosingDelayMinutes { get; init; } = 1;
+
+    /// <summary>Ce que fait le thermostat fenêtre ouverte (après <see cref="OpeningDelayMinutes"/>). Couper par défaut.</summary>
+    public WindowAction OpeningAction { get; init; } = WindowAction.Cut;
 
     public ThermostatMode ModeAt(DateTime heureLocale) => ScheduleActive ? Schedule.ModeAt(heureLocale) : ManualMode;
 
