@@ -20,6 +20,15 @@ public partial class CompteurElectrique
     /// <summary>Le prix du kWh (€), ou null : pas de coût affiché.</summary>
     [Parameter] public double? Prix { get; set; }
 
+    /// <summary>Dans un onglet de la page : le nom est sur l'onglet, la carte ne le répète pas et n'a pas d'ombre.</summary>
+    [Parameter] public bool DansOnglet { get; set; }
+
+    /// <summary>
+    /// Les tableaux jour et semaine prennent la hauteur de la fenêtre, moins ce qui est au-dessus d'eux (barre, en-tête,
+    /// onglets, chiffres) et la ligne de total ; jamais moins de 300 px, pour un petit écran.
+    /// </summary>
+    private string HauteurTableau => $"max(300px, calc(100vh - {(DansOnglet ? 445 : 415)}px))";
+
     [Inject] private IHistoryRepository Historique { get; set; } = default!;
     [Inject] private IEntityStateReader Etats { get; set; } = default!;
     [Inject] private TimeProvider Horloge { get; set; } = default!;

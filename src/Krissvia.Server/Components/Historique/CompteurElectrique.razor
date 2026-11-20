@@ -3,11 +3,14 @@
    de l'historique (HISTORIQUE.md §6). *@
 @implements IDisposable
 
-<MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
-    <div class="d-flex align-center gap-2 mb-3">
-        <MudIcon Icon="@Icons.Material.Filled.Bolt" Style="color:#ffb300" />
-        <MudText Typo="Typo.h6">@Compteur.Nom</MudText>
-    </div>
+<MudPaper Elevation="@(DansOnglet ? 0 : 1)" Class="@(DansOnglet ? "pa-4" : "pa-4 mb-4 rounded-lg")">
+    @if (!DansOnglet)
+    {
+        <div class="d-flex align-center gap-2 mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.Bolt" Style="color:#ffb300" />
+            <MudText Typo="Typo.h6">@Compteur.Nom</MudText>
+        </div>
+    }
 
     <MudGrid Spacing="2" Class="mb-2">
         @foreach (var (valeur, libelle, couleur) in Tuiles())
@@ -46,7 +49,7 @@
             <MudGrid Spacing="4">
             <MudItem xs="12" md="7">
             <MudText Typo="Typo.subtitle2" Class="mb-1">Par jour</MudText>
-            <MudDataGrid T="Ligne" Items="_lignes" Dense="true" Hover="true" Elevation="0" Height="420px" FixedHeader="true">
+            <MudDataGrid T="Ligne" Items="_lignes" Dense="true" Hover="true" Elevation="0" Height="@HauteurTableau" FixedHeader="true">
                 <Columns>
                     <PropertyColumn Property="l => l.Date" Title="Jour" />
                     <PropertyColumn Property="l => l.Kwh" Title="Consommation" />
@@ -70,7 +73,7 @@
             </MudItem>
             <MudItem xs="12" md="5">
             <MudText Typo="Typo.subtitle2" Class="mb-1">Par semaine <span class="mud-text-secondary" style="font-weight:400">(du lundi au dimanche)</span></MudText>
-            <MudDataGrid T="LigneSemaine" Items="_semaines" Dense="true" Hover="true" Elevation="0" Height="420px" FixedHeader="true">
+            <MudDataGrid T="LigneSemaine" Items="_semaines" Dense="true" Hover="true" Elevation="0" Height="@HauteurTableau" FixedHeader="true">
                 <Columns>
                     <TemplateColumn T="LigneSemaine" Title="Semaine">
                         <CellTemplate>

@@ -99,6 +99,7 @@ L'écran **Électricité** (menu, `/electricite`), comme celui de DomoMud : une 
 appareil qui publie un index en kWh (Linky par Téléinfo, Shelly EM, prise mesurée). Rien de plus à enregistrer : l'index
 et la puissance le sont déjà à la minute (§2), puis heure par heure sans limite (§3).
 
+- **Un onglet par compteur** quand il y en a plusieurs ; les tableaux prennent la hauteur de la fenêtre.
 - **Chiffres** : puissance (W, ou VA pour un Linky) et tension en direct ; **depuis minuit** = index maintenant − index
   en vigueur à minuit (points bruts) ; **coût du jour** si un prix du kWh est saisi en haut de l'écran (un seul prix
   TTC, collection `electricite`).
