@@ -75,17 +75,17 @@ else if (_m is not null && _planning is not null)
                                    Label="Anticiper avec la prévision (sinon : la sonde extérieure seule)" />
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudSelect Dense="true" T="string" @bind-Value="_m.Ouverture" Label="Capteur d'ouverture porte/fenêtre (facultatif)" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                   HelperText="Fenêtre ouverte : coupe ou baisse le chauffage, selon le réglage ci-contre">
-                            <MudSelectItem Value="@Aucune">— aucun —</MudSelectItem>
-                            @foreach (var e in Options(_ouvertures, _m.Ouverture))
+                        <MudSelect Dense="true" T="string" @bind-SelectedValues="_m.Ouvertures" MultiSelection="true" Label="Capteurs d'ouverture porte/fenêtre (facultatifs)"
+                                   MultiSelectionTextFunc="@(v => string.Join(", ", v.Select(Nom)))" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   HelperText="Un vantail ouvert suffit ; la fenêtre est refermée quand tous le sont">
+                            @foreach (var e in Options(_ouvertures, _m.Ouvertures.ToArray()))
                             {
                                 <MudSelectItem Value="e.EntityId">@Libelle(e)</MudSelectItem>
                             }
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudSelect Dense="true" T="WindowAction" @bind-Value="_m.ActionOuverture" Label="Fenêtre ouverte" Disabled="@(_m.Ouverture == Aucune)"
+                        <MudSelect Dense="true" T="WindowAction" @bind-Value="_m.ActionOuverture" Label="Fenêtre ouverte" Disabled="@(_m.Ouvertures.Count == 0)"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Fenêtre refermée, le thermostat reprend son mode, son planning et sa consigne">
                             <MudSelectItem Value="WindowAction.Cut">Couper le chauffage</MudSelectItem>
                             <MudSelectItem Value="WindowAction.Eco">Passer en Éco</MudSelectItem>
@@ -93,11 +93,11 @@ else if (_m is not null && _planning is not null)
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="6" md="3">
-                        <MudNumericField @bind-Value="_m.OuvertureMinutes" Label="Ouvert depuis (min)" Min="0" Disabled="@(_m.Ouverture == Aucune)"
+                        <MudNumericField @bind-Value="_m.OuvertureMinutes" Label="Ouvert depuis (min)" Min="0" Disabled="@(_m.Ouvertures.Count == 0)"
                                          Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="avant d'agir (2 par défaut)" />
                     </MudItem>
                     <MudItem xs="6" md="3">
-                        <MudNumericField @bind-Value="_m.FermetureMinutes" Label="Refermé depuis (min)" Min="0" Disabled="@(_m.Ouverture == Aucune)"
+                        <MudNumericField @bind-Value="_m.FermetureMinutes" Label="Refermé depuis (min)" Min="0" Disabled="@(_m.Ouvertures.Count == 0)"
                                          Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="avant de reprendre (1 par défaut)" />
                     </MudItem>
                 </MudGrid>

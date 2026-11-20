@@ -689,6 +689,59 @@ public class ThermostatEngineTests
         Assert.Equal(16.5, s.Target);
     }
 
+    private const string Vantail2 = "binary_sensor.baie_vantail_2";
+
+    [Fact]
+    public async Task Une_baie_a_deux_vantaux_reste_ouverte_tant_qu_un_seul_l_est()
+    {
+        var b = new Banc();
+        b.Mesurer(17);
+        b.Etats.Set(Fenetre, false, T0);
+        b.Etats.Set(Vantail2, false, T0);
+        await b.DemarrerAsync(Banc.Salon(t => t with { OpeningEntityIds = [Fenetre, Vantail2], OpeningDelayMinutes = 0, ClosingDelayMinutes = 1 }));
+
+        // Le second vantail s'ouvre : coupure.
+        b.Etats.Set(Vantail2, true, b.Horloge.GetUtcNow());
+        Assert.Equal(ThermostatStatus.WindowOpen, (await b.AvancerAsync(TimeSpan.FromSeconds(10))).Status);
+
+        // Le premier s'ouvre puis se referme, le second est toujours ouvert : toujours ouverte, bien après le délai.
+        b.Etats.Set(Fenetre, true, b.Horloge.GetUtcNow());
+        await b.AvancerAsync(TimeSpan.FromSeconds(30));
+        b.Etats.Set(Fenetre, false, b.Horloge.GetUtcNow());
+        b.Mesurer(17);
+        Assert.Equal(ThermostatStatus.WindowOpen, (await b.AvancerAsync(TimeSpan.FromMinutes(3))).Status);
+
+        // Le second se referme : reprise une minute plus tard.
+        b.Etats.Set(Vantail2, false, b.Horloge.GetUtcNow());
+        b.Mesurer(17);
+        Assert.Equal(ThermostatStatus.WindowOpen, (await b.AvancerAsync(TimeSpan.FromSeconds(50))).Status);
+        b.Mesurer(17);
+        Assert.Equal(ThermostatStatus.Heating, (await b.AvancerAsync(TimeSpan.FromSeconds(20))).Status);
+    }
+
+    [Fact]
+    public async Task Un_vantail_muet_ne_coupe_pas_le_chauffage_a_lui_seul()
+    {
+        var b = new Banc();
+        b.Mesurer(17);
+        b.Etats.Set(Fenetre, false, T0);
+        b.Etats.Set(Vantail2, true, T0, disponible: false);   // capteur dont le plugin est arrêté
+
+        var s = await b.DemarrerAsync(Banc.Salon(t => t with { OpeningEntityIds = [Fenetre, Vantail2], OpeningDelayMinutes = 0 }));
+
+        Assert.Equal(ThermostatStatus.Heating, s.Status);
+    }
+
+    [Fact]
+    public void L_ancien_capteur_unique_rejoint_la_liste_sans_doublon()
+    {
+        var t = Banc.Salon(x => x with { OpeningEntityId = Fenetre, OpeningEntityIds = [Vantail2, Fenetre] });
+
+        Assert.Equal([Vantail2, Fenetre], t.Openings);
+        Assert.Equal([Fenetre], Banc.Salon(x => x with { OpeningEntityId = Fenetre }).Openings);
+        Assert.Empty(Banc.Salon().Openings);
+    }
+
     [Fact]
     public async Task Passer_de_couper_a_Eco_fenetre_ouverte_leve_l_inhibition()
     {

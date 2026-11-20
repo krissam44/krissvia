@@ -106,7 +106,7 @@ public sealed partial class ThermostatService(IConfigurationStore store, IEntity
             await VerifierEntiteAsync(exterieure, EntityKind.Sensor, "sonde extérieure", ct);
         if (thermostat.ForecastEntityId is { } prevision)
             await VerifierEntiteAsync(prevision, EntityKind.Sensor, "prévision météo", ct);
-        if (thermostat.OpeningEntityId is { } ouverture)
+        foreach (var ouverture in thermostat.Openings)
             await VerifierEntiteAsync(ouverture, EntityKind.BinarySensor, "capteur d'ouverture", ct);
 
         return await ModifierAsync(thermostat.Id, _ => thermostat, creer: true, ct)

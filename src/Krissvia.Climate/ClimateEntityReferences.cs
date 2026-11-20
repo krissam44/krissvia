@@ -30,7 +30,7 @@ public sealed class ClimateEntityReferences(
             foreach (var s in t.SwitchEntityIds) Ajouter("radiateur", s);
             Ajouter("sonde extérieure", t.OutdoorTemperatureEntityId);
             Ajouter("prévision", t.ForecastEntityId);
-            Ajouter("ouverture", t.OpeningEntityId);
+            foreach (var o in t.Openings) Ajouter("ouverture", o);
         }
 
         foreach (var p in schedules.List().Where(p => p.Enabled))
