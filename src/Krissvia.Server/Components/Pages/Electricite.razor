@@ -19,7 +19,19 @@
     </MudAlert>
 }
 
-@foreach (var compteur in _compteurs)
+@if (_compteurs.Count == 1)
 {
-    <CompteurElectrique @key="compteur.Index.EntityId" Compteur="compteur" Prix="_prix" />
+    <CompteurElectrique @key="_compteurs[0].Index.EntityId" Compteur="_compteurs[0]" Prix="_prix" />
+}
+else if (_compteurs.Count > 1)
+{
+    @* Un onglet par compteur : la page tient sur un écran, et les tableaux peuvent en prendre toute la hauteur. *@
+    <MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pt-0" @bind-ActivePanelIndex="_onglet">
+        @foreach (var compteur in _compteurs)
+        {
+            <MudTabPanel @key="compteur.Index.EntityId" Text="@compteur.Nom" Icon="@Icons.Material.Filled.Bolt">
+                <CompteurElectrique Compteur="compteur" Prix="_prix" DansOnglet="true" />
+            </MudTabPanel>
+        }
+    </MudTabs>
 }

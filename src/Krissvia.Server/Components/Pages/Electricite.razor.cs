@@ -16,6 +16,7 @@ public partial class Electricite
 
     private List<Compteur> _compteurs = [];
     private double? _prix;
+    private int _onglet;
 
     protected override async Task OnInitializedAsync()
     {
