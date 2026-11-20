@@ -102,6 +102,21 @@ public sealed class KrissviaApi(HttpClient http, IConnexion connexion)
         }
     }
 
+    /// <summary>Les ouvertures et les détecteurs de mouvement, par pièce, avec ceux que surveille l'alarme.</summary>
+    public async Task<(VueDetecteurs? Vue, string? Erreur, bool ServeurAncien)> DetecteursAsync(CancellationToken ct = default)
+    {
+        var (json, erreur, absente) = await LireAsync("/api/detectors", ct);
+        if (erreur is not null) return (null, erreur, absente);
+        try
+        {
+            return VueDetecteurs.Lire(json!.Value) is { } vue ? (vue, null, false) : (null, "Réponse vide du serveur.", false);
+        }
+        catch (JsonException ex)
+        {
+            return (null, MessageLisible(ex), false);
+        }
+    }
+
     /// <summary>Allumer ou éteindre : un ordre vérifié, dont le résultat dit si l'appareil a suivi.</summary>
     public Task<ResultatOrdre> AllumerAsync(string entityId, bool allumer, CancellationToken ct = default) =>
         OrdreAsync(entityId, allumer ? StandardCommands.TurnOn : StandardCommands.TurnOff, null, ct);

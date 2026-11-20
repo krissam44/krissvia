@@ -427,3 +427,33 @@ h1:focus {
             border-color: #ffa726;
             color: #ffa726;
         }
+
+/* Une ligne de la carte Ouvertures et détecteurs (page Alarme). */
+.kv-detecteur {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-text-secondary) 15%, transparent);
+}
+
+    .kv-detecteur:last-child {
+        border-bottom: none;
+    }
+
+    .kv-detecteur .nom {
+        flex: 1;
+        min-width: 0;
+        font-size: .88rem;
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+
+    .kv-detecteur .etat {
+        flex-shrink: 0;
+        padding: 2px 9px;
+        border-radius: 12px;
+        border: 1px solid;
+        font-size: .75rem;
+        font-weight: 600;
+    }
