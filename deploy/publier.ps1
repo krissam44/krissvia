@@ -25,7 +25,7 @@
     Dossier de travail et de l'archive. Par défaut : publish/ à la racine du dépôt.
 
 .PARAMETER Version
-    Nom de version de l'archive. Par défaut : date du jour + commit court (20261022-7a3d9eb).
+    Nom de version de l'archive. Par défaut : la version de Directory.Build.props + commit court (1.1.0-7a3d9eb).
 
 .PARAMETER Runtime
     linux-arm64 (le Pi, par défaut) ou linux-x64. Un plugin C# publié pour l'un ne démarre pas sur l'autre : son
@@ -47,8 +47,10 @@ if (-not $Sortie) { $Sortie = Join-Path $depot 'publish' }
 $Sortie = [IO.Path]::GetFullPath($Sortie)
 
 if (-not $Version) {
+    # La même version que celle affichée dans le menu ⋮ : l'archive copiée sur le Pi dit ce qu'elle installe.
+    $produit = [regex]::Match((Get-Content -Raw (Join-Path $depot 'Directory.Build.props')), '<Version>([^<]+)</Version>').Groups[1].Value
     $commit = (git -C $depot rev-parse --short HEAD 2>$null)
-    $Version = (Get-Date -Format 'yyyyMMdd') + ($commit ? "-$commit" : '')
+    $Version = ($produit ? $produit : (Get-Date -Format 'yyyyMMdd')) + ($commit ? "-$commit" : '')
 }
 
 # Ce qui appartient à la machine, jamais à l'archive : jetons locaux, base, clés, données des plugins.
