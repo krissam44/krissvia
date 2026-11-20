@@ -104,7 +104,7 @@ public static class SupervisionRules
                 if (PluginEnPanne(e) || entree.States.Get(e.EntityId) is not { } s || !s.TryGetBool(out var probleme)) continue;
                 items.Add(new SupervisionItem($"probleme:{e.EntityId}", SupervisionCategory.Problem, e.DisplayName, probleme,
                     // Pas d'instant de mesure : le plugin republie à chaque relevé, le début est le premier constat.
-                    probleme ? "signalé par son plugin" : "aucun"));
+                    probleme ? "signalé par son plugin" : "rien à signaler"));
             }
         }
 
