@@ -139,10 +139,11 @@ Restart=always
 
 ## 6. Mettre à jour
 
-**La version.** Elle est dans `Directory.Build.props` (`<Version>`) et se lit dans le menu ⋮ (« Krissvia 1.1.0 ·
-commit ») et dans le nom de l'archive (`krissvia-1.1.0-<commit>.tar.gz`). Avant une publication qui apporte du
-nouveau : une PR qui l'incrémente — le 2e chiffre pour des nouveautés, le 3e pour des corrections seules — et
-ajoute son entrée dans `CHANGELOG.md` (les PR fusionnées depuis la précédente).
+**La version.** Elle est dans `Directory.Build.props` (`<Version>`) et se lit dans le menu ⋮ (« Krissvia 1.2.1 ·
+commit ») et dans le nom de l'archive (`krissvia-1.2.1-<commit>.tar.gz`). Chaque PR l'incrémente elle-même et
+ajoute son entrée dans `CHANGELOG.md` : le 2e chiffre pour une nouveauté, le 3e pour une correction ou un
+ajustement d'un écran existant. Deux PR ouvertes en même temps visent donc le même numéro : la seconde fusionnée
+prend le suivant.
 
 Avec le script, comme une installation : publier, copier, extraire dans un dossier **vide**, puis
 `sudo /tmp/krissvia/raspberry/installer.sh`.
