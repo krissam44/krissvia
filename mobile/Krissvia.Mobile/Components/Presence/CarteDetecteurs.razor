@@ -1,0 +1,64 @@
+@implements IDisposable
+
+@if (_vue is null)
+{
+    @if (_erreur is not null)
+    {
+        <MudAlert Severity="@(_serveurAncien ? Severity.Info : Severity.Warning)" Dense="true">Détecteurs : @_erreur</MudAlert>
+    }
+}
+else
+{
+    var v = _vue;
+    <MudCard Elevation="2" Style="border-radius:12px;">
+        <MudCardContent Class="pa-3">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <MudIcon Icon="@Icons.Material.Filled.Sensors" Style="@($"font-size:2rem;color:{CouleurBilan(v)};")" />
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:1.05rem;font-weight:600;">Ouvertures et détecteurs</div>
+                    <div class="kv-legende" style="font-size:.75rem;">@Bilan(v)</div>
+                </div>
+            </div>
+
+            @if (v.Detecteurs.Count == 0)
+            {
+                <div class="kv-legende" style="margin-top:10px;font-size:.8rem;">Aucun capteur d'ouverture ni détecteur de mouvement.</div>
+            }
+
+            @foreach (var piece in v.Detecteurs.GroupBy(d => d.Piece))
+            {
+                <div class="kv-legende" style="margin:12px 0 2px;">@((piece.Key ?? "Sans pièce").ToUpperInvariant())</div>
+                @foreach (var d in piece)
+                {
+                    var couleur = Couleur(d);
+                    <div class="kv-detecteur" @key="d.EntityId">
+                        <MudIcon Icon="@Icone(d)" Style="@($"color:{couleur};")" />
+                        <div class="nom">
+                            <div>@d.Nom</div>
+                            @if (d.Depuis is { } depuis && d.Actif is not null)
+                            {
+                                <div class="kv-legende" style="font-size:.72rem;">depuis @Depuis(depuis)</div>
+                            }
+                        </div>
+                        @if (d.Batterie is < PileFaible)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.BatteryAlert" Size="Size.Small" Style="color:#ef5350;" Title="@($"Pile à {d.Batterie:0} %")" />
+                        }
+                        @if (d.Surveille)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" Style="color:var(--mud-palette-text-secondary);" Title="Surveillé par l'alarme" />
+                        }
+                        <span class="etat" style="@($"color:{couleur};border-color:{couleur};{(d.Actif == true ? $"background:{couleur};color:#fff;" : "")}")">@d.Libelle</span>
+                    </div>
+                }
+            }
+
+            @if (v.Detecteurs.Any(d => d.Surveille))
+            {
+                <div class="kv-legende" style="margin-top:10px;font-size:.72rem;display:flex;align-items:center;gap:4px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" /> surveillé par l'alarme
+                </div>
+            }
+        </MudCardContent>
+    </MudCard>
+}

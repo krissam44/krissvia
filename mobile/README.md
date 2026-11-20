@@ -16,7 +16,9 @@ ne s'affiche jamais et s'efface à l'envoi ou après 30 s. Relu chaque seconde p
 Aucune route ajoutée : l'écran marche avec le serveur actuel. Un code faux est un 403, à ne pas confondre avec une
 clé d'API refusée. Sous un trait, la carte **Présence** (`GET /api/absence`, relue toutes les 10 s) : ce qui
 s'applique aux thermostats et qui en décide, le forçage Automatique / Présent / Absent (`PUT /api/absence/forced`,
-sans état optimiste), les appareils suivis et une absence programmée à venir.
+sans état optimiste), les appareils suivis et une absence programmée à venir. Dessous, la carte **Ouvertures et détecteurs**
+(`GET /api/detectors`, relue toutes les 10 s) : par pièce, ce qui est ouvert, où ça bouge et depuis quand, pile faible et
+surveillance par l'alarme ; un capteur sans nouvelles est gris, jamais « fermé ».
 **Énergie** : une carte par compteur (`GET /api/energy`) — puissance et tension du moment, consommation depuis minuit,
 coût si le prix du kWh est renseigné sur le web, la courbe de puissance du jour (minuit à minuit, moyenne et
 étendue min-max par 5 min, tracé calculé par `CourbeJour`), et les sept derniers jours en barres. Calcul du serveur, partagé avec

@@ -1,3 +1,4 @@
+using Krissvia.Climate.Alarm;
 using Krissvia.Core.History;
 using Krissvia.Core.Overview;
 using Krissvia.Core.Registry;
@@ -6,7 +7,7 @@ using Krissvia.Core.States;
 namespace Krissvia.Server;
 
 /// <summary>
-/// Sondes (<c>/api/sensors</c>), actionneurs (<c>/api/actuators</c>) et compteurs (<c>/api/energy</c>) : ce que montrent
+/// Sondes (<c>/api/sensors</c>), détecteurs (<c>/api/detectors</c>), actionneurs (<c>/api/actuators</c>) et compteurs (<c>/api/energy</c>) : ce que montrent
 /// les écrans Sondes, Actionneurs et Électricité, pour l'appli mobile. Lecture seule — un actionneur se commande par <c>/api/entities/{id}/commands</c>, ordre vérifié.
 /// </summary>
 internal static class SensorApi
@@ -17,6 +18,14 @@ internal static class SensorApi
         {
             var vue = SensorOverview.Build(await registre.ListAsync(ct), await registre.ListDevicesAsync(ct), etats, horloge.GetUtcNow());
             return Results.Json(SensorOverviewView.From(vue), SensorOverviewView.Json);
+        });
+
+        // Les ouvertures et les détecteurs de mouvement, pour la page Alarme de l'appli mobile.
+        api.MapGet("/detectors", async (IEntityRegistry registre, IEntityStateReader etats, AlarmService alarme, CancellationToken ct) =>
+        {
+            var surveilles = alarme.Settings.Sensors.Select(c => c.EntityId).ToHashSet(StringComparer.Ordinal);
+            var vue = DetectorOverview.Build(await registre.ListAsync(ct), await registre.ListDevicesAsync(ct), etats, surveilles);
+            return Results.Json(DetectorOverviewView.From(vue), DetectorOverviewView.Json);
         });
 
         api.MapGet("/actuators", async (IEntityRegistry registre, ActuatorSources sources, CancellationToken ct) =>

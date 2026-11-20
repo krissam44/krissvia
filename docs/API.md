@@ -158,6 +158,15 @@ sur les seules sondes à jour, ou **null** s'il n'y en a aucune ; `active`, `tot
 `stale`, `offline`, `never_received`), plus `stale_after_minutes` (60). Un client affiche ces valeurs, il ne refait pas la
 règle. Lecture seule.
 
+## Détecteurs
+
+`GET /api/detectors` : les capteurs d'ouverture et les détecteurs de mouvement (`binary_sensor` de classe `opening` ou
+`occupancy`), pour la page Alarme de l'appli mobile — `detectors`, triés par pièce puis ouvertures avant mouvements :
+`entity_id`, `name`, `room` (null : sans pièce), `type` (`opening` ou `motion`), `active` (ouvert, mouvement détecté ;
+**null** quand l'état ne se lit pas — ni « fermé » ni « calme »), `since` (dernier changement d'état), `health` (`ok`,
+`offline`, `never_received`), `battery` de l'appareil et `monitored` (surveillé par l'alarme). Pas de règle « muet » :
+un contact ne publie qu'au changement d'état. Lecture seule.
+
 ## Actionneurs
 
 `GET /api/actuators` : ce que montre l'écran Actionneurs — `rooms` (`room`, null pour « sans pièce »), chacune avec ses
