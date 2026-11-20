@@ -1,5 +1,6 @@
 @* Une carte de compteur, comme celle de DomoMud : quatre chiffres, la puissance du jour, la consommation des 30 derniers
-   jours en barres, et le tableau jour par jour. Tout vient de l'historique (HISTORIQUE.md §6). *@
+   jours en barres, et deux tableaux côte à côte, jour par jour et semaine par semaine, depuis le premier relevé. Tout vient
+   de l'historique (HISTORIQUE.md §6). *@
 @implements IDisposable
 
 <MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
@@ -42,6 +43,9 @@
             }
         </MudTabPanel>
         <MudTabPanel Text="Tableau" Icon="@Icons.Material.Filled.TableChart">
+            <MudGrid Spacing="4">
+            <MudItem xs="12" md="7">
+            <MudText Typo="Typo.subtitle2" Class="mb-1">Par jour</MudText>
             <MudDataGrid T="Ligne" Items="_lignes" Dense="true" Hover="true" Elevation="0" Height="420px" FixedHeader="true">
                 <Columns>
                     <PropertyColumn Property="l => l.Date" Title="Jour" />
@@ -63,10 +67,34 @@
                     }
                 </Columns>
             </MudDataGrid>
+            </MudItem>
+            <MudItem xs="12" md="5">
+            <MudText Typo="Typo.subtitle2" Class="mb-1">Par semaine <span class="mud-text-secondary" style="font-weight:400">(du lundi au dimanche)</span></MudText>
+            <MudDataGrid T="LigneSemaine" Items="_semaines" Dense="true" Hover="true" Elevation="0" Height="420px" FixedHeader="true">
+                <Columns>
+                    <TemplateColumn T="LigneSemaine" Title="Semaine">
+                        <CellTemplate>
+                            <div style="white-space:nowrap">@context.Item.Semaine</div>
+                            @if (context.Item.Note is { } note)
+                            {
+                                <div class="mud-text-secondary" style="font-size:.72rem">@note</div>
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="l => l.Kwh" Title="Consommation" />
+                    @if (Prix is not null)
+                    {
+                        <PropertyColumn Property="l => l.Cout" Title="Coût" />
+                    }
+                </Columns>
+            </MudDataGrid>
+            </MudItem>
+            </MudGrid>
             @if (_total is { } total)
             {
+                var mesures = Math.Max(1, _jours.Count(j => j.Kwh is not null));
                 <MudText Typo="Typo.body2" Class="mt-2">
-                    Sur 30 jours : <b>@Kwh(total)</b>@(Prix is { } p ? $" · {Euros(total * p)}" : "") · moyenne @Kwh(total / Math.Max(1, _jours.Count(j => j.Kwh is not null))) par jour
+                    Depuis le @_jours[0].Day.ToString("dd/MM/yyyy", Fr) (@mesures jour(s) mesuré(s)) : <b>@Kwh(total)</b>@(Prix is { } p ? $" · {Euros(total * p)}" : "") · moyenne @Kwh(total / mesures) par jour
                 </MudText>
             }
         </MudTabPanel>
