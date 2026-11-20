@@ -4,6 +4,12 @@ La version est dans `Directory.Build.props`. Elle s'affiche dans le menu ⋮ et 
 `deploy/publier.ps1`. Elle change à chaque publication qui apporte du nouveau : le 2ᵉ chiffre pour des nouveautés,
 le 3ᵉ pour des corrections seules (`docs/DEPLOIEMENT.md` § 6). L'appli mobile a sa propre version.
 
+## 1.2.0 — 20/11/2026
+
+**Électricité**
+- Tableau jour par jour depuis le premier relevé du compteur, et non plus sur 30 jours ; à côté, un tableau par semaine
+  (du lundi au dimanche, numéro ISO) avec la consommation et le coût (#137).
+
 ## 1.1.0 — 20/11/2026
 
 Tout ce qui a été fusionné depuis l'affichage de la version (#69), soit les PR #70 à #135.
