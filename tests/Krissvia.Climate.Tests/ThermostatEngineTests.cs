@@ -621,6 +621,90 @@ public class ThermostatEngineTests
         Assert.Equal(1, b.Ordres(StandardCommands.TurnOn));
     }
 
+    /// <summary>Confort à 20 °C, fenêtre ouverte depuis plus que son délai (0 min ici), dans le mode de repli donné.</summary>
+    private static async Task<(Banc Banc, ThermostatSnapshot Etat)> FenetreOuverteAsync(WindowAction action, double ambiante, Func<ThermostatSettings, ThermostatSettings>? ajuster = null)
+    {
+        var b = new Banc();
+        b.Mesurer(ambiante);
+        b.Etats.Set(Fenetre, true, T0);
+        var s = await b.DemarrerAsync(Banc.Salon(t => (ajuster ?? (x => x))(t with { OpeningEntityId = Fenetre, OpeningDelayMinutes = 0, OpeningAction = action })));
+        return (b, s);
+    }
+
+    [Fact]
+    public async Task Fenetre_ouverte_en_Eco_regule_en_Eco_au_lieu_de_couper()
+    {
+        // 15 °C pour un Éco à 16,5 : la pièce ne descend pas plus bas, le radiateur chauffe — sans inhibition.
+        var (b, s) = await FenetreOuverteAsync(WindowAction.Eco, 15);
+
+        Assert.Equal(ThermostatStatus.WindowOpen, s.Status);
+        Assert.Equal((ThermostatMode.Eco, 16.5), (s.Mode, s.Target));
+        Assert.Empty(s.InhibitionReasons);
+        Assert.Equal(1, b.Ordres(StandardCommands.TurnOn));
+        Assert.Equal(0, b.Ordres(StandardCommands.TurnOff, CommandPriority.Safety));
+    }
+
+    [Fact]
+    public async Task Fenetre_ouverte_en_hors_gel_coupe_par_la_regulation_et_reprend_le_confort_a_la_fermeture()
+    {
+        var (b, s) = await FenetreOuverteAsync(WindowAction.FrostProtection, 15, t => t with { ClosingDelayMinutes = 1 });
+
+        Assert.Equal(ThermostatStatus.WindowOpen, s.Status);
+        Assert.Equal((ThermostatMode.FrostProtection, 7.0), (s.Mode, s.Target));
+        Assert.Equal(0, b.Ordres(StandardCommands.TurnOn));
+        Assert.Equal(1, b.Ordres(StandardCommands.TurnOff));
+
+        b.Etats.Set(Fenetre, false, b.Horloge.GetUtcNow());
+        b.Mesurer(15);
+        Assert.Equal(ThermostatStatus.WindowOpen, (await b.AvancerAsync(TimeSpan.FromSeconds(50))).Status);
+
+        b.Mesurer(15);
+        var reprise = await b.AvancerAsync(TimeSpan.FromSeconds(20));
+        Assert.Equal((ThermostatMode.Comfort, 20.0, ThermostatStatus.Heating), (reprise.Mode, reprise.Target, reprise.Status));
+    }
+
+    [Fact]
+    public async Task Une_fenetre_ouverte_ne_rechauffe_jamais_une_absence_en_hors_gel()
+    {
+        var (_, s) = await FenetreOuverteAsync(WindowAction.Eco, 15, t => t with { FollowAbsence = true });
+        Assert.Equal(ThermostatMode.Eco, s.Mode);
+
+        var b = new Banc();
+        b.Foyer.Current = new HomeAbsenceState(true, AbsenceSource.Manual, null);
+        b.Mesurer(15);
+        b.Etats.Set(Fenetre, true, T0);
+        var absent = await b.DemarrerAsync(Banc.Salon(t => SuitAbsence(t) with { OpeningEntityId = Fenetre, OpeningDelayMinutes = 0, OpeningAction = WindowAction.Eco }));
+
+        Assert.Equal(ThermostatMode.FrostProtection, absent.Mode);
+        Assert.Equal(ThermostatStatus.WindowOpen, absent.Status);
+    }
+
+    [Fact]
+    public async Task Fenetre_ouverte_en_Eco_le_planning_ne_prechauffe_pas()
+    {
+        // Sans fenêtre, 18,5 °C à 30 min d'un créneau Confort déclencherait le préchauffage vers 20 °C.
+        var (_, s) = await FenetreOuverteAsync(WindowAction.Eco, 18.5, AvecPlanning);
+
+        Assert.NotEqual(ThermostatStatus.Preheating, s.Status);
+        Assert.Equal(16.5, s.Target);
+    }
+
+    [Fact]
+    public async Task Passer_de_couper_a_Eco_fenetre_ouverte_leve_l_inhibition()
+    {
+        var b = new Banc();
+        b.Mesurer(15);
+        b.Etats.Set(Fenetre, true, T0);
+        var coupe = await b.DemarrerAsync(Banc.Salon(t => t with { OpeningEntityId = Fenetre, OpeningDelayMinutes = 0 }));
+        Assert.Contains(InhibitionReasons.FenetreOuverte, coupe.InhibitionReasons);
+
+        await b.Moteur.ConfigureAsync([Banc.Salon(t => t with { OpeningEntityId = Fenetre, OpeningDelayMinutes = 0, OpeningAction = WindowAction.Eco })]);
+        var eco = await b.TickAsync();
+
+        Assert.Empty(eco.InhibitionReasons);
+        Assert.Equal((ThermostatMode.Eco, ThermostatStatus.WindowOpen), (eco.Mode, eco.Status));
+    }
+
     // ── Délestage (inhibition extérieure) ────────────────────────────────────
 
     [Fact]

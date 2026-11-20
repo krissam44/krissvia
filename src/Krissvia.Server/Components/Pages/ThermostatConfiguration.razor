@@ -76,13 +76,29 @@ else if (_m is not null && _planning is not null)
                     </MudItem>
                     <MudItem xs="12" md="6">
                         <MudSelect Dense="true" T="string" @bind-Value="_m.Ouverture" Label="Capteur d'ouverture porte/fenêtre (facultatif)" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                   HelperText="Suspend le chauffage tant que c'est ouvert">
+                                   HelperText="Fenêtre ouverte : coupe ou baisse le chauffage, selon le réglage ci-contre">
                             <MudSelectItem Value="@Aucune">— aucun —</MudSelectItem>
                             @foreach (var e in Options(_ouvertures, _m.Ouverture))
                             {
                                 <MudSelectItem Value="e.EntityId">@Libelle(e)</MudSelectItem>
                             }
                         </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSelect Dense="true" T="WindowAction" @bind-Value="_m.ActionOuverture" Label="Fenêtre ouverte" Disabled="@(_m.Ouverture == Aucune)"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Fenêtre refermée, le thermostat reprend son mode, son planning et sa consigne">
+                            <MudSelectItem Value="WindowAction.Cut">Couper le chauffage</MudSelectItem>
+                            <MudSelectItem Value="WindowAction.Eco">Passer en Éco</MudSelectItem>
+                            <MudSelectItem Value="WindowAction.FrostProtection">Passer en hors-gel</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="6" md="3">
+                        <MudNumericField @bind-Value="_m.OuvertureMinutes" Label="Ouvert depuis (min)" Min="0" Disabled="@(_m.Ouverture == Aucune)"
+                                         Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="avant d'agir (2 par défaut)" />
+                    </MudItem>
+                    <MudItem xs="6" md="3">
+                        <MudNumericField @bind-Value="_m.FermetureMinutes" Label="Refermé depuis (min)" Min="0" Disabled="@(_m.Ouverture == Aucune)"
+                                         Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="avant de reprendre (1 par défaut)" />
                     </MudItem>
                 </MudGrid>
             </MudTabPanel>
@@ -167,8 +183,9 @@ else if (_m is not null && _planning is not null)
                 <MudText Typo="Typo.subtitle2" Class="mud-text-secondary mt-4 mb-2">Protections</MudText>
                 <MudGrid>
                     <MudItem xs="12" sm="4"><MudNumericField @bind-Value="_m.FailsafeMinutes" Label="Sonde muette (min)" Min="0" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Au-delà, chauffage coupé. 60 par défaut, 0 = jamais" /></MudItem>
-                    <MudItem xs="6" sm="4"><MudNumericField @bind-Value="_m.OuvertureMinutes" Label="Ouvert depuis (min)" Min="0" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="avant de suspendre" /></MudItem>
-                    <MudItem xs="6" sm="4"><MudNumericField @bind-Value="_m.FermetureMinutes" Label="Refermé depuis (min)" Min="0" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="avant de reprendre" /></MudItem>
+                    <MudItem xs="12" sm="8" Class="d-flex align-center">
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Les délais de la fenêtre ouverte se règlent dans l'onglet Général, sous le capteur d'ouverture.</MudText>
+                    </MudItem>
                 </MudGrid>
             </MudTabPanel>
 
