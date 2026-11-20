@@ -43,6 +43,11 @@ public sealed record GraceAlertSettings
     public int GraceMinutes { get; init; } = 5;
 }
 
+public sealed record PublicIpAlertSettings
+{
+    public bool Enabled { get; init; } = true;
+}
+
 public sealed record PresenceAlertSettings
 {
     public bool Enabled { get; init; } = true;
@@ -77,6 +82,9 @@ public sealed record AlertSettings
     public BatteryAlertSettings Battery { get; init; } = new();
     public GraceAlertSettings Plugins { get; init; } = new();
     public GraceAlertSettings Internet { get; init; } = new();
+
+    /// <summary>Changement d'IP publique : un message avec la nouvelle adresse (<see cref="Supervision.PublicIpWatch"/>).</summary>
+    public PublicIpAlertSettings PublicIp { get; init; } = new();
     public PresenceAlertSettings Presence { get; init; } = new();
     public DiskAlertSettings Disk { get; init; } = new();
     public LoadSheddingAlertSettings LoadShedding { get; init; } = new();

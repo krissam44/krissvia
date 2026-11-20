@@ -11,6 +11,7 @@
 |---|---|---|---|
 | **Plugin arrêté** | plugin **activé** (page Services) et pas connecté au cœur ; lancé ailleurs et connecté, il compte comme connecté | 5 min (1 à 120) | `plugin:{id}` |
 | **Connexion Internet** | `binary_sensor` de classe `connectivity` à faux — quelle que soit la box (`PRESENCE.md` §1). Indisponible : rien, c'est l'affaire du plugin | 5 min (1 à 120) | `internet:{entité}` |
+| **IP publique changée** | une entité `sensor` de classe `public_ip` change de valeur — quelle que soit la box. Un **évènement**, pas un incident : un message par changement, « nouvelle adresse B (avant : A) », sans alerte active ni retour. Une IP vide pendant la reconnexion ne fait pas oublier l'ancienne ; au démarrage, la référence est l'état enregistré (changement pendant l'arrêt signalé). Envoi échoué (ntfy injoignable pendant la reconnexion) : retenté à 1, 5, 15 puis 60 min (`PublicIpWatch`) | aucun | — |
 | **Présence perdue** | appareils suivis sans réponse (`HomePresence`) : maison tenue pour occupée par sécurité | aucun | `presence` |
 | **Espace disque** | libre à côté de la base sous le seuil — une carte SD ou un SSD plein arrête tout | 1 Go (100 Mo à 100 Go) | `disque` |
 | **Capteur muet** | aucune mesure depuis le seuil, ou indisponible | 120 min (10 min à 48 h) | `capteur:{entité}` |

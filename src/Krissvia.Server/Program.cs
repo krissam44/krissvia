@@ -90,7 +90,8 @@ builder.Services.AddSingleton(sp => new Krissvia.Core.Notifications.Notification
     new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) })));
 builder.Services.AddSingleton<Krissvia.Core.Notifications.AlertService>();
 builder.Services.AddSingleton<Krissvia.Climate.Alerts.FrostWatch>();
-builder.Services.AddSingleton<Krissvia.Core.Supervision.SupervisionWatch>();   // plugins, Internet, capteurs, piles, disque
+builder.Services.AddSingleton<Krissvia.Core.Supervision.SupervisionWatch>();
+builder.Services.AddSingleton<Krissvia.Core.Supervision.PublicIpWatch>();   // nouvelle IP publique notifiée   // plugins, Internet, capteurs, piles, disque
 builder.Services.AddSingleton<ThermostatEngine>();
 builder.Services.AddSingleton<ThermostatService>();
 builder.Services.AddSingleton<AutoTpiService>();   // proposé, jamais appliqué seul (docs/AUTO-TPI.md)
@@ -135,6 +136,7 @@ builder.Services.AddHostedService<LoadSheddingLoop>();
 builder.Services.AddHostedService<DeviceScheduleLoop>();
 builder.Services.AddHostedService<AutomationLoop>();
 builder.Services.AddHostedService<AlertLoop>();
+builder.Services.AddHostedService<PublicIpLoop>();
 builder.Services.AddHostedService<PresenceLoop>();
 builder.Services.AddHostedService<RoomAverageLoop>();
 builder.Services.AddHostedService<AlarmLoop>();
