@@ -103,8 +103,11 @@ et la puissance le sont déjà à la minute (§2), puis heure par heure sans lim
   en vigueur à minuit (points bruts) ; **coût du jour** si un prix du kWh est saisi en haut de l'écran (un seul prix
   TTC, collection `electricite`).
 - **Puissance du jour** : de minuit à maintenant, par cases de 5 min, avec la bande min / max (`CourbeSvg`).
-- **Conso 30 jours** en barres, et un **tableau** jour par jour : consommation, part de chaque index partiel (index 1 /
-  index 2 d'un Linky : heures creuses et pleines selon le contrat), coût, puissance maximale.
+- **Conso 30 jours** en barres, et deux **tableaux** côte à côte, depuis le premier relevé du compteur (les heures
+  consolidées sont gardées sans limite, §3) : jour par jour — consommation, part de chaque index partiel (index 1 /
+  index 2 d'un Linky : heures creuses et pleines selon le contrat), coût, puissance maximale — et semaine par semaine,
+  du lundi au dimanche, numérotées selon l'ISO 8601 (`EnergyWeeks`, pur et testé) : consommation et coût, une semaine
+  incomplète (en cours, début d'historique, trou) étant signalée.
 - **Un jour = la somme des hausses d'index d'heure en heure** (`EnergyDays`, pur et testé), en jour **local** : une
   baisse se lit comme une remise à zéro, et seule la nouvelle valeur compte — « max − min » (DomoMud) gonflait ce
   jour-là de tout l'index. Aujourd'hui vient des points bruts, plus frais que l'heure consolidée toutes les 10 min.

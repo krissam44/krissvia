@@ -27,6 +27,9 @@ public partial class CompteurElectrique
     /// <summary>Une ligne du tableau, déjà mise en forme.</summary>
     private sealed record Ligne(string Date, string Kwh, IReadOnlyList<string> Parts, string Cout, string Pointe);
 
+    /// <summary>Une ligne du tableau des semaines ; <see cref="Note"/> dit une semaine incomplète (en cours, trou).</summary>
+    private sealed record LigneSemaine(string Semaine, string? Note, string Kwh, string Cout);
+
     private int _onglet;
     private Timer? _minuterie;
     private int _tours;
@@ -38,6 +41,8 @@ public partial class CompteurElectrique
     private IReadOnlyList<DateTimeOffset> _tempsJours = [];
     private List<SerieCourbe> _serieJours = [];
     private List<Ligne> _lignes = [];
+    private IReadOnlyList<EnergyWeek> _semainesBrutes = [];
+    private List<LigneSemaine> _semaines = [];
     private double? _total;
 
     protected override async Task OnInitializedAsync()
@@ -59,8 +64,8 @@ public partial class CompteurElectrique
         var maintenant = Horloge.GetUtcNow();
         var aujourdhui = EnergyDays.Jour(maintenant, zone);
 
-        // Depuis minuit et les 30 derniers jours : le même calcul que GET /api/energy (LectureCompteur).
-        var conso = await LectureCompteur.LireAsync(Compteur, Jours, Historique, Etats, Horloge);
+        // Depuis minuit et tous les jours depuis le premier relevé : le même calcul que GET /api/energy (LectureCompteur).
+        var conso = await LectureCompteur.LireAsync(Compteur, null, Historique, Etats, Horloge);
         _depuisMinuit = conso.DepuisMinuit;
 
         // La puissance du jour, de minuit à maintenant, par cases de 5 min.
@@ -77,8 +82,11 @@ public partial class CompteurElectrique
         _jours = jours;
         var premier = jours[0].Day;
         var depuis = EnergyDays.Midnight(premier.AddDays(-1), zone);
-        _tempsJours = [.. jours.Select(j => EnergyDays.Midnight(j.Day, zone))];
-        _serieJours = [new SerieCourbe("Consommation", [.. jours.Select(j => j.Kwh)], Bleu, StyleSerie.Barres)];
+        // Le graphique garde ses 30 jours : au-delà, les barres deviendraient des traits.
+        var recents = jours.TakeLast(Jours).ToList();
+        _tempsJours = [.. recents.Select(j => EnergyDays.Midnight(j.Day, zone))];
+        _serieJours = [new SerieCourbe("Consommation", [.. recents.Select(j => j.Kwh)], Bleu, StyleSerie.Barres)];
+        _semainesBrutes = EnergyWeeks.FromDays(jours);
 
         var parts = new List<IReadOnlyList<EnergyDay>>();
         foreach (var partiel in Compteur.Partiels)
@@ -99,6 +107,14 @@ public partial class CompteurElectrique
                 [.. _partsBrutes.Select(p => p[i].Kwh is { } x ? Kwh(x) : "—")],
                 j.Kwh is { } c && Prix is { } prix ? Euros(c * prix) : "—",
                 j.PeakPower is { } m ? $"{m.ToString("#,0", Fr)} {Compteur.Puissance?.Unit}" : "—"))
+            .Reverse()];
+
+        var lundiCourant = EnergyWeeks.MondayOf(EnergyDays.Jour(Horloge.GetUtcNow(), Horloge.LocalTimeZone));
+        _semaines = [.. _semainesBrutes.Select(s => new LigneSemaine(
+                $"S{s.Number} · {s.Monday.ToString("dd/MM", Fr)} → {s.Sunday.ToString("dd/MM", Fr)}",
+                s.Monday == lundiCourant ? "en cours" : s.MeasuredDays < 7 ? $"{s.MeasuredDays} j mesuré(s)" : null,
+                s.Kwh is { } k ? Kwh(k) : "—",
+                s.Kwh is { } c && Prix is { } prix ? Euros(c * prix) : "—"))
             .Reverse()];
     }
 

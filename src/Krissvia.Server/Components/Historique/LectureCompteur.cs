@@ -13,9 +13,12 @@ public sealed record Consommation(double? DepuisMinuit, IReadOnlyList<EnergyDay>
 /// </summary>
 public static class LectureCompteur
 {
-    /// <param name="jours">Nombre de jours, aujourd'hui compris.</param>
+    /// <param name="jours">
+    /// Nombre de jours, aujourd'hui compris ; null : depuis le premier relevé du compteur (les heures consolidées sont
+    /// gardées sans limite, HISTORIQUE.md §3).
+    /// </param>
     public static async Task<Consommation> LireAsync(
-        Compteur compteur, int jours, IHistoryRepository historique, IEntityStateReader etats, TimeProvider horloge, CancellationToken ct = default)
+        Compteur compteur, int? jours, IHistoryRepository historique, IEntityStateReader etats, TimeProvider horloge, CancellationToken ct = default)
     {
         var zone = horloge.LocalTimeZone;
         var maintenant = horloge.GetUtcNow();
@@ -29,9 +32,22 @@ public static class LectureCompteur
         double? depuisMinuit = aMinuit is { } a && actuel is { } b ? Math.Max(0, b - a) : null;
 
         // Les jours, depuis les heures consolidées (la veille du premier jour donne l'index de départ).
-        var premier = aujourdhui.AddDays(-(jours - 1));
-        var depuis = EnergyDays.Midnight(premier.AddDays(-1), zone);
-        var heures = await historique.ReadHourlyAsync(compteur.Index.EntityId, depuis, maintenant, ct);
+        DateOnly premier;
+        DateTimeOffset depuis;
+        IReadOnlyList<HistoryBucket> heures;
+        if (jours is { } n)
+        {
+            premier = aujourdhui.AddDays(-(n - 1));
+            depuis = EnergyDays.Midnight(premier.AddDays(-1), zone);
+            heures = await historique.ReadHourlyAsync(compteur.Index.EntityId, depuis, maintenant, ct);
+        }
+        else
+        {
+            depuis = DateTimeOffset.UnixEpoch;
+            heures = await historique.ReadHourlyAsync(compteur.Index.EntityId, depuis, maintenant, ct);
+            premier = heures.FirstOrDefault(h => h.Last is not null) is { } h ? EnergyDays.Jour(h.Hour, zone) : aujourdhui;
+        }
+
         var heuresPuissance = compteur.Puissance is { } p ? await historique.ReadHourlyAsync(p.EntityId, depuis, maintenant, ct) : [];
         var liste = EnergyDays.FromHours(heures, heuresPuissance, zone, premier, aujourdhui).ToList();
         // Aujourd'hui : les points bruts, plus frais que l'heure consolidée toutes les 10 min.
