@@ -1,8 +1,14 @@
 # Journal des versions
 
 La version est dans `Directory.Build.props`. Elle s'affiche dans le menu ⋮ et donne son nom à l'archive de
-`deploy/publier.ps1`. Elle change à chaque publication qui apporte du nouveau : le 2ᵉ chiffre pour des nouveautés,
-le 3ᵉ pour des corrections seules (`docs/DEPLOIEMENT.md` § 6). L'appli mobile a sa propre version.
+`deploy/publier.ps1`. Chaque PR l'incrémente et ajoute ici son entrée : le 2ᵉ chiffre pour une nouveauté, le 3ᵉ pour
+une correction ou un ajustement d'un écran existant (`docs/DEPLOIEMENT.md` § 6). L'appli mobile a sa propre version.
+
+## 1.2.1 — 21/11/2026
+
+**Électricité**
+- Un onglet par compteur au lieu de cartes empilées ; les tableaux par jour et par semaine prennent la hauteur de la
+  fenêtre (#139).
 
 ## 1.2.0 — 20/11/2026
 
