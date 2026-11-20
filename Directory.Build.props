@@ -6,6 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AnalysisLevel>latest</AnalysisLevel>
     <Deterministic>true</Deterministic>
+    <!--
+      La version de Krissvia : cœur, plugins C# et menu ⋮ (« Krissvia 1.1.0 · commit »). Elle change à chaque
+      publication qui apporte du nouveau, dans une PR à elle, avec son entrée dans CHANGELOG.md :
+      le 2e chiffre pour des nouveautés, le 3e pour des corrections seules.
+      L'appli mobile a sa propre version (ApplicationDisplayVersion dans mobile/).
+    -->
+    <Version>1.1.0</Version>
     <!-- Règle du projet : zéro warning. Les alertes d'audit NuGet restent des warnings. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
