@@ -119,6 +119,7 @@ Une entité non choisie est refusée (`not_allowed`, dit au journal) ; un ordre 
 ```bash
 python -m unittest discover -s sdk/python
 python -m unittest discover -s plugins/Krissvia.Plugin.Meteo
+python -m unittest discover -s plugins/Krissvia.Plugin.Matter
 ```
 
 Contre un faux cœur WebSocket sur la boucle locale : poignée de main et resynchronisation, ordres réussis et

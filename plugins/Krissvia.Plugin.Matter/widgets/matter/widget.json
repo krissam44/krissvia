@@ -1,0 +1,11 @@
+{
+  "contract": 2,
+  "id": "matter",
+  "name": "Matter",
+  "description": "État du serveur Matter, appareils appairés, et appairage d'un nouvel appareil à partir de son code. Livré par le plugin Matter.",
+  "version": "1.0.0",
+  "element": "kv-matter",
+  "script": "matter.js",
+  "slots": [ { "name": "controleur", "kinds": ["sensor"], "device_classes": ["matter_controller"], "required": true } ],
+  "size": { "cols": 3, "rows": 3 }
+}

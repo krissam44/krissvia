@@ -1,0 +1,21 @@
+{
+  "id": "matter",
+  "name": "Matter (Python)",
+  "description": "Les appareils Matter (prises, interrupteurs, capteurs) d'un Matter Server de l'Open Home Foundation : marche/arrêt, mesure d'énergie, capteurs, et appairage d'un nouvel appareil depuis la carte « Matter ». Voir docs/MATTER.md.",
+  "runtime": "python",
+  "executable": "matter.py",
+  "settings": {
+    "type": "object",
+    "properties": {
+      "Matter": {
+        "type": "object",
+        "title": "Serveur Matter",
+        "properties": {
+          "Url": { "type": "string", "title": "Adresse du serveur", "default": "ws://localhost:5580/ws", "description": "L'API WebSocket du Matter Server (matterjs-server), en général sur la même machine." },
+          "WifiSsid": { "type": "string", "title": "Wi-Fi (nom du réseau)", "description": "Facultatif : seulement pour appairer par Bluetooth un appareil Matter Wi-Fi neuf. Inutile pour un appareil partagé depuis son appli." },
+          "WifiPassword": { "type": "string", "title": "Wi-Fi (mot de passe)", "format": "password", "description": "Transmis au serveur Matter, qui le donne à l'appareil pendant l'appairage Bluetooth." }
+        }
+      }
+    }
+  }
+}
