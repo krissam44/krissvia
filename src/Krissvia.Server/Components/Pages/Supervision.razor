@@ -4,6 +4,18 @@
 
 <PageTitle>Supervision · Krissvia</PageTitle>
 
+<style>
+    .kv-sup-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2px 24px; }
+    .kv-sup-point { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; min-width: 0; }
+    .kv-sup-point .mud-icon-root { margin-top: 2px; flex-shrink: 0; }
+    .kv-sup-texte { min-width: 0; line-height: 1.25; }
+    .kv-sup-nom { font-size: .875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .kv-sup-detail { font-size: .75rem; color: var(--mud-palette-text-secondary); }
+    .kv-sup-panne .kv-sup-nom { font-weight: 600; }
+    .kv-sup-famille { display: flex; align-items: center; gap: 12px; width: 100%; }
+    .kv-sup-famille .kv-sup-compte { margin-left: auto; padding-right: 8px; font-size: .8rem; color: var(--mud-palette-text-secondary); white-space: nowrap; }
+</style>
+
 <MudText Typo="Typo.h5" Class="mb-4">Supervision</MudText>
 
 @if (Rapport is not { } r)
@@ -12,102 +24,130 @@
 }
 else
 {
-    <MudGrid>
-        <MudItem xs="12" md="6">
-            <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-3">
-                    <MudIcon Icon="@(EnPanne.Count == 0 ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)" Size="Size.Large"
-                             Style="@($"color:{(EnPanne.Count == 0 ? Vert : Orange)}")" />
-                    <div>
-                        <MudText Typo="Typo.h6">@(EnPanne.Count == 0 ? "Tout fonctionne" : $"{EnPanne.Count} point(s) en panne")</MudText>
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Contrôlé @Heure(r.At), toutes les minutes.</MudText>
-                    </div>
-                </MudStack>
-                <MudSimpleTable Dense="true" Elevation="0">
+    <MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-3">
+            <MudIcon Icon="@(Pannes.Count == 0 ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)" Size="Size.Large"
+                     Style="@($"color:{(Pannes.Count == 0 ? Vert : Pannes.Any(p => p.Alerting) ? Rouge : Orange)}")" />
+            <div>
+                <MudText Typo="Typo.h6">@Verdict</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Contrôlé @Heure(r.At), toutes les minutes.</MudText>
+            </div>
+        </MudStack>
+        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+            @foreach (var f in Familles.Where(f => Points(f).Count > 0))
+            {
+                var points = Points(f);
+                var pannes = points.Count(p => p.Item.Problem);
+                <MudChip T="string" @key="f.Nom" Icon="@f.Icone" Size="Size.Small" Variant="@(pannes == 0 ? Variant.Outlined : Variant.Filled)"
+                         Color="@(pannes == 0 ? Color.Success : points.Any(p => p.Alerting) ? Color.Error : Color.Warning)"
+                         OnClick="() => Ouvrir(f)">
+                    @f.Nom · @Pastille(points)
+                </MudChip>
+            }
+        </MudStack>
+    </MudPaper>
+
+    <MudTabs @bind-ActivePanelIndex="_onglet" Elevation="1" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-4">
+        <MudTabPanel Text="@(Pannes.Count == 0 ? "À traiter" : $"À traiter ({Pannes.Count})")" Icon="@Icons.Material.Filled.ReportProblem">
+            @if (r.SensorsInGrace)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                    Démarrage récent : les capteurs ont dix minutes pour se manifester avant d'être jugés.
+                </MudAlert>
+            }
+            @if (Pannes.Count == 0)
+            {
+                <MudText Typo="Typo.body1" Class="mud-text-secondary">Rien à traiter : tout ce qui est surveillé fonctionne.</MudText>
+            }
+            else
+            {
+                <MudSimpleTable Dense="true" Elevation="0" Hover="true">
                     <tbody>
-                        @foreach (var s in r.Items.Where(i => i.Item.Category is not (SupervisionCategory.Sensor or SupervisionCategory.Battery or SupervisionCategory.Reference)))
+                        @foreach (var s in Pannes)
                         {
                             <tr @key="s.Item.Key">
-                                <td style="width: 28px"><MudIcon Icon="@Icone(s.Item.Category)" Size="Size.Small" Style="@($"color:{Couleur(s)}")" /></td>
-                                <td>@s.Item.Name</td>
-                                <td class="mud-text-secondary">@Detail(s)</td>
+                                <td style="width: 28px"><MudIcon Icon="@Icone(s)" Size="Size.Small" Style="@($"color:{Couleur(s)}")" /></td>
+                                <td><b>@s.Item.Name</b><br /><span class="mud-text-secondary">@Detail(s)</span></td>
+                                <td class="mud-text-secondary d-none d-sm-table-cell" style="white-space: nowrap">@FamilleDe(s.Item.Category).Nom</td>
                             </tr>
                         }
                     </tbody>
                 </MudSimpleTable>
-                @if (!r.Items.Any(i => i.Item.Category == SupervisionCategory.Plugin))
-                {
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2">Aucun plugin activé (page Services).</MudText>
-                }
-            </MudPaper>
-        </MudItem>
-
-        <MudItem xs="12" md="6">
-            <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
-                <MudText Typo="Typo.h6" Class="mb-1">Capteurs et piles</MudText>
-                @if (r.SensorsInGrace)
-                {
-                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
-                        Démarrage récent : les capteurs ont dix minutes pour se manifester avant d'être jugés.
-                    </MudAlert>
-                }
-                <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">@Bilan(r)</MudText>
-                @foreach (var s in r.Items.Where(i => i.Item.Category is SupervisionCategory.Sensor or SupervisionCategory.Battery && i.Item.Problem))
-                {
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" @key="s.Item.Key">
-                        <MudIcon Icon="@Icone(s.Item.Category)" Size="Size.Small" Style="@($"color:{Couleur(s)}")" />
-                        <MudText Typo="Typo.body2"><b>@s.Item.Name</b> — @s.Item.Detail</MudText>
-                    </MudStack>
-                }
-            </MudPaper>
-        </MudItem>
-
-        <MudItem xs="12" md="6">
-            <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
-                <MudText Typo="Typo.h6" Class="mb-1">Références aux entités</MudText>
-                <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">@BilanReferences(r)</MudText>
-                @foreach (var s in r.Items.Where(i => i.Item.Category == SupervisionCategory.Reference && i.Item.Problem))
-                {
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" @key="s.Item.Key">
-                        <MudIcon Icon="@Icone(s.Item.Category)" Size="Size.Small" Style="@($"color:{Couleur(s)}")" />
-                        <MudText Typo="Typo.body2"><b>@s.Item.Name</b> — @Detail(s)</MudText>
-                    </MudStack>
-                }
-            </MudPaper>
-        </MudItem>
-
-        <MudItem xs="12" md="6">
-            <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
-                <MudText Typo="Typo.h6" Class="mb-2">Alertes en cours</MudText>
-                @if (Alertes.Active.Count == 0)
-                {
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Aucune.</MudText>
-                }
-                else
-                {
-                    <MudSimpleTable Dense="true" Elevation="0">
-                        <tbody>
-                            @foreach (var a in Alertes.Active)
-                            {
-                                <tr @key="a.Key">
-                                    <td style="white-space: nowrap" class="mud-text-secondary">@Heure(a.Since)</td>
-                                    <td><b>@a.Title</b><br /><span class="mud-text-secondary">@a.Message</span></td>
-                                    <td class="mud-text-secondary">@Envoi(a.Delivery)</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </MudSimpleTable>
-                }
-                <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2">
-                    Par ntfy (<MudLink Href="/parametres/notifications">Notifications</MudLink>). Une alerte part une fois par
-                    incident ; sa fin n'est dite que si elle avait été signalée.
+                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mt-2">
+                    Rouge : l'alerte est partie. Orange : en panne, le délai avant l'alerte n'est pas encore écoulé.
                 </MudText>
-            </MudPaper>
-        </MudItem>
+            }
+        </MudTabPanel>
 
-        <MudItem xs="12" md="6">
-            <MudPaper Elevation="1" Class="pa-4 rounded-lg" Style="height: 100%">
-                <MudText Typo="Typo.h6" Class="mb-2">Réglages des alertes</MudText>
+        <MudTabPanel Text="Tout l'état" Icon="@Icons.Material.Filled.ViewList">
+            <MudExpansionPanels MultiExpansion="true" Elevation="0">
+                @foreach (var f in Familles)
+                {
+                    var points = Points(f);
+                    var pannes = points.Count(p => p.Item.Problem);
+                    <MudExpansionPanel @key="f.Nom" Expanded="@_ouvertes.Contains(f.Nom)" ExpandedChanged="v => Basculer(f.Nom, v)">
+                        <TitleContent>
+                            <div class="kv-sup-famille">
+                                <MudIcon Icon="@f.Icone" Size="Size.Small"
+                                         Style="@($"color:{(points.Count == 0 ? Gris : pannes == 0 ? Vert : points.Any(p => p.Alerting) ? Rouge : Orange)}")" />
+                                <MudText Typo="Typo.subtitle1">@f.Nom</MudText>
+                                <span class="kv-sup-compte">@Compte(points)</span>
+                            </div>
+                        </TitleContent>
+                        <ChildContent>
+                            @if (points.Count == 0)
+                            {
+                                <MudText Typo="Typo.body2" Class="mud-text-secondary">@f.Vide</MudText>
+                            }
+                            else
+                            {
+                                <div class="kv-sup-grille">
+                                    @foreach (var s in points.OrderByDescending(p => p.Item.Problem).ThenBy(p => p.Item.Name, StringComparer.CurrentCultureIgnoreCase))
+                                    {
+                                        <div class="kv-sup-point @(s.Item.Problem ? "kv-sup-panne" : "")" @key="s.Item.Key">
+                                            <MudIcon Icon="@Icone(s)" Size="Size.Small" Style="@($"color:{Couleur(s)}")" />
+                                            <div class="kv-sup-texte">
+                                                <div class="kv-sup-nom" title="@s.Item.Name">@s.Item.Name</div>
+                                                <div class="kv-sup-detail">@Detail(s)</div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </ChildContent>
+                    </MudExpansionPanel>
+                }
+            </MudExpansionPanels>
+        </MudTabPanel>
+
+        <MudTabPanel Text="@(Alertes.Active.Count == 0 ? "Alertes" : $"Alertes ({Alertes.Active.Count})")" Icon="@Icons.Material.Filled.NotificationsActive">
+            @if (Alertes.Active.Count == 0)
+            {
+                <MudText Typo="Typo.body1" Class="mud-text-secondary">Aucune alerte en cours.</MudText>
+            }
+            else
+            {
+                <MudSimpleTable Dense="true" Elevation="0" Hover="true">
+                    <tbody>
+                        @foreach (var a in Alertes.Active)
+                        {
+                            <tr @key="a.Key">
+                                <td style="white-space: nowrap" class="mud-text-secondary">@Heure(a.Since)</td>
+                                <td><b>@a.Title</b><br /><span class="mud-text-secondary">@a.Message</span></td>
+                                <td class="mud-text-secondary" style="white-space: nowrap">@Envoi(a.Delivery)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">
+                Par ntfy (<MudLink Href="/parametres/notifications">Notifications</MudLink>). Une alerte part une fois par
+                incident ; sa fin n'est dite que si elle avait été signalée.
+            </MudText>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Réglages" Icon="@Icons.Material.Filled.Tune">
+            <div style="max-width: 720px">
                 <MudGrid Spacing="1">
                     <MudItem xs="7"><MudSwitch T="bool" @bind-Value="_f.Plugins" Color="Color.Primary" Label="Plugin arrêté, après" /></MudItem>
                     <MudItem xs="5"><MudNumericField T="int" @bind-Value="_f.PluginsMin" Label="min" Min="1" Max="120" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
@@ -128,7 +168,7 @@ else
                 </MudGrid>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Class="mt-3"
                            OnClick="EnregistrerAsync">Enregistrer</MudButton>
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
+            </div>
+        </MudTabPanel>
+    </MudTabs>
 }
