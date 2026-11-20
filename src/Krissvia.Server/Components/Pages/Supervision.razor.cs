@@ -20,7 +20,7 @@ public partial class Supervision : IDisposable
 
     private sealed class Formulaire
     {
-        public bool Plugins, Internet, Capteurs, Piles, Disque, Presence, Delestage, Problemes, References;
+        public bool Plugins, Internet, IpPublique, Capteurs, Piles, Disque, Presence, Delestage, Problemes, References;
         public int PluginsMin, InternetMin, CapteursMin, PilesPct, DisqueMo, ReferencesMin;
     }
 
@@ -37,6 +37,7 @@ public partial class Supervision : IDisposable
         {
             Plugins = r.Plugins.Enabled, PluginsMin = r.Plugins.GraceMinutes,
             Internet = r.Internet.Enabled, InternetMin = r.Internet.GraceMinutes,
+            IpPublique = r.PublicIp.Enabled,
             Capteurs = r.Sensors.Enabled, CapteursMin = r.Sensors.SilentMinutes,
             Piles = r.Battery.Enabled, PilesPct = r.Battery.ThresholdPercent,
             Disque = r.Disk.Enabled, DisqueMo = r.Disk.MinFreeMegabytes,
@@ -61,6 +62,7 @@ public partial class Supervision : IDisposable
             {
                 Plugins = new GraceAlertSettings { Enabled = _f.Plugins, GraceMinutes = _f.PluginsMin },
                 Internet = new GraceAlertSettings { Enabled = _f.Internet, GraceMinutes = _f.InternetMin },
+                PublicIp = new PublicIpAlertSettings { Enabled = _f.IpPublique },
                 Sensors = new SensorAlertSettings { Enabled = _f.Capteurs, SilentMinutes = _f.CapteursMin },
                 Battery = new BatteryAlertSettings { Enabled = _f.Piles, ThresholdPercent = _f.PilesPct },
                 Disk = new DiskAlertSettings { Enabled = _f.Disque, MinFreeMegabytes = _f.DisqueMo },
