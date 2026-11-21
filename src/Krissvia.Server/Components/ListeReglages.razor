@@ -5,12 +5,14 @@
 <MudDataGrid @key="_version" T="JsonObject" Items="Elements" Dense="true" Hover="true" Elevation="0" Outlined="true" Class="rounded-lg"
              Breakpoint="Breakpoint.Sm">
     <Columns>
-        <TemplateColumn T="JsonObject" Title="N°" HeaderStyle="width: 48px" Sortable="false">
+        @* « width: 1% » et pas de retour à la ligne : la colonne prend juste sa place, le reste va aux textes. *@
+        <TemplateColumn T="JsonObject" Title="N°" HeaderStyle="@Etroite" CellStyle="@Etroite" Sortable="false">
             <CellTemplate>@(Liste.IndexOf(context.Item) + 1)</CellTemplate>
         </TemplateColumn>
         @foreach (var colonne in Colonnes)
         {
-            <TemplateColumn T="JsonObject" Title="@Entete(colonne)" Sortable="false">
+            <TemplateColumn T="JsonObject" Title="@Entete(colonne)" Sortable="false"
+                            HeaderStyle="@(colonne.Type == SettingType.Integer ? Etroite : null)" CellStyle="@(colonne.Type == SettingType.Integer ? Etroite : null)">
                 <CellTemplate>
                     @if (colonne.Type == SettingType.Boolean)
                     {
@@ -24,7 +26,7 @@
                 </CellTemplate>
             </TemplateColumn>
         }
-        <TemplateColumn T="JsonObject" Title="" HeaderStyle="width: 150px" CellStyle="white-space: nowrap; text-align: right" Sortable="false">
+        <TemplateColumn T="JsonObject" Title="" HeaderStyle="@Etroite" CellStyle="@(Etroite + "; text-align: right")" Sortable="false">
             <CellTemplate>
                 @{ var indice = Liste.IndexOf(context.Item); }
                 <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Disabled="@(indice == 0)"

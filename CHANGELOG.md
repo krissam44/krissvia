@@ -4,6 +4,12 @@ La version est dans `Directory.Build.props`. Elle s'affiche dans le menu ⋮ et 
 `deploy/publier.ps1`. Chaque PR l'incrémente et ajoute ici son entrée : le 2ᵉ chiffre pour une nouveauté, le 3ᵉ pour
 une correction ou un ajustement d'un écran existant (`docs/DEPLOIEMENT.md` § 6). L'appli mobile a sa propre version.
 
+## 1.3.1 — 21/11/2026
+
+**Services**
+- Fenêtre d'une ligne de réglages qui contient elle-même des listes (une platine) plus large ; dans les tableaux de
+  réglages, le n° de ligne, les nombres (n° d'objet…) et les boutons ne prennent que leur place.
+
 ## 1.3.0 — 21/11/2026
 
 **OpenHasp**
