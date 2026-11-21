@@ -33,6 +33,9 @@ public partial class ListeReglages
     /// <summary>« Interrupteurs (page horloge, 3 au plus) » devient « Interrupteurs » : la précision reste dans la fenêtre.</summary>
     private static string Entete(SettingField champ) => champ.Label.Split(" (")[0];
 
+    /// <summary>Le n° de ligne, un nombre (n° d'objet…), les boutons : la largeur de leur contenu, pas plus.</summary>
+    private const string Etroite = "width: 1%; white-space: nowrap";
+
     private string Apercu(SettingField champ, JsonObject element)
     {
         var v = element[champ.Key];
@@ -110,7 +113,7 @@ public partial class ListeReglages
             { d => d.Element, element },
         };
         // Une ligne qui contient elle-même une liste (les interrupteurs d'une platine) a besoin de place.
-        var largeur = Champ.Properties.Any(c => c.Type == SettingType.Array) ? MaxWidth.Medium : MaxWidth.Small;
+        var largeur = Champ.Properties.Any(c => c.Type == SettingType.Array) ? MaxWidth.Large : MaxWidth.Small;
         var dialogue = await Dialogues.ShowAsync<ElementReglagesDialog>(titre, parametres,
             new DialogOptions { MaxWidth = largeur, FullWidth = true, CloseButton = true });
         return await dialogue.Result is { Canceled: false, Data: JsonObject resultat } ? resultat : null;
