@@ -15,6 +15,11 @@ public sealed record EnergyWeek(DateOnly Monday, double? Kwh, int MeasuredDays)
     public int Number => ISOWeek.GetWeekOfYear(Monday.ToDateTime(TimeOnly.MinValue));
 
     public DateOnly Sunday => Monday.AddDays(6);
+
+    /// <summary>
+    /// La consommation moyenne d'un jour mesuré : une semaine en cours ou trouée se compare ainsi aux semaines pleines.
+    /// </summary>
+    public double? AveragePerDay => Kwh is { } kwh && MeasuredDays > 0 ? kwh / MeasuredDays : null;
 }
 
 /// <summary>La consommation par semaine, tirée des jours (<see cref="EnergyDays"/>) : aucun calcul de plus sur l'index.</summary>

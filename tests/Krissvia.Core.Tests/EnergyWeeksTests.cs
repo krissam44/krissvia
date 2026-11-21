@@ -32,6 +32,17 @@ public class EnergyWeeksTests
     }
 
     [Fact]
+    public void La_moyenne_est_par_jour_mesure()
+    {
+        // Trois jours mesurés sur quatre : 36 kWh / 3, et non / 4 ni / 7 (semaine en cours ou trouée).
+        var semaine = Assert.Single(EnergyWeeks.FromDays(
+            [J(2026, 11, 16, 21), J(2026, 11, 17, 13.5), J(2026, 11, 18, null), J(2026, 11, 19, 1.5)]));
+
+        Assert.Equal(12, semaine.AveragePerDay!.Value, 6);
+        Assert.Null(EnergyWeeks.FromDays([J(2026, 11, 16, null)])[0].AveragePerDay);
+    }
+
+    [Fact]
     public void Le_numero_est_celui_de_l_ISO_8601()
     {
         // Le 1er janvier 2027 est un vendredi : il appartient à la semaine 53 de 2026, qui commence le lundi 28/12.

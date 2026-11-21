@@ -32,7 +32,7 @@
             }
             else
             {
-                <CourbeSvg Temps="_tempsJour" Series="_serieJour" Unite="@Compteur.Puissance?.Unit" Fuseau="Horloge.LocalTimeZone" />
+                <CourbeSvg Temps="_tempsJour" Series="_serieJour" Unite="@Compteur.Puissance?.Unit" Hauteur="HauteurCourbe" Fuseau="Horloge.LocalTimeZone" />
             }
         </MudTabPanel>
         <MudTabPanel Text="Conso 30 jours" Icon="@Icons.Material.Filled.BarChart">
@@ -42,12 +42,13 @@
             }
             else
             {
-                <CourbeSvg Temps="_tempsJours" Series="_serieJours" Unite="kWh" YMin="0" Fuseau="Horloge.LocalTimeZone" />
+                <CourbeSvg Temps="_tempsJours" Series="_serieJours" Unite="kWh" YMin="0" Hauteur="HauteurCourbe" Fuseau="Horloge.LocalTimeZone" />
             }
         </MudTabPanel>
         <MudTabPanel Text="Tableau" Icon="@Icons.Material.Filled.TableChart">
             <MudGrid Spacing="4">
-            <MudItem xs="12" md="7">
+            <MudItem xs="12" md="6">
+            <div class="kv-tableau-teinte kv-tableau-jour">
             <MudText Typo="Typo.subtitle2" Class="mb-1">Par jour</MudText>
             <MudDataGrid T="Ligne" Items="_lignes" Dense="true" Hover="true" Elevation="0" Height="@HauteurTableau" FixedHeader="true">
                 <Columns>
@@ -70,8 +71,10 @@
                     }
                 </Columns>
             </MudDataGrid>
+            </div>
             </MudItem>
-            <MudItem xs="12" md="5">
+            <MudItem xs="12" md="6">
+            <div class="kv-tableau-teinte kv-tableau-semaine">
             <MudText Typo="Typo.subtitle2" Class="mb-1">Par semaine <span class="mud-text-secondary" style="font-weight:400">(du lundi au dimanche)</span></MudText>
             <MudDataGrid T="LigneSemaine" Items="_semaines" Dense="true" Hover="true" Elevation="0" Height="@HauteurTableau" FixedHeader="true">
                 <Columns>
@@ -85,12 +88,14 @@
                         </CellTemplate>
                     </TemplateColumn>
                     <PropertyColumn Property="l => l.Kwh" Title="Consommation" />
+                    <PropertyColumn Property="l => l.Moyenne" Title="Moyenne / jour" />
                     @if (Prix is not null)
                     {
                         <PropertyColumn Property="l => l.Cout" Title="Coût" />
                     }
                 </Columns>
             </MudDataGrid>
+            </div>
             </MudItem>
             </MudGrid>
             @if (_total is { } total)

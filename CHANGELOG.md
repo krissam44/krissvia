@@ -4,6 +4,12 @@ La version est dans `Directory.Build.props`. Elle s'affiche dans le menu ⋮ et 
 `deploy/publier.ps1`. Chaque PR l'incrémente et ajoute ici son entrée : le 2ᵉ chiffre pour une nouveauté, le 3ᵉ pour
 une correction ou un ajustement d'un écran existant (`docs/DEPLOIEMENT.md` § 6). L'appli mobile a sa propre version.
 
+## 1.2.2 — 21/11/2026
+
+**Électricité**
+- Graphiques plus hauts ; tableaux par jour et par semaine sur fond teinté (bleu, violet) ; colonne « Moyenne / jour »
+  dans le tableau des semaines, sur les jours mesurés (#141).
+
 ## 1.2.1 — 21/11/2026
 
 **Électricité**

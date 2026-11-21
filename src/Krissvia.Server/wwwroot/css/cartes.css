@@ -28,3 +28,13 @@
    de faire défiler la page. */
 .mud-dialog .mud-dialog-title { cursor: move; touch-action: none; user-select: none; }
 .mud-dialog .mud-dialog-title :is(button, a) { cursor: pointer; }
+
+/* Électricité : les tableaux par jour et par semaine, côte à côte, chacun sur un fond teinté de sa couleur (bleu de la
+   consommation, violet du coût). La teinte est mélangée à la surface, donc opaque : l'en-tête figé des tableaux en a
+   besoin, sinon les lignes défileraient à travers. */
+.kv-tableau-teinte { padding: 8px; border-radius: 8px; background: var(--kv-fond); }
+.kv-tableau-jour { --kv-fond: color-mix(in srgb, var(--mud-palette-surface) 90%, #42a5f5); }
+.kv-tableau-semaine { --kv-fond: color-mix(in srgb, var(--mud-palette-surface) 90%, #ce93d8); }
+.kv-tableau-teinte .mud-table,
+.kv-tableau-teinte .mud-table-container,
+.kv-tableau-teinte .mud-table-head .mud-table-cell { background-color: var(--kv-fond) !important; }
