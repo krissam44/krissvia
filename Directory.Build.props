@@ -12,7 +12,7 @@
       ou un ajustement d'un écran existant.
       L'appli mobile a sa propre version (ApplicationDisplayVersion dans mobile/).
     -->
-    <Version>1.2.2</Version>
+    <Version>1.3.0</Version>
     <!-- Règle du projet : zéro warning. Les alertes d'audit NuGet restent des warnings. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>

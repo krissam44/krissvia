@@ -12,7 +12,11 @@ public sealed class AffichagePerso
     public int Objet { get; set; }
     public string Entite { get; set; } = "";
 
-    /// <summary><c>text</c> (par défaut) pour un libellé ou un bouton, <c>val</c> pour un arc, une barre, un curseur.</summary>
+    /// <summary>
+    /// <c>text</c> (par défaut) pour un libellé ou un bouton, <c>val</c> pour un arc, une barre, un curseur. Avec
+    /// <see cref="SiOui"/> et <see cref="SiNon"/>, aussi <c>src</c> (l'image d'un <c>img</c>), <c>text_color</c>,
+    /// <c>bg_color</c>.
+    /// </summary>
     public string? Attribut { get; set; }
 
     /// <summary>
@@ -23,6 +27,24 @@ public sealed class AffichagePerso
 
     /// <summary>Pour une entité dont la valeur est un objet (un thermostat) : le champ à montrer (<c>temperature</c>, <c>target</c>).</summary>
     public string? Champ { get; set; }
+
+    /// <summary>
+    /// Ce qui est écrit quand l'entité est vraie (ouverte, allumée…), à la place de la valeur : <c>L:/porte_ouverte.png</c>,
+    /// <c>Ouverte</c>, <c>#FF453A</c>. Ne vaut qu'avec <see cref="SiNon"/>.
+    /// </summary>
+    public string? SiOui { get; set; }
+
+    /// <summary>Ce qui est écrit quand l'entité est fausse (fermée, éteinte…). Ne vaut qu'avec <see cref="SiOui"/>.</summary>
+    public string? SiNon { get; set; }
+
+    /// <summary>
+    /// Ce qui est écrit quand l'état n'est pas connu (indisponible, jamais reçu, pas un booléen). Vide : <c>--</c> pour
+    /// <c>text</c>, sinon <see cref="SiNon"/>.
+    /// </summary>
+    public string? SiInconnu { get; set; }
+
+    /// <summary>Un choix Si oui / Si non est en place : les deux sont donnés.</summary>
+    public bool AChoix => SiOui is { Length: > 0 } && SiNon is { Length: > 0 };
 }
 
 /// <summary>Un bouton de la page perso qui allume ou éteint une entité.</summary>
@@ -105,10 +127,19 @@ public static class PagePerso
     /// La valeur d'une entité, mise en forme pour un objet : nombre à la française, booléen en Oui / Non (Allumé /
     /// Éteint pour un interrupteur ou une lumière), texte tel quel ; « -- » quand l'entité est indisponible ou jamais
     /// reçue — jamais une valeur périmée qui passerait pour une mesure. Pour <c>val</c>, un entier (0 si inconnu).
+    /// Avec un choix Si oui / Si non (une image par état, par exemple), la valeur choisie, telle quelle.
     /// </summary>
     public static string Valeur(AffichagePerso a, EntityStateUpdate? etat)
     {
         var brute = etat is { Available: true, Value: { } v } ? Champ(v, a.Champ) : null;
+        if (a.AChoix)
+            return Vrai(brute) switch
+            {
+                true => a.SiOui!,
+                false => a.SiNon!,
+                null => a.SiInconnu is { Length: > 0 } inconnu ? inconnu : Attribut(a) == "text" ? "--" : a.SiNon!,
+            };
+
         if (a.Attribut == "val")
             return (brute is { ValueKind: JsonValueKind.Number } n ? (int)Math.Round(n.GetDouble()) : brute?.ValueKind == JsonValueKind.True ? 1 : 0)
                 .ToString(CultureInfo.InvariantCulture);
@@ -132,6 +163,22 @@ public static class PagePerso
     private static string Booleen(bool vrai, EntityStateUpdate? etat) =>
         etat?.Kind is EntityKind.Switch or EntityKind.Light ? vrai ? "Allumé" : "Éteint" : vrai ? "Oui" : "Non";
 
-    /// <summary>L'attribut écrit : <c>text</c> sauf demande contraire, et rien d'autre que <c>text</c> ou <c>val</c>.</summary>
-    public static string Attribut(AffichagePerso a) => a.Attribut == "val" ? "val" : "text";
+    /// <summary>Un booléen, ou le <c>on</c> d'une lumière ; null pour tout le reste.</summary>
+    private static bool? Vrai(JsonElement? brute) => brute switch
+    {
+        { ValueKind: JsonValueKind.True } => true,
+        { ValueKind: JsonValueKind.False } => false,
+        { ValueKind: JsonValueKind.Object } o when o.TryGetProperty("on", out var on) && on.ValueKind is JsonValueKind.True or JsonValueKind.False => on.GetBoolean(),
+        _ => null,
+    };
+
+    /// <summary>Les attributs qui n'ont de sens qu'avec un choix Si oui / Si non : une image, une couleur.</summary>
+    private static readonly HashSet<string> AttributsDeChoix = new(StringComparer.Ordinal) { "src", "text_color", "bg_color" };
+
+    /// <summary>
+    /// L'attribut écrit : <c>text</c> sauf demande contraire ; <c>val</c> ; <c>src</c>, <c>text_color</c>, <c>bg_color</c>
+    /// seulement avec un choix Si oui / Si non. Rien d'autre : une valeur mal formée n'abîme pas l'objet.
+    /// </summary>
+    public static string Attribut(AffichagePerso a) =>
+        a.Attribut == "val" ? "val" : a.AChoix && a.Attribut is { } x && AttributsDeChoix.Contains(x) ? x : "text";
 }

@@ -53,6 +53,19 @@ L'échappatoire pour ce que les pages générées ne font pas : une page qu'on �
   reçue. **Format** : `{}` à la place de la valeur (« Salon {} °C ») ; sans `{}`, il suit la valeur (« °C »).
   **Champ** : pour une entité dont la valeur est un objet (un thermostat : `temperature`, `target`). `val` : un entier,
   pour un arc, une barre, un curseur.
+- **Si oui / Si non** : pour une entité vraie ou fausse (capteur d'ouverture, interrupteur, lumière), la valeur écrite
+  selon l'état, à la place de la valeur elle-même. Avec eux, l'attribut peut aussi être `src` (l'image d'un `img`),
+  `text_color` ou `bg_color` : une porte qui change d'image, un libellé rouge quand c'est ouvert. **Si inconnu** :
+  l'état indisponible ou jamais reçu ; vide, `--` pour `text`, sinon la valeur de Si non. Les images sont des PNG
+  téléversés sur la platine (*File Editor*), à la taille d'affichage de préférence :
+
+  ```
+  {"id":20,"obj":"img","x":40,"y":60,"w":96,"h":96,"src":"L:/porte_fermee.png"}
+  ```
+  ```json
+  { "Objet": 20, "Entite": "binary_sensor.porte_entree", "Attribut": "src",
+    "SiOui": "L:/porte_ouverte.png", "SiNon": "L:/porte_fermee.png" }
+  ```
 - **Boutons qui commandent** : n° d'objet → interrupteur ou lumière. Un appui (au relâché) allume ou éteint selon l'état
   connu, comme les interrupteurs de la page horloge. Avec `"toggle":true`, le bouton reste enfoncé tant que l'entité est
   allumée (le plugin écrit son `val`).
