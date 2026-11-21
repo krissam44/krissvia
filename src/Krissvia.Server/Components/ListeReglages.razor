@@ -47,6 +47,13 @@
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-1 mb-2">
     <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Add" OnClick="AjouterAsync" Disabled="Plein">Ajouter</MudButton>
+    @* Copier ici, Coller sous la même liste d'un autre élément : la page perso d'une platine passe à une autre. *@
+    <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="Copier"
+               Disabled="@(Liste.Count == 0)">Copier</MudButton>
+    @if (PressePapiers.Disponible(Champ) is { } copies)
+    {
+        <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ContentPaste" OnClick="CollerAsync">Coller (@copies)</MudButton>
+    }
     @if (Champ.MaxItems is { } plafond)
     {
         <MudText Typo="Typo.caption" Class="mud-text-secondary">@Liste.Count / @plafond@(Plein ? " : la liste est complète" : "")</MudText>

@@ -15,6 +15,8 @@ public partial class ListeReglages
 
     [Inject] private IEntityRegistry Registre { get; set; } = default!;
     [Inject] private IDialogService Dialogues { get; set; } = default!;
+    [Inject] private PressePapiersReglages PressePapiers { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
     private List<JsonObject> Elements => [.. Liste.OfType<JsonObject>()];
 
@@ -90,6 +92,27 @@ public partial class ListeReglages
             _version++;
             await Modifie.InvokeAsync();
         }
+    }
+
+    private void Copier()
+    {
+        PressePapiers.Copier(Champ, Liste);
+        Snackbar.Add($"« {Entete(Champ)} » : {Liste.Count} ligne(s) copiée(s). « Coller » sous la même liste d'un autre élément.", Severity.Info);
+    }
+
+    /// <summary>Remplace la liste par ce qui a été copié ; une liste déjà remplie demande confirmation.</summary>
+    private async Task CollerAsync()
+    {
+        var copies = PressePapiers.Coller(Champ);
+        if (copies.Count == 0) return;
+        if (Liste.Count > 0 && await Dialogues.ShowMessageBoxAsync("Coller",
+                $"Remplacer les {Liste.Count} ligne(s) de « {Entete(Champ)} » par les {copies.Count} copiée(s) ?",
+                yesText: "Remplacer", cancelText: "Annuler") != true)
+            return;
+        Liste.Clear();
+        foreach (var element in copies) Liste.Add(element);
+        _version++;
+        await Modifie.InvokeAsync();
     }
 
     private async Task RetirerAsync(JsonObject element)

@@ -4,6 +4,12 @@ La version est dans `Directory.Build.props`. Elle s'affiche dans le menu ⋮ et 
 `deploy/publier.ps1`. Chaque PR l'incrémente et ajoute ici son entrée : le 2ᵉ chiffre pour une nouveauté, le 3ᵉ pour
 une correction ou un ajustement d'un écran existant (`docs/DEPLOIEMENT.md` § 6). L'appli mobile a sa propre version.
 
+## 1.4.0 — 21/11/2026
+
+**Services**
+- Listes de réglages : « Copier » sous une liste, « Coller » sous la même liste d'un autre élément la remplace (après
+  confirmation si elle n'est pas vide) — la page perso d'une platine, ses liaisons, passe à une autre en deux clics.
+
 ## 1.3.1 — 21/11/2026
 
 **Services**
