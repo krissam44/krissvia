@@ -27,7 +27,13 @@ public partial class CompteurElectrique
     /// Les tableaux jour et semaine prennent la hauteur de la fenêtre, moins ce qui est au-dessus d'eux (barre, en-tête,
     /// onglets, chiffres) et la ligne de total ; jamais moins de 300 px, pour un petit écran.
     /// </summary>
-    private string HauteurTableau => $"max(300px, calc(100vh - {(DansOnglet ? 445 : 415)}px))";
+    private string HauteurTableau => $"max(300px, calc(100vh - {(DansOnglet ? 465 : 435)}px))";
+
+    /// <summary>
+    /// La hauteur du repère des deux graphiques, pour 1000 de large : le SVG suit la largeur, donc 375 donne environ
+    /// 610 px sur un écran de 1920, ce qui remplit la carte sans faire défiler la page (260 laissait un tiers vide).
+    /// </summary>
+    private const int HauteurCourbe = 375;
 
     [Inject] private IHistoryRepository Historique { get; set; } = default!;
     [Inject] private IEntityStateReader Etats { get; set; } = default!;
@@ -37,7 +43,7 @@ public partial class CompteurElectrique
     private sealed record Ligne(string Date, string Kwh, IReadOnlyList<string> Parts, string Cout, string Pointe);
 
     /// <summary>Une ligne du tableau des semaines ; <see cref="Note"/> dit une semaine incomplète (en cours, trou).</summary>
-    private sealed record LigneSemaine(string Semaine, string? Note, string Kwh, string Cout);
+    private sealed record LigneSemaine(string Semaine, string? Note, string Kwh, string Moyenne, string Cout);
 
     private int _onglet;
     private Timer? _minuterie;
@@ -123,6 +129,7 @@ public partial class CompteurElectrique
                 $"S{s.Number} · {s.Monday.ToString("dd/MM", Fr)} → {s.Sunday.ToString("dd/MM", Fr)}",
                 s.Monday == lundiCourant ? "en cours" : s.MeasuredDays < 7 ? $"{s.MeasuredDays} j mesuré(s)" : null,
                 s.Kwh is { } k ? Kwh(k) : "—",
+                s.AveragePerDay is { } m ? Kwh(m) : "—",
                 s.Kwh is { } c && Prix is { } prix ? Euros(c * prix) : "—"))
             .Reverse()];
     }
