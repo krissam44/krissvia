@@ -185,6 +185,7 @@ builder.Services.AddCascadingAuthenticationState();
 // Interface d'administration (Blazor + MudBlazor).
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddMudServices();   // après les thermostats, que sa configuration référence
+builder.Services.AddScoped<PressePapiersReglages>();   // Copier / Coller des listes de réglages, par session
 
 var app = builder.Build();
 
