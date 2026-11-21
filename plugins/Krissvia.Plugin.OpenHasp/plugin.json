@@ -41,9 +41,12 @@
                 "properties": {
                   "Objet": { "type": "integer", "title": "N° d'objet (id)", "minimum": 1, "maximum": 254 },
                   "Entite": { "type": "string", "title": "Entité", "format": "entity", "x-kinds": [ "sensor", "binary_sensor", "switch", "light", "climate" ] },
-                  "Attribut": { "type": "string", "title": "Attribut", "default": "text", "description": "text pour un libellé ou un bouton ; val pour un arc, une barre, un curseur (valeur entière)." },
+                  "Attribut": { "type": "string", "title": "Attribut", "default": "text", "description": "text pour un libellé ou un bouton ; val pour un arc, une barre, un curseur (valeur entière). Avec Si oui et Si non : aussi src (image d'un img), text_color, bg_color." },
                   "Format": { "type": "string", "title": "Format", "description": "{} à la place de la valeur : « Salon {} °C ». Sans {}, il suit la valeur (« °C »). Vide : la valeur seule." },
-                  "Champ": { "type": "string", "title": "Champ", "description": "Pour une entité dont la valeur est un objet, le champ à montrer (thermostat : temperature, target)." }
+                  "Champ": { "type": "string", "title": "Champ", "description": "Pour une entité dont la valeur est un objet, le champ à montrer (thermostat : temperature, target)." },
+                  "SiOui": { "type": "string", "title": "Si oui", "description": "Écrit quand l'entité est vraie (ouverte, allumée) : L:/porte_ouverte.png, Ouverte, #FF453A. Avec Si non." },
+                  "SiNon": { "type": "string", "title": "Si non", "description": "Écrit quand l'entité est fausse (fermée, éteinte). Avec Si oui." },
+                  "SiInconnu": { "type": "string", "title": "Si inconnu", "description": "Écrit quand l'état n'est pas connu. Vide : -- pour text, sinon Si non." }
                 }
               }
             },

@@ -4,6 +4,13 @@ La version est dans `Directory.Build.props`. Elle s'affiche dans le menu ⋮ et 
 `deploy/publier.ps1`. Chaque PR l'incrémente et ajoute ici son entrée : le 2ᵉ chiffre pour une nouveauté, le 3ᵉ pour
 une correction ou un ajustement d'un écran existant (`docs/DEPLOIEMENT.md` § 6). L'appli mobile a sa propre version.
 
+## 1.3.0 — 21/11/2026
+
+**OpenHasp**
+- Page perso : une valeur « Si oui » / « Si non » (et « Si inconnu ») selon l'état d'une entité vraie ou fausse, qui
+  peut aussi changer l'image d'un `img` (`src`) ou une couleur (`text_color`, `bg_color`) : une porte ouverte ou
+  fermée, une lampe allumée ou éteinte.
+
 ## 1.2.2 — 21/11/2026
 
 **Électricité**

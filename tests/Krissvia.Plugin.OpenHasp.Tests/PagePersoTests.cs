@@ -150,6 +150,41 @@ public class PagePersoTests
     }
 
     [Fact]
+    public void Si_oui_si_non_choisit_la_valeur_selon_l_etat()
+    {
+        var porte = new AffichagePerso { Attribut = "src", SiOui = "L:/porte_ouverte.png", SiNon = "L:/porte_fermee.png" };
+        var lampe = new AffichagePerso { Attribut = "src", SiOui = "L:/lampe_on.png", SiNon = "L:/lampe_off.png" };
+
+        Assert.Equal("src", PagePerso.Attribut(porte));
+        Assert.Equal("L:/porte_ouverte.png", PagePerso.Valeur(porte, Donnees.Etat("binary_sensor.porte", true, genre: EntityKind.BinarySensor)));
+        Assert.Equal("L:/porte_fermee.png", PagePerso.Valeur(porte, Donnees.Etat("binary_sensor.porte", false, genre: EntityKind.BinarySensor)));
+        Assert.Equal("L:/lampe_on.png", PagePerso.Valeur(lampe, Donnees.Etat(Donnees.Lampe, new { on = true }, genre: EntityKind.Light)));
+    }
+
+    [Fact]
+    public void L_etat_inconnu_d_un_choix_ne_passe_jamais_pour_un_etat()
+    {
+        var image = new AffichagePerso { Attribut = "src", SiOui = "L:/o.png", SiNon = "L:/f.png" };
+        var libelle = new AffichagePerso { SiOui = "Ouverte", SiNon = "Fermée" };
+
+        Assert.Equal("L:/f.png", PagePerso.Valeur(image, null));   // sans « Si inconnu », une image prend celle de Si non
+        Assert.Equal("L:/i.png", PagePerso.Valeur(new AffichagePerso { Attribut = "src", SiOui = "L:/o.png", SiNon = "L:/f.png", SiInconnu = "L:/i.png" },
+            Donnees.Etat("binary_sensor.porte", true, disponible: false)));
+        Assert.Equal("--", PagePerso.Valeur(libelle, Donnees.Etat("sensor.t", 21.5)));   // pas un booléen
+        Assert.Equal("Fermée", PagePerso.Valeur(libelle, Donnees.Etat("binary_sensor.porte", false, genre: EntityKind.BinarySensor)));
+    }
+
+    [Fact]
+    public void Image_et_couleurs_seulement_avec_un_choix_complet()
+    {
+        Assert.Equal("text", PagePerso.Attribut(new AffichagePerso { Attribut = "src" }));
+        Assert.Equal("text", PagePerso.Attribut(new AffichagePerso { Attribut = "src", SiOui = "L:/o.png" }));   // Si non manque
+        Assert.Equal("text_color", PagePerso.Attribut(new AffichagePerso { Attribut = "text_color", SiOui = "#FF453A", SiNon = "#30D158" }));
+        Assert.Equal("bg_color", PagePerso.Attribut(new AffichagePerso { Attribut = "bg_color", SiOui = "#FF453A", SiNon = "#30D158" }));
+        Assert.Equal("text", PagePerso.Attribut(new AffichagePerso { Attribut = "hidden", SiOui = "1", SiNon = "0" }));   // liste fermée
+    }
+
+    [Fact]
     public void L_ecran_peint_les_objets_relies_de_la_page_5()
     {
         var platine = AvecPage();
