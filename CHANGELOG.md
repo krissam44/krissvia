@@ -4,6 +4,13 @@ La version est dans `Directory.Build.props`. Elle s'affiche dans le menu ⋮ et 
 `deploy/publier.ps1`. Chaque PR l'incrémente et ajoute ici son entrée : le 2ᵉ chiffre pour une nouveauté, le 3ᵉ pour
 une correction ou un ajustement d'un écran existant (`docs/DEPLOIEMENT.md` § 6). L'appli mobile a sa propre version.
 
+## 1.4.1 — 27/11/2026
+
+**Matter**
+- Documentation (`docs/MATTER.md`) : plugin vérifié avec une vraie prise SONOFF Orb Socket (appairage, marche/arrêt,
+  quatre mesures) ; unité systemd du serveur Matter telle qu'installée sur le Pi ; où trouver le code dans eWeLink
+  (« Activer le mode d'appairage », pas « Partager ») ; carte conseillée « Compteur d'énergie ».
+
 ## 1.4.0 — 21/11/2026
 
 **Services**
