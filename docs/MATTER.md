@@ -1,8 +1,8 @@
 # Matter
 
 > Livré le 20/11/2026. Plugin `plugins/Krissvia.Plugin.Matter` (Python), carte « Matter » livrée par le plugin,
-> classe `matter_controller`. Premier appareil visé : la prise SONOFF Orb Socket WS01TPE-E (Matter sur Wi-Fi, mesure
-> d'énergie).
+> classe `matter_controller`. **Vérifié le 27/11/2026 avec une vraie prise** SONOFF Orb Socket WS01TPE-E (Matter sur
+> Wi-Fi, mesure d'énergie), sur le Raspberry Pi de l'appartement (§ 5).
 
 ## 1. Le principe
 
@@ -32,7 +32,29 @@ cd /opt/matter-server && npm install matter-server
 /opt/matter-server/node_modules/.bin/matter-server --storage-path /var/lib/matter-server --listen-address 127.0.0.1
 ```
 
-puis une unité `matter-server.service` (`ExecStart=` la commande ci-dessus, `Restart=on-failure`, `User=christian`).
+puis l'unité systemd (celle installée sur le Pi le 27/11/2026, où le Node.js 22.23 déjà présent a suffi) :
+
+```bash
+sudo tee /etc/systemd/system/matter-server.service > /dev/null <<'EOF'
+[Unit]
+Description=Matter Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=christian
+ExecStart=/opt/matter-server/node_modules/.bin/matter-server --storage-path /var/lib/matter-server --listen-address 127.0.0.1
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload && sudo systemctl enable --now matter-server
+journalctl -u matter-server -n 20 --no-pager      # « Webserver listening on http://127.0.0.1:5580 »
+```
+
+Le paquet `nodejs` de Debian/Raspberry Pi OS est trop ancien : il faut Node.js 22.13 ou plus (`node --version`),
+sinon celui de NodeSource.
 
 **Docker** : `docker run -d --name matterjs-server --restart=unless-stopped --network=host -v $(pwd)/data:/data
 ghcr.io/matter-js/matterjs-server:stable` (UID 1000 dans le conteneur : `chown -R 1000:1000 data`).
@@ -72,13 +94,16 @@ Poser la carte **Matter** sur le tableau de bord (entité « Matter Contrôleur 
 liste les appareils connus, et appaire un nouvel appareil à partir de son **code d'appairage** (11 chiffres, ou le
 texte `MT:…` du QR code). L'appairage prend jusqu'à 3 minutes ; son issue s'affiche sur la carte.
 
-**Le plus simple — partager depuis l'appli du fabricant (« multi-admin »)** : un appareil Matter accepte plusieurs
-contrôleurs. Pour la prise SONOFF :
+**Le plus simple — depuis l'appli du fabricant (« multi-admin »)** : un appareil Matter accepte plusieurs
+contrôleurs. Pour la prise SONOFF (eWeLink, novembre 2026) :
 
-1. l'appairer d'abord dans **eWeLink** (ou Alexa, Google Home…), comme prévu par le fabricant ;
-2. dans l'appli, ouvrir l'appareil → partager / « Matter » / « Associer à un autre écosystème » : elle affiche un
-   **code d'appairage** valable quelques minutes ;
-3. le taper dans la carte Matter → **Appairer**.
+1. l'appairer d'abord dans **eWeLink**, comme prévu par le fabricant ;
+2. préparer Krissvia : service `matter-server` actif, plugin Matter activé, carte Matter « CONNECTÉ » — le mode
+   appairage de la prise ne dure que quelques minutes ;
+3. dans eWeLink : l'appareil → **Paramètres de dispositif** → tout en bas, **« Activer le mode d'appairage »**. Ce
+   n'est **pas** le bouton « Partager » (il partage la prise avec un autre utilisateur eWeLink), ni la rubrique
+   « Plateformes compatibles Matter » (une simple liste). L'appli affiche un code de 11 chiffres (ou un QR code) ;
+4. le taper dans la carte Matter → **Appairer** (tirets et espaces acceptés).
 
 L'appareil est déjà sur le Wi-Fi : le Pi le trouve sur le réseau (IPv6/mDNS), aucun Bluetooth n'est nécessaire, et
 l'appli d'origine continue de fonctionner à côté.
@@ -88,18 +113,29 @@ l'appli d'origine continue de fonctionner à côté.
 réglages du plugin : le serveur le transmet à l'appareil pendant l'appairage. La case « Appareil neuf, par
 Bluetooth » apparaît alors sur la carte, avec le code imprimé sur l'appareil.
 
-## 5. Vérifié, et ce qui ne l'est pas encore
+## 5. Vérifié
 
-Vérifié le 20/11/2026 contre un vrai `matter-server` 1.6.0 lancé sur la boucle locale du PC de développement :
+**Avec une vraie prise, le 27/11/2026** — SONOFF Orb Socket WS01TPE-E (micrologiciel 1.0.4, puce Beken BK7238), sur
+le Raspberry Pi 4 de l'appartement, `matter-server` installé par npm en service systemd (§ 2) :
+
+- appairage par le code de « Activer le mode d'appairage » d'eWeLink, tapé dans la carte Matter : « Smart Plug
+  appairé » ; eWeLink continue de fonctionner à côté ;
+- nom de l'appareil : « Smart Plug », le produit (`0/40/3`) — la prise ne porte pas de nom Matter (`0/40/5`) ; le
+  renommer dans l'écran Entités ;
+- entités créées : l'interrupteur (`switch`) et les quatre mesures — courant, énergie, puissance, tension — qui se
+  mettent à jour ; la prise se pilote depuis Krissvia (marche/arrêt), son état suit ;
+- carte conseillée : **« Compteur d'énergie »** posée sur l'entité puissance (elle relie d'elle-même tension, courant
+  et énergie du même appareil), et une carte « Prise » pour le bouton.
+
+**Contre un vrai serveur, le 20/11/2026** — `matter-server` 1.6.0 lancé sur la boucle locale du PC de développement : contre un vrai `matter-server` 1.6.0 lancé sur la boucle locale du PC de développement :
 message d'accueil (`ServerInfo`), format des requêtes et des réponses (`{message_id, result}` /
 `{message_id, error_code, details}`), `start_listening`, événements `node_added`, `device_command` accepté, et un
 nœud de test (prise à mesure) importé avec `import_test_node` : déclaré dans Krissvia avec ses mesures converties,
-carte Matter comprise. Les commandes et événements restants (`commission_with_code`, `attribute_updated`,
-`node_removed`…) suivent les types publiés du client officiel (`@matter-server/ws-client`), et sont couverts par les
-tests contre un faux serveur.
+carte Matter comprise. Les autres commandes et événements suivent les types publiés du client officiel
+(`@matter-server/ws-client`), et sont couverts par les tests contre un faux serveur.
 
-**Pas encore vérifié** : un appairage réel et les valeurs exactes d'une vraie prise SONOFF (le simulateur d'appareil
-de matter.js n'a pas été lancé, pour ne rien annoncer sur le réseau local). À faire au premier branchement sur le Pi.
+**Pas encore vérifié** : l'appairage par Bluetooth d'un appareil neuf, et les autres familles d'appareils
+(lumières, capteurs).
 
 Sources : https://github.com/matter-js/matterjs-server , https://github.com/OpenHomeFoundation/roadmap/issues/89 ,
 https://github.com/matter-js/python-matter-server

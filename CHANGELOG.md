@@ -12,6 +12,13 @@ une correction ou un ajustement d'un écran existant (`docs/DEPLOIEMENT.md` § 6
   sur une page vide. Elle garde son widget, ses liens, sa taille et son nom ; « Enregistrer » valide, « Annuler » la
   ramène.
 
+## 1.4.1 — 27/11/2026
+
+**Matter**
+- Documentation (`docs/MATTER.md`) : plugin vérifié avec une vraie prise SONOFF Orb Socket (appairage, marche/arrêt,
+  quatre mesures) ; unité systemd du serveur Matter telle qu'installée sur le Pi ; où trouver le code dans eWeLink
+  (« Activer le mode d'appairage », pas « Partager ») ; carte conseillée « Compteur d'énergie ».
+
 ## 1.4.0 — 21/11/2026
 
 **Services**
