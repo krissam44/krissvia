@@ -376,6 +376,28 @@ public partial class TableauDeBord
         return s with { Cards = cartes };
     });
 
+    /// <summary>
+    /// Où une carte peut partir : chaque section des autres pages (« Technique › Proxmox »), ou une page vide, où une
+    /// section « Cartes déplacées » l'accueillera.
+    /// </summary>
+    private IEnumerable<(string PageId, string? SectionId, string Libelle)> Destinations() =>
+        _pages.Where(p => p.Id != Page.Id).SelectMany(p => p.Sections.Count == 0
+            ? [(p.Id, (string?)null, $"{NomPage(p)} (nouvelle section)")]
+            : p.Sections.Select(s => (p.Id, (string?)s.Id, $"{NomPage(p)} › {(s.Title is { Length: > 0 } t ? t : "section sans titre")}")));
+
+    private static string NomPage(Dashboard p) => p.Name is { Length: > 0 } n ? n : p.Id;
+
+    /// <summary>
+    /// Envoie une carte à la fin d'une section d'une autre page. Comme tout le mode édition, rien n'est écrit avant
+    /// « Enregistrer », qui enregistre toutes les pages ensemble : « Annuler » la ramène là où elle était. Pas de
+    /// message : il s'affichait par-dessus le bouton « Enregistrer » et restait tant que la souris le survolait.
+    /// </summary>
+    private void DeplacerVersPage(string carteId, string pageId, string? sectionId)
+    {
+        _pages = [.. DashboardEditing.MoveCardToPage(_pages, Page.Id, carteId, pageId, sectionId, NouvelId)];
+        _aAppliquer = true;
+    }
+
     private void Redimensionner(string sectionId, string carteId, int? cols) =>
         ChangerSection(sectionId, s => s with { Cards = [.. s.Cards.Select(c => c.Id == carteId ? c with { Cols = cols } : c)] });
 

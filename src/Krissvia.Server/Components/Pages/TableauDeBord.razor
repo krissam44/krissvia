@@ -183,6 +183,15 @@
                                                          Icon="@(carte.Rows == hauteur ? Icons.Material.Filled.Check : null)">@Hauteurs.Libelle(hauteur)</MudMenuItem>
                                         }
                                     </MudMenu>
+                                    @if (_pages.Count > 1)
+                                    {
+                                        <MudMenu Icon="@Icons.Material.Filled.DriveFileMove" Size="Size.Small" Dense="true" aria-label="Déplacer vers une autre page">
+                                            @foreach (var d in Destinations())
+                                            {
+                                                <MudMenuItem OnClick="() => DeplacerVersPage(carte.Id, d.PageId, d.SectionId)">@d.Libelle</MudMenuItem>
+                                            }
+                                        </MudMenu>
+                                    }
                                     <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
                                                    OnClick="() => ModifierCarteAsync(sec.Id, carte)" aria-label="Régler la carte" />
                                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
@@ -197,6 +206,11 @@
                                                      OnClick="() => DeplacerCarte(sec.Id, index, -1)">Avancer</MudMenuItem>
                                         <MudMenuItem Icon="@Icons.Material.Filled.ChevronRight" Disabled="@(index == sec.Cards.Count - 1)"
                                                      OnClick="() => DeplacerCarte(sec.Id, index, 1)">Reculer</MudMenuItem>
+                                        @foreach (var d in Destinations())
+                                        {
+                                            <MudMenuItem Icon="@Icons.Material.Filled.DriveFileMove"
+                                                         OnClick="() => DeplacerVersPage(carte.Id, d.PageId, d.SectionId)">Vers @d.Libelle</MudMenuItem>
+                                        }
                                         <MudMenuItem Icon="@Icons.Material.Filled.Settings"
                                                      OnClick="() => ModifierCarteAsync(sec.Id, carte)">Régler (taille, widget…)</MudMenuItem>
                                         <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error"

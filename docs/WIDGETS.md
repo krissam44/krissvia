@@ -298,7 +298,9 @@ laisse rien ; replier une section hors édition s'enregistre aussitôt.
   Les pages écrites en douzièmes (`"grid": 12`) sont relues en doublant leurs largeurs, celles d'avant la grille de 12
   (sans `grid`) en les quadruplant — cartes ET sections : rien ne bouge à l'écran, et la page est réécrite en 24ᵉ au
   prochain enregistrement.
-- Cartes : glisser-déposer, y compris d'une section à l'autre ; flèches ◀ ▶ pour le téléphone ; menu de taille.
+- Cartes : glisser-déposer, y compris d'une section à l'autre ; flèches ◀ ▶ pour le téléphone ; menu de taille ;
+  « Déplacer vers une autre page » (menu de la carte) : à la fin d'une section d'une autre page, ou dans une section
+  « Cartes déplacées » créée sur une page vide — la carte garde widget, liens, taille et nom (`DashboardEditing`).
 - Nom sur la carte (`title` de la carte, 80 caractères au plus) : remplace, sur cette carte seulement, le nom de l'entité principale ; vide, la carte suit le nom de l'écran Entités.
 - **Proposer** (mode édition) : ajoute une section par famille (thermostats, températures, interrupteurs et
   lumières, capteurs, énergie), chaque entité avec son meilleur widget ; les slots secondaires prennent les entités
