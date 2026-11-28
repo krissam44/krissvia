@@ -1,4 +1,5 @@
 using Krissvia.Climate.Alarm;
+using Krissvia.Core.Export;
 using Krissvia.Core.History;
 using Krissvia.Core.Overview;
 using Krissvia.Core.Registry;
@@ -53,6 +54,23 @@ internal static class SensorApi
                     [.. courbe.Select(p => new EnergyPowerPointView(p.At, p.Mean, p.Min, p.Max))]));
             }
             return Results.Json(new EnergyOverviewView(kwh, vues), EnergyOverviewView.Json);
+        });
+
+        // Toute la consommation de tous les compteurs, depuis leur premier relevé, en classeur Excel (feuilles Jours et
+        // Semaines) : pour ses propres statistiques. Le bouton « Exporter » de l'écran Électricité y mène.
+        api.MapGet("/energy/export.xlsx", async (IEntityRegistry registre, IHistoryRepository historique, IEntityStateReader etats,
+            ElectricityPrice prix, TimeProvider horloge, CancellationToken ct) =>
+        {
+            var kwh = await prix.GetAsync(ct);
+            var compteurs = Components.Historique.Compteur.Trouver(await registre.ListAsync(ct), await registre.ListDevicesAsync(ct));
+            var aExporter = new List<EnergyExportMeter>();
+            foreach (var c in compteurs)
+                aExporter.Add(new EnergyExportMeter(c.Nom, (await Components.Historique.LectureCompteur.LireAsync(c, null, historique, etats, horloge, ct)).Jours));
+
+            var aujourdhui = EnergyDays.Jour(horloge.GetUtcNow(), horloge.LocalTimeZone);
+            var classeur = XlsxWorkbook.Write(EnergyExport.Build(aExporter, kwh, aujourdhui));
+            return Results.File(classeur, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"krissvia-consommation-{aujourdhui:yyyy-MM-dd}.xlsx");
         });
     }
 }

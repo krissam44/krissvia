@@ -114,6 +114,9 @@ et la puissance le sont déjà à la minute (§2), puis heure par heure sans lim
   jour-là de tout l'index. Aujourd'hui vient des points bruts, plus frais que l'heure consolidée toutes les 10 min.
 - Un appareil qui a un index « total » est un seul compteur (les autres index en sont les parts) ; sinon chaque index est
   un compteur, avec la puissance de la même voie (les deux voies d'un Shelly EM).
+- **Exporter (Excel)**, en haut de l'écran : un classeur avec tous les compteurs, jour par jour et semaine par semaine,
+  depuis le premier relevé, pour ses propres statistiques (tableau croisé, graphiques). Détail des colonnes : `API.md`,
+  § Énergie.
 
 ## 7. Pas encore
 

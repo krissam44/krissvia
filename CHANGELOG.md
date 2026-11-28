@@ -4,6 +4,15 @@ La version est dans `Directory.Build.props`. Elle s'affiche dans le menu ⋮ et 
 `deploy/publier.ps1`. Chaque PR l'incrémente et ajoute ici son entrée : le 2ᵉ chiffre pour une nouveauté, le 3ᵉ pour
 une correction ou un ajustement d'un écran existant (`docs/DEPLOIEMENT.md` § 6). L'appli mobile a sa propre version.
 
+## 1.6.0 — 28/11/2026
+
+**Électricité**
+- Bouton « Exporter (Excel) » : un classeur `.xlsx` avec tous les compteurs depuis leur premier relevé, une feuille
+  « Jours » (date, jour de la semaine, semaine, mois, kWh, coût, puissance max) et une feuille « Semaines » (du lundi
+  au dimanche, jours mesurés, kWh, moyenne par jour, coût). Une ligne par compteur et par jour (ou semaine) : un
+  tableau croisé dynamique s'en fait directement. Le jour et la semaine en cours sont marqués, un jour sans mesure
+  reste vide plutôt que zéro. Aussi par l'API : `GET /api/energy/export.xlsx`.
+
 ## 1.5.0 — 27/11/2026
 
 **Tableau de bord**

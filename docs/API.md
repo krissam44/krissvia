@@ -185,6 +185,14 @@ pas zéro), `today_power` : la puissance de minuit à maintenant par cases de 5 
 `mean` **null** = case sans mesure ; liste vide sans entité de puissance). Même calcul que les cartes de l'écran
 (`LectureCompteur`). Lecture seule.
 
+`GET /api/energy/export.xlsx` : la même consommation, de tous les compteurs et depuis leur premier relevé, en classeur
+Excel (bouton « Exporter (Excel) » de l'écran Électricité). Feuille **Jours** : une ligne par compteur et par jour
+(compteur, date, jour de la semaine, semaine ISO, mois, kWh, coût, puissance max, remarque « en cours » ou « sans
+mesure ») ; feuille **Semaines** : une ligne par compteur et par semaine du lundi au dimanche (année et numéro ISO, du,
+au, jours mesurés, kWh, moyenne par jour mesuré, coût, remarque). Format « long » pour qu'un tableau croisé dynamique
+s'en fasse directement ; nombres et dates sont de vraies valeurs, un jour sans mesure a sa ligne avec une case vide
+(pas zéro). Écrit sans bibliothèque (`XlsxWorkbook`).
+
 ## Supervision
 
 `GET /api/supervision` : le dernier contrôle (chaque point surveillé, en panne ou non, depuis quand, alerte partie ou
