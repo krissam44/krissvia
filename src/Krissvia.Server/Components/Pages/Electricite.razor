@@ -6,17 +6,22 @@
     <MudIcon Icon="@Icons.Material.Filled.Bolt" Style="color:#ffb300; font-size:2rem" />
     <MudText Typo="Typo.h5">Consommation électrique</MudText>
     <MudSpacer />
-    @if (_compteurs.Count > 0)
-    {
-        @* download + _blank : le navigateur enregistre le fichier au lieu que Blazor tente d'y naviguer comme vers une page. *@
-        <MudButton Href="/api/energy/export.xlsx" Target="_blank" download="" Variant="Variant.Outlined" Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.Download" title="Tous les compteurs, jour par jour et semaine par semaine, depuis le premier relevé">
-            Exporter (Excel)
-        </MudButton>
-    }
-    <MudNumericField T="double?" Value="_prix" ValueChanged="ChangerPrixAsync" Label="Prix du kWh (€ TTC)" Format="0.#####"
-                     Variant="Variant.Outlined" Margin="Margin.Dense" Step="0.001" Min="0" Max="10" Clearable="true" Style="max-width: 200px"
-                     HelperText="Pour le coût du jour ; vide : pas de coût" />
+    @* Alignés par le haut : le texte d'aide allonge le champ, centrer le bouton sur l'ensemble le décalait vers le bas.
+       Le bouton prend la marge et la hauteur de la case de saisie (dense, contour : 8 px puis 40 px). *@
+    <div class="d-flex align-start gap-3">
+        @if (_compteurs.Count > 0)
+        {
+            @* download + _blank : le navigateur enregistre le fichier au lieu que Blazor tente d'y naviguer comme vers une page. *@
+            <MudButton Href="/api/energy/export.xlsx" Target="_blank" download="" Variant="Variant.Outlined" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Download" Style="margin-top: 8px; height: 40px"
+                       title="Tous les compteurs, jour par jour et semaine par semaine, depuis le premier relevé">
+                Exporter (Excel)
+            </MudButton>
+        }
+        <MudNumericField T="double?" Value="_prix" ValueChanged="ChangerPrixAsync" Label="Prix du kWh (€ TTC)" Format="0.#####"
+                         Variant="Variant.Outlined" Margin="Margin.Dense" Step="0.001" Min="0" Max="10" Clearable="true" Style="max-width: 200px"
+                         HelperText="Pour le coût du jour ; vide : pas de coût" />
+    </div>
 </div>
 
 @if (_compteurs.Count == 0)

@@ -4,6 +4,12 @@ La version est dans `Directory.Build.props`. Elle s'affiche dans le menu ⋮ et 
 `deploy/publier.ps1`. Chaque PR l'incrémente et ajoute ici son entrée : le 2ᵉ chiffre pour une nouveauté, le 3ᵉ pour
 une correction ou un ajustement d'un écran existant (`docs/DEPLOIEMENT.md` § 6). L'appli mobile a sa propre version.
 
+## 1.6.1 — 28/11/2026
+
+**Électricité**
+- Le bouton « Exporter (Excel) » est aligné sur la case du prix du kWh (il se centrait sur le champ et son texte
+  d'aide, donc trop bas).
+
 ## 1.6.0 — 28/11/2026
 
 **Électricité**
